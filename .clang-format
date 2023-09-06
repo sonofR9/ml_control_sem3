@@ -1,0 +1,86 @@
+BasedOnStyle: LLVM
+
+AccessModifierOffset: -4
+AlignAfterOpenBracket: Align
+AlignConsecutiveMacros: 'true'
+AlignConsecutiveAssignments: 'false'
+AlignConsecutiveDeclarations: 'false'
+AlignOperands: 'true'
+AlignTrailingComments: 'true'
+AllowAllArgumentsOnNextLine: 'true'
+AllowAllConstructorInitializersOnNextLine: 'true'
+AllowAllParametersOfDeclarationOnNextLine: 'true'
+AllowShortBlocksOnASingleLine: 'false'
+AllowShortEnumsOnASingleLine: 'false'
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: 'false'
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: 'true'
+AlwaysBreakTemplateDeclarations: 'Yes'
+BinPackArguments: 'true'
+BinPackParameters: 'true'
+BreakBeforeBraces: Allman
+BreakConstructorInitializers: BeforeColon
+BreakInheritanceList: BeforeColon
+ColumnLimit: '120'
+CompactNamespaces: 'false'
+ConstructorInitializerAllOnOneLineOrOnePerLine: 'false'
+ConstructorInitializerIndentWidth: '8'
+ContinuationIndentWidth: '8'
+Cpp11BracedListStyle: 'true'
+DerivePointerAlignment: 'true'
+FixNamespaceComments: 'true'
+IncludeBlocks: Regroup
+
+IncludeCategories:
+  # gtest headers
+  - Regex:           '^((<|")(gtest|gmock))'
+    Priority:        6
+  # boost headers
+  - Regex:           '^(<boost)'
+    Priority:        5
+  # Qt headers
+  - Regex:           '^(<(Q|qt))'
+    Priority:        4
+  # Third party libraries
+  - Regex:           '((<pqxx)|((<|")spdlog\/)|(<nlohmann)|(<json))'
+    Priority:        3
+  # Headers in <> without extension
+  - Regex:           '<([A-Za-z0-9\Q/-_\E])+>'
+    Priority:        7
+  # headers <> from this project 
+  - Regex:           '.*>'
+    Priority:        2
+  # Headers in ""
+  - Regex:           '.*"'
+    Priority:        1
+
+IndentCaseLabels: 'false'
+IndentWidth: '4'
+IndentWrappedFunctionNames: 'false'
+KeepEmptyLinesAtTheStartOfBlocks: 'false'
+Language: Cpp
+MaxEmptyLinesToKeep: '1'
+NamespaceIndentation: None
+PointerAlignment: Left
+ReflowComments: 'true'
+SortIncludes: 'true'
+SortUsingDeclarations: 'true'
+SpaceAfterCStyleCast: 'false'
+SpaceAfterLogicalNot: 'false'
+SpaceAfterTemplateKeyword: 'true'
+SpaceBeforeAssignmentOperators: 'true'
+SpaceBeforeCpp11BracedList: 'false'
+SpaceBeforeCtorInitializerColon: 'true'
+SpaceBeforeInheritanceColon: 'true'
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: 'true'
+SpaceInEmptyParentheses: 'false'
+SpacesInAngles: 'false'
+SpacesInCStyleCastParentheses: 'false'
+SpacesInContainerLiterals: 'false'
+SpacesInParentheses: 'false'
+SpacesInSquareBrackets: 'false'
+TabWidth: '20'
+UseTab: Never
