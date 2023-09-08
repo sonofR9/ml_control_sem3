@@ -98,6 +98,10 @@ else()
     add_compile_options(${WARNINGS_FLAGS})
 endif()
 
+if(CMAKE_CXX_STANDARD EQUAL 20)
+    add_compile_options("-fmodules-ts")
+endif()
+
 if(ENABLE_TEST)
     set(BoldCyan "${Esc}[1;36m")
     message("\n${BoldCyan}Build with tests is enabled${ResetColor}\n")

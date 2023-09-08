@@ -1,14 +1,20 @@
 #pragma once
+// module;
 
 #include <array>
 #include <concepts>
 #include <functional>
 #include <iostream>
 
+// export module runge_kutte;
+
+// export import <array>;
+
 namespace runge_kutte {
 constexpr double kEps = 1e-10;
 
 // --------------------------------StatePoint start---------------------------
+// export {
 /**
  * @brief class to represent state of system using T variables
  *
@@ -40,6 +46,12 @@ struct StatePoint {
  private:
   std::array<double, T> data_;
 };
+
+/**
+ * @brief represents current derivatives (left-hand side of equations system)
+ */
+template <int T>
+using StateDerivativesPoint = StatePoint<T>;
 
 template <int T>
 StatePoint<T> operator+(const StatePoint<T>& self, const StatePoint<T>& other) {
@@ -103,12 +115,13 @@ StatePoint<T> operator/(const StatePoint<T>& self, M divider) {
   }
   return result;
 }
+// }
 // --------------------------------StatePoint end------------------------------
-
+// export {
 template <typename F, int T>
 concept StateSpaceFunction =
     requires(F func, StatePoint<T> point, double time) {
-      { func(point, time) } -> std::same_as<StatePoint<T>>;
+      { func(point, time) } -> std::same_as<StateDerivativesPoint<T>>;
     };
 
 template <int T, StateSpaceFunction<T> F>
@@ -156,7 +169,7 @@ SolveDiffEqRungeKutte(double startT, const StatePoint<T>& startX, F fun,
 
   return result;
 }
-
+// }
 } // namespace runge_kutte
 
 template <int T>

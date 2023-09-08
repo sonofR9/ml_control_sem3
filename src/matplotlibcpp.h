@@ -131,8 +131,8 @@ struct _interpreter {
     return ctx;
   }
 
-  PyObject* safe_import(PyObject* module, std::string fname) {
-    PyObject* fn = PyObject_GetAttrString(module, fname.c_str());
+  PyObject* safe_import(PyObject* moduleVar, std::string fname) {
+    PyObject* fn = PyObject_GetAttrString(moduleVar, fname.c_str());
 
     if (!fn)
       throw std::runtime_error(
@@ -202,7 +202,7 @@ struct _interpreter {
     Py_DECREF(matplotlibname);
     if (!matplotlib) {
       PyErr_Print();
-      throw std::runtime_error("Error loading module matplotlib!");
+      throw std::runtime_error("Error loading moduleVar matplotlib!");
     }
 
     // matplotlib.use() must be called *before* pylab, matplotlib.pyplot,
@@ -215,19 +215,19 @@ struct _interpreter {
     PyObject* pymod = PyImport_Import(pyplotname);
     Py_DECREF(pyplotname);
     if (!pymod) {
-      throw std::runtime_error("Error loading module matplotlib.pyplot!");
+      throw std::runtime_error("Error loading moduleVar matplotlib.pyplot!");
     }
 
     s_python_colormap = PyImport_Import(cmname);
     Py_DECREF(cmname);
     if (!s_python_colormap) {
-      throw std::runtime_error("Error loading module matplotlib.cm!");
+      throw std::runtime_error("Error loading moduleVar matplotlib.cm!");
     }
 
     PyObject* pylabmod = PyImport_Import(pylabname);
     Py_DECREF(pylabname);
     if (!pylabmod) {
-      throw std::runtime_error("Error loading module pylab!");
+      throw std::runtime_error("Error loading moduleVar pylab!");
     }
 
     s_python_function_arrow = safe_import(pymod, "arrow");
@@ -527,7 +527,7 @@ void plot_surface(const std::vector<::std::vector<Numeric>>& x,
                   const long fig_number = 0) {
   detail::_interpreter::get();
 
-  // We lazily load the modules here the first time this function is called
+  // We lazily load the moduleVars here the first time this function is called
   // because I'm not sure that we can assume "matplotlib installed" implies
   // "mpl_toolkits installed" on all platforms, and we don't want to require
   // it for people who don't need 3d plots.
@@ -544,13 +544,13 @@ void plot_surface(const std::vector<::std::vector<Numeric>>& x,
     mpl_toolkitsmod = PyImport_Import(mpl_toolkits);
     Py_DECREF(mpl_toolkits);
     if (!mpl_toolkitsmod) {
-      throw std::runtime_error("Error loading module mpl_toolkits!");
+      throw std::runtime_error("Error loading moduleVar mpl_toolkits!");
     }
 
     axis3dmod = PyImport_Import(axis3d);
     Py_DECREF(axis3d);
     if (!axis3dmod) {
-      throw std::runtime_error("Error loading module mpl_toolkits.mplot3d!");
+      throw std::runtime_error("Error loading moduleVar mpl_toolkits.mplot3d!");
     }
   }
 
@@ -712,10 +712,10 @@ void plot3(const std::vector<Numeric>& x, const std::vector<Numeric>& y,
            const long fig_number = 0) {
   detail::_interpreter::get();
 
-  // Same as with plot_surface: We lazily load the modules here the first time
-  // this function is called because I'm not sure that we can assume "matplotlib
-  // installed" implies "mpl_toolkits installed" on all platforms, and we don't
-  // want to require it for people who don't need 3d plots.
+  // Same as with plot_surface: We lazily load the moduleVars here the first
+  // time this function is called because I'm not sure that we can assume
+  // "matplotlib installed" implies "mpl_toolkits installed" on all platforms,
+  // and we don't want to require it for people who don't need 3d plots.
   static PyObject *mpl_toolkitsmod = nullptr, *axis3dmod = nullptr;
   if (!mpl_toolkitsmod) {
     detail::_interpreter::get();
@@ -729,13 +729,13 @@ void plot3(const std::vector<Numeric>& x, const std::vector<Numeric>& y,
     mpl_toolkitsmod = PyImport_Import(mpl_toolkits);
     Py_DECREF(mpl_toolkits);
     if (!mpl_toolkitsmod) {
-      throw std::runtime_error("Error loading module mpl_toolkits!");
+      throw std::runtime_error("Error loading moduleVar mpl_toolkits!");
     }
 
     axis3dmod = PyImport_Import(axis3d);
     Py_DECREF(axis3d);
     if (!axis3dmod) {
-      throw std::runtime_error("Error loading module mpl_toolkits.mplot3d!");
+      throw std::runtime_error("Error loading moduleVar mpl_toolkits.mplot3d!");
     }
   }
 
@@ -1131,10 +1131,10 @@ bool scatter(const std::vector<NumericX>& x, const std::vector<NumericY>& y,
              const long fig_number = 0) {
   detail::_interpreter::get();
 
-  // Same as with plot_surface: We lazily load the modules here the first time
-  // this function is called because I'm not sure that we can assume "matplotlib
-  // installed" implies "mpl_toolkits installed" on all platforms, and we don't
-  // want to require it for people who don't need 3d plots.
+  // Same as with plot_surface: We lazily load the moduleVars here the first
+  // time this function is called because I'm not sure that we can assume
+  // "matplotlib installed" implies "mpl_toolkits installed" on all platforms,
+  // and we don't want to require it for people who don't need 3d plots.
   static PyObject *mpl_toolkitsmod = nullptr, *axis3dmod = nullptr;
   if (!mpl_toolkitsmod) {
     detail::_interpreter::get();
@@ -1148,13 +1148,13 @@ bool scatter(const std::vector<NumericX>& x, const std::vector<NumericY>& y,
     mpl_toolkitsmod = PyImport_Import(mpl_toolkits);
     Py_DECREF(mpl_toolkits);
     if (!mpl_toolkitsmod) {
-      throw std::runtime_error("Error loading module mpl_toolkits!");
+      throw std::runtime_error("Error loading moduleVar mpl_toolkits!");
     }
 
     axis3dmod = PyImport_Import(axis3d);
     Py_DECREF(axis3d);
     if (!axis3dmod) {
-      throw std::runtime_error("Error loading module mpl_toolkits.mplot3d!");
+      throw std::runtime_error("Error loading moduleVar mpl_toolkits.mplot3d!");
     }
   }
 
@@ -1536,13 +1536,13 @@ bool quiver(const std::vector<NumericX>& x, const std::vector<NumericY>& y,
     mpl_toolkitsmod = PyImport_Import(mpl_toolkits);
     Py_DECREF(mpl_toolkits);
     if (!mpl_toolkitsmod) {
-      throw std::runtime_error("Error loading module mpl_toolkits!");
+      throw std::runtime_error("Error loading moduleVar mpl_toolkits!");
     }
 
     axis3dmod = PyImport_Import(axis3d);
     Py_DECREF(axis3d);
     if (!axis3dmod) {
-      throw std::runtime_error("Error loading module mpl_toolkits.mplot3d!");
+      throw std::runtime_error("Error loading moduleVar mpl_toolkits.mplot3d!");
     }
   }
 
@@ -2593,10 +2593,10 @@ set_zlabel(const std::string& str,
            const std::map<std::string, std::string>& keywords = {}) {
   detail::_interpreter::get();
 
-  // Same as with plot_surface: We lazily load the modules here the first time
-  // this function is called because I'm not sure that we can assume "matplotlib
-  // installed" implies "mpl_toolkits installed" on all platforms, and we don't
-  // want to require it for people who don't need 3d plots.
+  // Same as with plot_surface: We lazily load the moduleVars here the first
+  // time this function is called because I'm not sure that we can assume
+  // "matplotlib installed" implies "mpl_toolkits installed" on all platforms,
+  // and we don't want to require it for people who don't need 3d plots.
   static PyObject *mpl_toolkitsmod = nullptr, *axis3dmod = nullptr;
   if (!mpl_toolkitsmod) {
     PyObject* mpl_toolkits = PyString_FromString("mpl_toolkits");
@@ -2608,13 +2608,13 @@ set_zlabel(const std::string& str,
     mpl_toolkitsmod = PyImport_Import(mpl_toolkits);
     Py_DECREF(mpl_toolkits);
     if (!mpl_toolkitsmod) {
-      throw std::runtime_error("Error loading module mpl_toolkits!");
+      throw std::runtime_error("Error loading moduleVar mpl_toolkits!");
     }
 
     axis3dmod = PyImport_Import(axis3d);
     Py_DECREF(axis3d);
     if (!axis3dmod) {
-      throw std::runtime_error("Error loading module mpl_toolkits.mplot3d!");
+      throw std::runtime_error("Error loading moduleVar mpl_toolkits.mplot3d!");
     }
   }
 
