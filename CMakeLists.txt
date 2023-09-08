@@ -29,9 +29,18 @@ option(ENABLE_SANITIZER "Set to \"ON\" to enable sanitizer in debug build" OFF)
 include(cmake/apply_options.cmake)
 
 add_executable(${PROJECT_NAME} 
-               "src/runge_kutte.cpp"
+               "src/main.cpp"
 ) 
+set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 
+target_include_directories(${PROJECT_NAME} PRIVATE
+                "/usr/local/lib/python3.10/dist-packages/numpy/core/include"
+                "/usr/include/python3.10"
+                "src"
+)
+target_link_libraries(${PROJECT_NAME} PRIVATE 
+                      "-lpython3.10"
+)
 
 # if (ENABLE_TEST)
 #     add_subdirectory(tests)
