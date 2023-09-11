@@ -8,8 +8,8 @@ namespace plt = matplotlibcpp;
 int main() {
   using namespace runge_kutte;
 
-  auto u1 = [](double t) -> double { return std::cos(t); };
-  auto u2 = [](double t) -> double { return std::sin(t); };
+  auto u1 = [](double t) -> double { return 1; };
+  auto u2 = [](double t) -> double { return 0; };
   two_wheeled_robot::Model robot(u1, u2, 2, 1);
 
   double delta{0.01};

@@ -114,9 +114,9 @@ class Model<C1, C2> {
    */
   runge_kutte::StateDerivativesPoint<3>
   operator()(const runge_kutte::StatePoint<3>& state, double time) {
-    return {(u1_(state, time) + u2_(state, time)) * std::cos(state[2]),
-            (u1_(state, time) + u2_(state, time)) * std::sin(state[2]),
-            u1_(state, time) - u2_(state, time)};
+    return {r_ / 2 * (u1_(state, time) + u2_(state, time)) * std::cos(state[2]),
+            r_ / 2 * (u1_(state, time) + u2_(state, time)) * std::sin(state[2]),
+            (u1_(state, time) - u2_(state, time)) * r_ / a_};
   }
 
   /**
@@ -125,9 +125,9 @@ class Model<C1, C2> {
    */
   runge_kutte::StatePoint<3> operator()(runge_kutte::StatePoint<3> state,
                                         double time) {
-    return {(u1_(state, time) + u2_(state, time)) * std::cos(state[2]),
-            (u1_(state, time) + u2_(state, time)) * std::sin(state[2]),
-            u1_(state, time) - u2_(state, time)};
+    return {r_ / 2 * (u1_(state, time) + u2_(state, time)) * std::cos(state[2]),
+            r_ / 2 * (u1_(state, time) + u2_(state, time)) * std::sin(state[2]),
+            (u1_(state, time) - u2_(state, time)) * r_ / a_};
   }
 
  private:
@@ -155,9 +155,9 @@ class Model<C1, C2> {
    */
   runge_kutte::StatePoint<3> operator()(runge_kutte::StatePoint<3>&& state,
                                         double time) {
-    return {(u1_(state, time) + u2_(state, time)) * std::cos(state[2]),
-            (u1_(state, time) + u2_(state, time)) * std::sin(state[2]),
-            u1_(state, time) - u2_(state, time)};
+    return {r_ / 2 * (u1_(state, time) + u2_(state, time)) * std::cos(state[2]),
+            r_ / 2 * (u1_(state, time) + u2_(state, time)) * std::sin(state[2]),
+            (u1_(state, time) - u2_(state, time)) * r_ / a_};
   }
 
   /**
@@ -166,9 +166,9 @@ class Model<C1, C2> {
    */
   runge_kutte::StatePoint<3> operator()(runge_kutte::StatePoint<3> state,
                                         double time) {
-    return {(u1_(state, time) + u2_(state, time)) * std::cos(state[2]),
-            (u1_(state, time) + u2_(state, time)) * std::sin(state[2]),
-            u1_(state, time) - u2_(state, time)};
+    return {r_ / 2 * (u1_(state, time) + u2_(state, time)) * std::cos(state[2]),
+            r_ / 2 * (u1_(state, time) + u2_(state, time)) * std::sin(state[2]),
+            (u1_(state, time) - u2_(state, time)) * r_ / a_};
   }
 
  private:
