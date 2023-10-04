@@ -1,6 +1,6 @@
 #include "matplotlibcpp.h"
-#include "runge_kutte.h"
-#include "two_wheel_robot.h"
+#include "runge-kutte.h"
+#include "two-wheel-robot.h"
 // import runge_kutte1;
 
 namespace plt = matplotlibcpp;
