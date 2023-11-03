@@ -2,6 +2,7 @@
 // module;
 
 #include <array>
+#include <cmath>
 #include <concepts>
 #include <functional>
 #include <iostream>
@@ -115,14 +116,30 @@ StatePoint<T> operator/(const StatePoint<T>& self, M divider) {
   }
   return result;
 }
+
+template <int N>
+bool operator==(const StatePoint<N>& lhs, const StatePoint<N>& rhs) {
+  constexpr double eps{1e-3};
+  for (int i{0}; i < N; ++i) {
+    if (fabs(lhs[i] - rhs[i]) > eps) {
+      return false;
+    }
+  }
+  return true;
+}
+
+template <int N>
+bool operator!=(const StatePoint<N>& lhs, const StatePoint<N>& rhs) {
+  return !(lhs == rhs);
+}
 // }
 // --------------------------------StatePoint end------------------------------
 // export {
 template <typename F, int T>
-concept StateSpaceFunction =
-    requires(F func, StatePoint<T> point, double time) {
-      { func(point, time) } -> std::same_as<StateDerivativesPoint<T>>;
-    };
+concept StateSpaceFunction = requires(F func, StatePoint<T> point,
+                                      double time) {
+  { func(point, time) } -> std::same_as<StateDerivativesPoint<T>>;
+};
 
 template <int T, StateSpaceFunction<T> F>
 StatePoint<T> RungeKutteStep(double startT, const StatePoint<T>& startX, F fun,
@@ -148,9 +165,9 @@ StatePoint<T> RungeKutteStep(double startT, const StatePoint<T>& startX, F fun,
  * of each state coordinate and time
  */
 template <int T, StateSpaceFunction<T> F>
-std::array<std::vector<double>, T + 1>
-SolveDiffEqRungeKutte(double startT, const StatePoint<T>& startX, F fun,
-                      double lastT, double delta = 0.001) {
+std::array<std::vector<double>, T + 1> SolveDiffEqRungeKutte(
+    double startT, const StatePoint<T>& startX, F fun, double lastT,
+    double delta = 0.001) {
   std::array<std::vector<double>, T + 1> result;
   double curT{startT};
   StatePoint<T> curX{startX};
@@ -170,7 +187,7 @@ SolveDiffEqRungeKutte(double startT, const StatePoint<T>& startX, F fun,
   return result;
 }
 // }
-} // namespace runge_kutte
+}  // namespace runge_kutte
 
 template <int T>
 std::ostream& operator<<(std::ostream& stream,
