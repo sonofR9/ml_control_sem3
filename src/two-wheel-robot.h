@@ -4,26 +4,26 @@
 
 #include <cmath>
 #include <concepts>
-// import runge_kutte;
+// import optimization;
 
 namespace two_wheeled_robot {
 
 template <typename T>
 concept ControlFunctionFullLvalue =
-    requires(T fun, const runge_kutte::StatePoint<3>& state, double time) {
-  { fun(state, time) } -> std::same_as<runge_kutte::StatePoint<2>>;
+    requires(T fun, const optimization::Vector<3>& state, double time) {
+  { fun(state, time) } -> std::same_as<optimization::Vector<2>>;
 };
 
 template <typename T>
 concept ControlFunctionTimeOnly = requires(T fun, double time) {
-  { fun(time) } -> std::same_as<runge_kutte::StatePoint<2>>;
+  { fun(time) } -> std::same_as<optimization::Vector<2>>;
 };
 
 template <typename T>
 concept ControlFunctionFullRvalue = requires(T fun,
-                                             runge_kutte::StatePoint<3>&& state,
+                                             optimization::Vector<3>&& state,
                                              double time) {
-  { fun(std::move(state), time) } -> std::same_as<runge_kutte::StatePoint<2>>;
+  { fun(std::move(state), time) } -> std::same_as<optimization::Vector<2>>;
 };
 
 template <typename T>
@@ -50,11 +50,11 @@ class Model {
    *
    * @param state current state
    * @param time current time
-   * @return runge_kutte::StateDerivativesPoint<3> left-hand side of equations
+   * @return optimization::StateDerivativesPoint<3> left-hand side of equations
    * system (derivatives of state variables)
    */
-  runge_kutte::StateDerivativesPoint<3> operator()(
-      runge_kutte::StatePoint<3> state, double time);
+  optimization::StateDerivativesPoint<3> operator()(
+      optimization::Vector<3> state, double time);
 };
 
 template <ControlFunctionTimeOnly C>
@@ -68,11 +68,11 @@ class Model<C> {
    *
    * @param state current state
    * @param time current time
-   * @return runge_kutte::StateDerivativesPoint<3> left-hand side of equations
+   * @return optimization::StateDerivativesPoint<3> left-hand side of equations
    * system (derivatives of state variables)
    */
-  runge_kutte::StateDerivativesPoint<3> operator()(
-      const runge_kutte::StatePoint<3>& state, double time) {
+  optimization::StateDerivativesPoint<3> operator()(
+      const optimization::Vector<3>& state, double time) {
     auto res{u_(time)};
     return {(res[0] + res[1]) * std::cos(state[2]),
             (res[0] + res[1]) * std::sin(state[2]), res[0] - res[1]};
@@ -81,8 +81,8 @@ class Model<C> {
   /**
    * @brief Overload of models equations system (So it could accept rvalues too)
    */
-  runge_kutte::StatePoint<3> operator()(runge_kutte::StatePoint<3>&& state,
-                                        double time) {
+  optimization::Vector<3> operator()(optimization::Vector<3>&& state,
+                                     double time) {
     auto res{u_(time)};
     return {(res[0] + res[1]) * std::cos(state[2]),
             (res[0] + res[1]) * std::sin(state[2]), res[0] - res[1]};
@@ -106,11 +106,11 @@ class Model<C> {
    *
    * @param state current state
    * @param time current time
-   * @return runge_kutte::StateDerivativesPoint<3> left-hand side of equations
+   * @return optimization::StateDerivativesPoint<3> left-hand side of equations
    * system (derivatives of state variables)
    */
-  runge_kutte::StateDerivativesPoint<3> operator()(
-      const runge_kutte::StatePoint<3>& state, double time) {
+  optimization::StateDerivativesPoint<3> operator()(
+      const optimization::Vector<3>& state, double time) {
     auto res{u_(state, time)};
     return {r_ / 2 * (res[0] + res[1]) * std::cos(state[2]),
             r_ / 2 * (res[0] + res[1]) * std::sin(state[2]),
@@ -121,8 +121,8 @@ class Model<C> {
    * @brief Overload of models equations system (So it could accept rvalues too)
    * (not preferred)
    */
-  runge_kutte::StatePoint<3> operator()(runge_kutte::StatePoint<3> state,
-                                        double time) {
+  optimization::Vector<3> operator()(optimization::Vector<3> state,
+                                     double time) {
     auto res{u_(state, time)};
     return {r_ / 2 * (res[0] + res[1]) * std::cos(state[2]),
             r_ / 2 * (res[0] + res[1]) * std::sin(state[2]),
@@ -147,11 +147,11 @@ class Model<C> {
    *
    * @param state current state
    * @param time current time
-   * @return runge_kutte::StateDerivativesPoint<3> left-hand side of equations
+   * @return optimization::StateDerivativesPoint<3> left-hand side of equations
    * system (derivatives of state variables)
    */
-  runge_kutte::StatePoint<3> operator()(runge_kutte::StatePoint<3>&& state,
-                                        double time) {
+  optimization::Vector<3> operator()(optimization::Vector<3>&& state,
+                                     double time) {
     auto res{u_(state, time)};
     return {r_ / 2 * (res[0] + res[1]) * std::cos(state[2]),
             r_ / 2 * (res[0] + res[1]) * std::sin(state[2]),
@@ -162,8 +162,8 @@ class Model<C> {
    * @brief Overload of models equations system (So it could accept lvalues too)
    * (not preferred)
    */
-  runge_kutte::StatePoint<3> operator()(runge_kutte::StatePoint<3> state,
-                                        double time) {
+  optimization::Vector<3> operator()(optimization::Vector<3> state,
+                                     double time) {
     auto res{u_(state, time)};
     return {r_ / 2 * (res[0] + res[1]) * std::cos(state[2]),
             r_ / 2 * (res[0] + res[1]) * std::sin(state[2]),

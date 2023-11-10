@@ -6,8 +6,13 @@
 
 namespace plt = matplotlibcpp;
 
+using namespace optimization;
+
+template <int N, StateSpaceFunction<N> MS, ConjugateFunction<N, N> CS,
+          FindMaximumFunction<N, 2> FM>
+using PontryaginSolver = decltype(SolveUsingPontryagin<2, N, MS, CS, FM>);
+
 int main() {
-  using namespace runge_kutte;
   // struct Lambda {
   //  public:
   //   Lambda(int a, int& b) : a{a}, b{b} {
@@ -30,22 +35,21 @@ int main() {
   // };
 
   // auto u2 = [](double t) -> double { return 0; };
-  using namespace runge_kutte;
-  using namespace pontryagin;
-  auto u = [](double t) -> runge_kutte::StatePoint<2> { return {1, 0}; };
+
+  auto u = [](double t) -> optimization::StatePoint<2> { return {1, 0}; };
   constexpr double umin{-1};
   constexpr double umax{1};
 
   two_wheeled_robot::Model robot(u, 2, 1);
-  auto conjugate = [](const StatePoint<3>& x, const StatePoint<2>& u,
-                      const StatePoint<3>& psi,
+  auto conjugate = [](const Vector<3>& x, const Vector<2>& u,
+                      const Vector<3>& psi,
                       double time) -> StateDerivativesPoint<3> {
     return {0, 0,
             -psi[0] * sin(x[2]) * (u[0] + u[1]) / 2 +
                 psi[1] * cos(x[2]) * (u[0] + u[1]) / 2};
   };
-  auto findMaximum = [](const StatePoint<3>& x, const StatePoint<3>& psi,
-                        double) -> StatePoint<2> {
+  auto findMaximum = [](const Vector<3>& x, const Vector<3>& psi,
+                        double) -> Vector<2> {
     double ul;
     double ur;
     if (psi[0] * cos(x[2]) + psi[1] * sin(x[2]) + psi[2] > 0) {
@@ -62,18 +66,19 @@ int main() {
   };
 
   double delta{0.01};
-  StatePoint<3> x0{0, 0, 0};
-  StatePoint<3> psi0{
+  Vector<3> x0{0, 0, 0};
+  Vector<3> psi0{
       0,
       0,
   };
-  StatePoint<3> xf{0, 0, 0};
+  Vector<3> xf{0, 0, 0};
   double curT{0};
   // double endT{100};
   // const auto solvedFun = SolveDiffEqRungeKutte(curT, curX, robot, endT,
   // delta);
+
   const auto solvedFcn =
-      SolveUsingPontryagin(x0, psi0, robot, conjugate, findMaximum, xf);
+      PontryaginSolver(x0, psi0, robot, conjugate, findMaximum, xf);
 
   plt::figure();
   // plt::plot(solvedFun[0], solvedFun[1]);

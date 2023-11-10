@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-namespace pontryagin {
+namespace optimization {
 class ControlFunction {
  public:
   double operator()(double t) {
@@ -23,37 +23,29 @@ class ControlFunction {
 };
 
 template <typename F, int N, int M>
-concept FindMaximumFunction = requires(F func,
-                                       const runge_kutte::StatePoint<N>& x,
-                                       const runge_kutte::StatePoint<N>& psi,
-                                       double time) {
-  { func(x, psi, time) } -> std::same_as<runge_kutte::StatePoint<M>>;
+concept FindMaximumFunction = requires(F func, const Vector<N>& x,
+                                       const Vector<N>& psi, double time) {
+  { func(x, psi, time) } -> std::same_as<Vector<M>>;
 };
 
 template <typename F, int N, int M>
-concept ConjugateFunction = requires(F func,
-                                     const runge_kutte::StatePoint<N>& x,
-                                     const runge_kutte::StatePoint<M>& u,
-                                     const runge_kutte::StatePoint<N>& psi,
+concept ConjugateFunction = requires(F func, const Vector<N>& x,
+                                     const Vector<M>& u, const Vector<N>& psi,
                                      double time) {
-  {
-    func(x, u, psi, time)
-    } -> std::same_as<runge_kutte::StateDerivativesPoint<N>>;
+  { func(x, u, psi, time) } -> std::same_as<StateDerivativesPoint<N>>;
 };
 
-template <int M, int N, runge_kutte::StateSpaceFunction<N> MS,
-          ConjugateFunction<N, N> CS, FindMaximumFunction<N, M> FM>
-ControlFunction SolveUsingPontryagin(const runge_kutte::StatePoint<N>& x0,
-                                     const runge_kutte::StatePoint<N>& psi0,
+template <int M, int N, StateSpaceFunction<N> MS, ConjugateFunction<N, N> CS,
+          FindMaximumFunction<N, M> FM>
+ControlFunction SolveUsingPontryagin(const Vector<N>& x0, const Vector<N>& psi0,
                                      MS main, CS conjugate, FM findMaximum,
-                                     const runge_kutte::StatePoint<N>& xf) {
-  using namespace runge_kutte;
+                                     const Vector<N>& xf) {
   ControlFunction result;
 
   double dt{1e-2};
 
   double t{0};
-  StatePoint<M> u;
+  Vector<M> u;
   auto x{x0};
   auto psi{psi0};
   while (x != xf) {
@@ -65,4 +57,4 @@ ControlFunction SolveUsingPontryagin(const runge_kutte::StatePoint<N>& x0,
   return result;
 }
 
-}  // namespace pontryagin
+}  // namespace optimization
