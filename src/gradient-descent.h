@@ -5,28 +5,27 @@
 #include <concepts>
 
 namespace optimization {
-template <typename F, int N>
-concept GradientFunction = requires(F func, const Vector<N>& inp) {
-                             { func(inp) } -> std::same_as<Vector<N>>;
+template <typename F, typename T>
+concept GradientFunction = requires(F func, const T& inp) {
+                             { func(inp) } -> std::same_as<T>;
                            };
 
-template <typename F, int N>
-concept Regular1OutFunction = requires(F func, const Vector<N>& inp) {
+template <typename F, typename T>
+concept Regular1OutFunction = requires(F func, const T& inp) {
                                 { func(inp) } -> std::same_as<double>;
                               };
 
-template <int N, GradientFunction<N> G>
-Vector<N> GradientDescent(const Vector<N>& qMin, const Vector<N>& qMax, G grad,
-                          double ksi = 0.5) {
+template <typename T, GradientFunction<T> G>
+T GradientDescent(const T& qMin, const T& qMax, G grad, double ksi = 0.5) {
   constexpr double kg{0.618034};
 
   auto qStar{ksi * (qMin + qMax)};
   const auto& gradStar{grad(qStar)};
 
-  const auto golden = [qMin, qMax](const double kGold, const Vector<N>& q,
-                                   const Vector<N>& grad) -> Vector<N> {
-    Vector<N> result;
-    for (int i{0}; i < N; ++i) {
+  const auto golden = [qMin, qMax](const double kGold, const T& q,
+                                   const T& grad) -> T {
+    T result;
+    for (int i{0}; i < T::size(); ++i) {
       const auto dq{q[i] + kGold * grad[i]};
       if (dq > qMax) {
         result[i] = qMax;
@@ -63,14 +62,13 @@ Vector<N> GradientDescent(const Vector<N>& qMin, const Vector<N>& qMax, G grad,
   return (q1 + q2) / 2;
 }
 
-template <int N, Regular1OutFunction<N> G>
-Vector<N> GradientDescent(const Vector<N>& qMin, const Vector<N>& qMax, G grad,
-                          double ksi = 0.5) {
-  auto gradFunc = [&](const Vector<N>& q) -> Vector<N> {
+template <typename T, Regular1OutFunction<T> G>
+T GradientDescent(const T& qMin, const T& qMax, G grad, double ksi = 0.5) {
+  auto gradFunc = [&](const T& q) -> T {
     constexpr double dq{norm(qMax - qMin) / 1e6};
-    Vector<N> result{};
-    Vector<N> tmp{};
-    for (int i{0}; i < N; ++i) {
+    T result{};
+    T tmp{};
+    for (int i{0}; i < T::size(); ++i) {
       tmp[i] = dq;
       result[i] = grad(q + tmp);
       tmp[i] = 0;

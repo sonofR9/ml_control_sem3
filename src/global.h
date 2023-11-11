@@ -34,10 +34,10 @@ struct Vector {
     for (int i{0}; i < T; ++i) data_[i] = *(el++);
   }
 
-  double& operator[](int i) {
+  double& operator[](int i) noexcept {
     return data_[i];
   }
-  double operator[](int i) const {
+  double operator[](int i) const noexcept {
     return data_[i];
   }
 
@@ -46,6 +46,10 @@ struct Vector {
   Iterator begin();
 
   Iterator end();
+
+  [[nodiscard]] static constexpr int size() noexcept {
+    return T;
+  }
 
  private:
   std::array<double, T> data_;
