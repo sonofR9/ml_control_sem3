@@ -1,8 +1,10 @@
-#include "matplotlibcpp.h"
 #include "runge-kutte.h"
 #include "two-wheel-robot.h"
 // import runge_kutte1;
 #include "pontryagin-method.h"
+#include "global.h"
+
+#include "matplotlibcpp.h"
 
 namespace plt = matplotlibcpp;
 

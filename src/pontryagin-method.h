@@ -1,4 +1,5 @@
 #include "runge-kutte.h"
+#include "global.h"
 
 #include <concepts>
 #include <functional>

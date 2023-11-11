@@ -9,8 +9,6 @@ project(ml_control VERSION 0.1.0)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-include(cmake/get_boost_lib.cmake)
-
 option(ENABLE_BACKEND "Set to \"ON\" to build back" ON)
 option(ENABLE_FRONTEND "Set to \"ON\" to build front" ON)
 
