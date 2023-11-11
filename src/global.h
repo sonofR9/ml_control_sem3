@@ -16,10 +16,10 @@ constexpr double kEps = 1e-10;
  *
  * @tparam T number of state variables
  */
-template <int T>
+template <int N, typename T = double>
 struct Vector {
   Vector() {
-    for (int i{0}; i < T; ++i) data_[i] = 0;
+    for (int i{0}; i < N; ++i) data_[i] = 0;
   }
   ~Vector() = default;
   Vector(const Vector&) = default;
@@ -27,17 +27,17 @@ struct Vector {
   Vector& operator=(const Vector&) = default;
   Vector& operator=(Vector&&) noexcept = default;
 
-  Vector(std::initializer_list<double> list) {
-    if (list.size() != T)
+  Vector(std::initializer_list<T> list) {
+    if (list.size() != N)
       throw std::length_error("Initializer list size dffers from data size");
     auto el = list.begin();
-    for (int i{0}; i < T; ++i) data_[i] = *(el++);
+    for (int i{0}; i < N; ++i) data_[i] = *(el++);
   }
 
-  double& operator[](int i) noexcept {
+  T& operator[](int i) noexcept {
     return data_[i];
   }
-  double operator[](int i) const noexcept {
+  T operator[](int i) const noexcept {
     return data_[i];
   }
 
@@ -48,109 +48,108 @@ struct Vector {
   Iterator end();
 
   [[nodiscard]] static constexpr int size() noexcept {
-    return T;
+    return N;
   }
 
  private:
-  std::array<double, T> data_;
+  std::array<T, N> data_;
 };
 
-template <int T>
-using StatePoint = Vector<T>;
+template <int N>
+using StatePoint = Vector<N>;
 
 /**
  * @brief represents current derivatives (left-hand side of equations system)
  */
-template <int T>
-using StateDerivativesPoint = Vector<T>;
+template <int N>
+using StateDerivativesPoint = Vector<N>;
 
-template <int T>
-Vector<T> operator+(const Vector<T>& self, const Vector<T>& other) {
-  Vector<T> result;
-  for (int i{0}; i < T; ++i) {
+template <int N, typename T>
+Vector<N, T> operator+(const Vector<N, T>& self, const Vector<N, T>& other) {
+  Vector<N, T> result;
+  for (int i{0}; i < N; ++i) {
     result[i] = other[i] + self[i];
   }
   return result;
 }
 
-template <int T>
-Vector<T>& operator+=(Vector<T>& self, const Vector<T>& other) {
-  for (int i{0}; i < T; ++i) {
+template <int N, typename T>
+Vector<N, T>& operator+=(Vector<N, T>& self, const Vector<N, T>& other) {
+  for (int i{0}; i < N; ++i) {
     self[i] += other[i];
   }
   return self;
 }
 
-template <int T>
-Vector<T> operator-(const Vector<T>& self, const Vector<T>& other) {
-  Vector<T> result;
-  for (int i{0}; i < T; ++i) {
+template <int N, typename T>
+Vector<N, T> operator-(const Vector<N, T>& self, const Vector<N, T>& other) {
+  Vector<N, T> result;
+  for (int i{0}; i < N; ++i) {
     result[i] = other[i] - self[i];
   }
   return result;
 }
 
-template <int T>
-Vector<T>& operator-=(Vector<T>& self, const Vector<T>& other) {
-  for (int i{0}; i < T; ++i) {
+template <int N, typename T>
+Vector<N, T>& operator-=(Vector<N, T>& self, const Vector<N, T>& other) {
+  for (int i{0}; i < N; ++i) {
     self[i] -= other[i];
   }
   return self;
 }
 
-template <int T, typename M>
-Vector<T> operator*(const Vector<T>& self, M multiplier) {
-  Vector<T> result;
-  for (int i{0}; i < T; ++i) {
-    result[i] = multiplier * self[i];
-  }
+template <int N, typename T, typename M>
+Vector<N, T> operator*(const Vector<N, T>& self, M multiplier) {
+  Vector<N, T> result;
+  // for (int i{0}; i < N; ++i) {
+  // result[i] = multiplier * self[i];
+  // }
+  std::transform(self.begin(), self.end(), result.begin(),
+                 [&multiplier](const T& val) -> T { return val * multiplier; });
   return result;
 }
-template <int T, typename M>
-Vector<T> operator*(M multiplier, const Vector<T>& self) {
+template <int N, typename T, typename M>
+Vector<N, T> operator*(M multiplier, const Vector<N, T>& self) {
   return self * multiplier;
 }
-template <int T>
-Vector<T>& operator*=(Vector<T>& self, const Vector<T>& other) {
-  for (int i{0}; i < T; ++i) {
+template <int N, typename T>
+Vector<N, T>& operator*=(Vector<N, T>& self, const Vector<N, T>& other) {
+  for (int i{0}; i < N; ++i) {
     self[i] *= other[i];
   }
   return self;
 }
 
-template <int T, typename M>
-Vector<T> operator/(const Vector<T>& self, M divider) {
-  Vector<T> result;
-  for (int i{0}; i < T; ++i) {
+template <int N, typename T, typename M>
+Vector<N, T> operator/(const Vector<N, T>& self, M divider) {
+  Vector<N, T> result;
+  for (int i{0}; i < N; ++i) {
     result[i] = self[i] / divider;
   }
   return result;
 }
 
-template <int N>
-bool operator==(const Vector<N>& lhs, const Vector<N>& rhs) {
+template <int N, typename T>
+bool operator==(const Vector<N, T>& lhs, const Vector<N, T>& rhs) {
   constexpr double eps{1e-3};
-  for (int i{0}; i < N; ++i) {
-    if (fabs(lhs[i] - rhs[i]) > eps) {
-      return false;
-    }
-  }
-  return true;
+  const auto& diff{lhs - rhs};
+  return !std::any_of(diff.begin(), diff.end(),
+                      [eps](const T& value) { return fabs(value) > eps; });
 }
 
-template <int N>
-bool operator!=(const Vector<N>& lhs, const Vector<N>& rhs) {
+template <int N, typename T>
+bool operator!=(const Vector<N, T>& lhs, const Vector<N, T>& rhs) {
   return !(lhs == rhs);
 }
 
-template <int N>
-class Vector<N>::Iterator {
+template <int N, typename T>
+class Vector<N, T>::Iterator {
  public:
   using iterator_category = std::random_access_iterator_tag;
-  using value_type = double;
+  using value_type = T;
   using difference_type = std::ptrdiff_t;
-  using pointer = double*;
-  using reference = double&;
+  using pointer = T*;
+  using reference = T&;
 
   explicit Iterator(pointer ptr) : ptr_(ptr) {
   }
@@ -234,35 +233,35 @@ class Vector<N>::Iterator {
   pointer ptr_;
 };
 
-template <int N>
-typename Vector<N>::Iterator Vector<N>::begin() {
+template <int N, typename T>
+typename Vector<N, T>::Iterator Vector<N, T>::begin() {
   return data_.begin();
 }
 
-template <int N>
-typename Vector<N>::Iterator Vector<N>::end() {
+template <int N, typename T>
+typename Vector<N, T>::Iterator Vector<N, T>::end() {
   return data_.end();
 }
 
-template <int N>
-double norm(Vector<N> self) {
+template <int N, typename T>
+double norm(Vector<N, T> self) {
   return std::sqrt(std::transform_reduce(self.begin(), self.end(), 0.0));
 }
 // }
 // --------------------------------StatePoint end------------------------------
 // export {
-template <typename F, int T>
-concept StateSpaceFunction = requires(F func, Vector<T> point, double time) {
+template <typename F, int N>
+concept StateSpaceFunction = requires(F func, Vector<N> point, double time) {
                                {
                                  func(point, time)
-                                 } -> std::same_as<StateDerivativesPoint<T>>;
+                                 } -> std::same_as<StateDerivativesPoint<N>>;
                              };
 }  // namespace optimization
 
-template <int T>
+template <int N, typename T>
 std::ostream& operator<<(std::ostream& stream,
-                         const optimization::Vector<T>& state) {
-  for (int i{0}; i < T; ++i) {
+                         const optimization::Vector<N, T>& state) {
+  for (int i{0}; i < N; ++i) {
     stream << state[i] << " ";
   }
   return stream;
