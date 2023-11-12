@@ -256,6 +256,16 @@ concept StateSpaceFunction = requires(F func, Vector<N> point, double time) {
                                  func(point, time)
                                  } -> std::same_as<StateDerivativesPoint<N>>;
                              };
+
+template <typename F, typename T>
+concept GradientFunction = requires(F func, const T& inp) {
+                             { func(inp) } -> std::same_as<T>;
+                           };
+
+template <typename F, typename T>
+concept Regular1OutFunction = requires(F func, const T& inp) {
+                                { func(inp) } -> std::same_as<double>;
+                              };
 }  // namespace optimization
 
 template <int N, typename T>

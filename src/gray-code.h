@@ -44,6 +44,10 @@ class DoubleGrayCode {
     return static_cast<double>(from_gray(code_)) / D;
   }
 
+  void changeBit(int bit) {
+    code_ ^= (1 << bit);
+  }
+
  private:
   uint64_t code_{0};
 };

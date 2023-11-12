@@ -5,16 +5,6 @@
 #include <concepts>
 
 namespace optimization {
-template <typename F, typename T>
-concept GradientFunction = requires(F func, const T& inp) {
-                             { func(inp) } -> std::same_as<T>;
-                           };
-
-template <typename F, typename T>
-concept Regular1OutFunction = requires(F func, const T& inp) {
-                                { func(inp) } -> std::same_as<double>;
-                              };
-
 template <typename T, GradientFunction<T> G>
 T GradientDescent(const T& qMin, const T& qMax, G grad, double ksi = 0.5) {
   constexpr double kg{0.618034};
