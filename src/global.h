@@ -1,10 +1,13 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
+#include <cmath>
 #include <concepts>
 #include <functional>
 #include <numeric>
 #include <ostream>
+#include <ranges>
 
 namespace optimization {
 constexpr double kEps = 1e-10;
@@ -44,7 +47,6 @@ struct Vector {
   class Iterator;
 
   Iterator begin();
-
   Iterator end();
 
   [[nodiscard]] static constexpr int size() noexcept {
@@ -91,6 +93,15 @@ Vector<N, T> operator-(const Vector<N, T>& self, const Vector<N, T>& other) {
 }
 
 template <int N, typename T>
+Vector<N, T> operator-(const Vector<N, T>& self) {
+  Vector<N, T> result;
+  for (int i{0}; i < N; ++i) {
+    result[i] = -self[i];
+  }
+  return result;
+}
+
+template <int N, typename T>
 Vector<N, T>& operator-=(Vector<N, T>& self, const Vector<N, T>& other) {
   for (int i{0}; i < N; ++i) {
     self[i] -= other[i];
@@ -101,11 +112,11 @@ Vector<N, T>& operator-=(Vector<N, T>& self, const Vector<N, T>& other) {
 template <int N, typename T, typename M>
 Vector<N, T> operator*(const Vector<N, T>& self, M multiplier) {
   Vector<N, T> result;
-  // for (int i{0}; i < N; ++i) {
-  // result[i] = multiplier * self[i];
-  // }
-  std::transform(self.begin(), self.end(), result.begin(),
-                 [&multiplier](const T& val) -> T { return val * multiplier; });
+  for (int i{0}; i < N; ++i) {
+    result[i] = multiplier * self[i];
+  }
+  // std::transform(self.begin(), self.end(), result.begin(),
+  //  [&multiplier](const T& val) -> T { return val * multiplier; });
   return result;
 }
 template <int N, typename T, typename M>
@@ -145,13 +156,16 @@ bool operator!=(const Vector<N, T>& lhs, const Vector<N, T>& rhs) {
 template <int N, typename T>
 class Vector<N, T>::Iterator {
  public:
-  using iterator_category = std::random_access_iterator_tag;
+  // TODO(novak)
+  // using iterator_category = std::random_access_iterator_tag;
+
+  using iterator_category = std::bidirectional_iterator_tag;
   using value_type = T;
   using difference_type = std::ptrdiff_t;
   using pointer = T*;
   using reference = T&;
 
-  explicit Iterator(pointer ptr) : ptr_(ptr) {
+  /*implicit*/ Iterator(pointer ptr) : ptr_(ptr) {
   }
 
   reference operator*() const {
@@ -205,29 +219,12 @@ class Vector<N, T>::Iterator {
     return *this;
   }
 
-  bool operator==(const Iterator& other) const {
-    return ptr_ == other.ptr_;
-  }
+  // TODO(novak)
+  // reference operator[](difference_type n) const {
+  //   return *(this + n);
+  // }
 
-  bool operator!=(const Iterator& other) const {
-    return ptr_ != other.ptr_;
-  }
-
-  bool operator<(const Iterator& other) const {
-    return ptr_ < other.ptr_;
-  }
-
-  bool operator>(const Iterator& other) const {
-    return ptr_ > other.ptr_;
-  }
-
-  bool operator<=(const Iterator& other) const {
-    return ptr_ <= other.ptr_;
-  }
-
-  bool operator>=(const Iterator& other) const {
-    return ptr_ >= other.ptr_;
-  }
+  friend auto operator<=>(const Iterator&, const Iterator&) = default;
 
  private:
   pointer ptr_;
@@ -235,37 +232,43 @@ class Vector<N, T>::Iterator {
 
 template <int N, typename T>
 typename Vector<N, T>::Iterator Vector<N, T>::begin() {
-  return data_.begin();
+  return {&data_[0]};
 }
 
 template <int N, typename T>
 typename Vector<N, T>::Iterator Vector<N, T>::end() {
-  return data_.end();
+  return {&data_[N - 1] + 1};
 }
 
 template <int N, typename T>
 double norm(Vector<N, T> self) {
-  return std::sqrt(std::transform_reduce(self.begin(), self.end(), 0.0));
+  return std::sqrt(
+      std::transform_reduce(self.begin(), self.end(), 0.0, std::plus<>(),
+                            [](const T& val) { return val * val; }));
+}
+
+double norm(Vector<100, double> self) {
+  return std::sqrt(std::transform_reduce(self.begin(), self.end(), 0.0,
+                                         std::plus{},
+                                         [](double val) { return val * val; }));
 }
 // }
 // --------------------------------StatePoint end------------------------------
 // export {
 template <typename F, int N>
 concept StateSpaceFunction = requires(F func, Vector<N> point, double time) {
-                               {
-                                 func(point, time)
-                                 } -> std::same_as<StateDerivativesPoint<N>>;
-                             };
+  { func(point, time) } -> std::same_as<StateDerivativesPoint<N>>;
+};
 
 template <typename F, typename T>
 concept GradientFunction = requires(F func, const T& inp) {
-                             { func(inp) } -> std::same_as<T>;
-                           };
+  { func(inp) } -> std::same_as<T>;
+};
 
 template <typename F, typename T>
 concept Regular1OutFunction = requires(F func, const T& inp) {
-                                { func(inp) } -> std::same_as<double>;
-                              };
+  { func(inp) } -> std::same_as<double>;
+};
 }  // namespace optimization
 
 template <int N, typename T>
