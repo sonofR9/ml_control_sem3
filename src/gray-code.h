@@ -24,24 +24,22 @@ uint64_t from_gray(uint64_t n) {
 
 template <uint64_t D>
 class DoubleGrayCode {
+  const uint64_t zero_{std::numeric_limits<uint64_t>::max() / D / 2};
+
  public:
   DoubleGrayCode() = default;
-  /*implicit*/ DoubleGrayCode(const double& value) {
-    code_ = to_gray(D * value);
+  /*implicit*/ DoubleGrayCode(double value) {
+    code_ = to_gray(static_cast<uint64_t>(D * (value + zero_)));
   }
-  /*implicit*/ DoubleGrayCode(double&& value) {
-    code_ = to_gray(D * value);
-  }
-
   DoubleGrayCode& operator=(double value) {
-    code_ = to_gray(D * value);
+    code_ = to_gray(D * (value + zero_));
   }
 
   uint64_t getGray() const {
     return code_;
   }
   uint64_t getDouble() const {
-    return static_cast<double>(from_gray(code_)) / D;
+    return static_cast<double>(from_gray(code_)) / D - zero_;
   }
 
   void changeBit(int bit) {

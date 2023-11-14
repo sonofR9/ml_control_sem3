@@ -18,7 +18,24 @@ template <int N, StateSpaceFunction<N> MS, ConjugateFunction<N, N> CS,
           FindMaximumFunction<N, 2> FM>
 using PontryaginSolver = decltype(SolveUsingPontryagin<2, N, MS, CS, FM>);
 
-int main() {
+void testGradientDescent() {
+  const Vector<5> qMin{-3, -3, -3, -3, -3};
+  const Vector<5> qMax{30, 30, 30, 30, 30};
+  // func = (q0-5)^2 + (q1)^2 + (q2)^2 + (q3-5)^2 + (q4-10)^2
+  auto grad = [](const Vector<5>& q) -> Vector<5> {
+    return {2 * (q[0] - 5), 2 * q[1], 2 * q[2], 2 * (q[3] - 5),
+            2 * (q[4] - 10)};
+  };
+  auto functional = [](const Vector<5>& q) -> double {
+    return std::pow(q[0] - 5, 2) + std::pow(q[1], 2) + std::pow(q[2], 2) +
+           std::pow(q[3] - 5, 2) + std::pow(q[4] - 10, 2);
+  };
+  const auto& res{GradientDescent(qMin, qMax, functional, grad)};
+  std::cout << "GradientDescent: [" << res << "] True: [5 0 0 5 10]"
+            << std::endl;
+}
+
+void testPontryagin() {
   // auto u = [](double t) -> optimization::StatePoint<2> { return {1, 0}; };
   // constexpr double umin{-1};
   // constexpr double umax{1};
@@ -59,21 +76,15 @@ int main() {
 
   // const auto solvedFcn =
   // PontryaginSolver(x0, psi0, robot, conjugate, findMaximum, xf);
+}
 
-  Vector<5> qMin{-3, -3, -3, -3, -3};
-  Vector<5> qMax{30, 30, 30, 30, 30};
-  // func = (q0-5)^2 + (q1)^2 + (q2)^2 + (q3-5)^2 + (q4-10)^2
-  auto grad = [](const Vector<5>& q) -> Vector<5> {
-    return {2 * (q[0] - 5), 2 * q[1], 2 * q[2], 2 * (q[3] - 5),
-            2 * (q[4] - 10)};
-  };
-  auto functional = [](const Vector<5>& q) -> double {
-    return std::pow(q[0] - 5, 2) + std::pow(q[1], 2) + std::pow(q[2], 2) +
-           std::pow(q[3] - 5, 2) + std::pow(q[4] - 10, 2);
-  };
-  const auto& res{GradientDescent(qMin, qMax, functional, grad)};
-  std::cout << res << std::endl;
+void testEvolution() {
+}
 
+int main() {
+  testPontryagin();
+  testGradientDescent();
+  testEvolution();
   // plt::figure();
   // plt::plot(solvedFun[0], solvedFun[1]);
   // plt::show();

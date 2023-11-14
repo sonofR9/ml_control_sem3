@@ -51,7 +51,6 @@ T GradientDescent(const T& qMin, const T& qMax, F functional, G grad,
     auto fQ1{functional(q1)};
     auto fQ2{functional(q2)};
 
-    int iter{0};
     while (norm(q2 - q1) > kEps) {
       // std::cout << iter << " " << norm(q2 - q1) << std::endl;
       if (fQ1 < fQ2) {
@@ -67,7 +66,6 @@ T GradientDescent(const T& qMin, const T& qMax, F functional, G grad,
         q2 = golden(kg, qStar, qWave - qStar);
         fQ2 = functional(q2);
       }
-      ++iter;
     }
   }
   return (q1 + q2) / 2;
