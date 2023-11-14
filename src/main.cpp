@@ -2,6 +2,7 @@
 #include "runge-kutte.h"
 #include "two-wheel-robot.h"
 // import runge_kutte1;
+#include "evolution-optimization.h"
 #include "global.h"
 #include "pontryagin-method.h"
 
@@ -79,6 +80,13 @@ void testPontryagin() {
 }
 
 void testEvolution() {
+  auto fitness = [](const Vector<5>& q) -> double {
+    return 1 + std::pow(q[0] - 5, 2) + std::pow(q[1], 2) + std::pow(q[2], 2) +
+           std::pow(q[3] - 5, 2) + std::pow(q[4] - 10, 2);
+  };
+  Evolution<5, 1000, decltype(fitness)> solver(fitness);
+  const auto best{solver.solve(100)};
+  std::cout << "Evolution: [" << best << "] True: [5 0 0 5 10]" << std::endl;
 }
 
 int main() {

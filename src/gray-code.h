@@ -24,26 +24,51 @@ uint64_t from_gray(uint64_t n) {
 
 template <uint64_t D>
 class DoubleGrayCode {
-  const uint64_t zero_{std::numeric_limits<uint64_t>::max() / D / 2};
+  static const uint64_t zero_{std::numeric_limits<uint64_t>::max() / D / 2};
 
  public:
-  DoubleGrayCode() = default;
+  DoubleGrayCode() : DoubleGrayCode(static_cast<double>(zero_)) {
+  }
   /*implicit*/ DoubleGrayCode(double value) {
-    code_ = to_gray(static_cast<uint64_t>(D * (value + zero_)));
+    code_ = to_gray(
+        static_cast<uint64_t>(D * (value + static_cast<double>(zero_))));
   }
   DoubleGrayCode& operator=(double value) {
-    code_ = to_gray(D * (value + zero_));
+    code_ = to_gray(
+        static_cast<uint64_t>(D * (value + static_cast<double>(zero_))));
+    return *this;
   }
+  // /*implicit*/ DoubleGrayCode(uint64_t value) {
+  //   code_ = to_gray(D * (value + zero_));
+  // }
+  // DoubleGrayCode& operator=(uint64_t value) {
+  //   code_ = to_gray(D * (value + zero_));
+  // }
 
-  uint64_t getGray() const {
+  DoubleGrayCode(const DoubleGrayCode& value) = default;
+  DoubleGrayCode(DoubleGrayCode&& value) noexcept = default;
+  DoubleGrayCode& operator=(const DoubleGrayCode& value) = default;
+  DoubleGrayCode& operator=(DoubleGrayCode&& value) noexcept = default;
+
+  [[nodiscard]] uint64_t getGray() const {
     return code_;
   }
-  uint64_t getDouble() const {
-    return static_cast<double>(from_gray(code_)) / D - zero_;
+  [[nodiscard]] double getDouble() const {
+    return static_cast<double>(from_gray(code_)) / D -
+           static_cast<double>(zero_);
   }
 
   void changeBit(int bit) {
     code_ ^= (1 << bit);
+  }
+
+  DoubleGrayCode<D>& operator&=(uint64_t rhs) {
+    code_ &= rhs;
+    return *this;
+  }
+  DoubleGrayCode<D>& operator|=(uint64_t rhs) {
+    code_ |= rhs;
+    return *this;
   }
 
  private:

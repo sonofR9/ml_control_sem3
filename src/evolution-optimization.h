@@ -13,14 +13,14 @@ constexpr int seed{1};
 constexpr double threshold{0.6};
 
 struct DoubleGenerator {
-  static int get() {
+  static double get() {
     static std::mt19937 gen(seed);
     static std::uniform_real_distribution<> dis(-100, 100);
     return dis(gen);
   }
 };
 
-template <int D>
+template <uint64_t D>
 struct IntGenerator {
   static int get() {
     static std::mt19937 gen(seed);
@@ -37,14 +37,14 @@ struct Probability {
   }
 };
 
-template <int D>
+template <uint64_t D>
 void mutateGen(DoubleGrayCode<D>& code) {
   if (Probability::get() > threshold) {
     code.changeBit(IntGenerator<D>::get());
   }
 }
 
-template <int D>
+template <uint64_t D>
 std::pair<DoubleGrayCode<D>, DoubleGrayCode<D>> crossover(
     DoubleGrayCode<D> lhs, DoubleGrayCode<D> rhs) {
   uint64_t mask = (1ULL << IntGenerator<D>::get()) - 1;
@@ -61,16 +61,19 @@ std::pair<DoubleGrayCode<D>, DoubleGrayCode<D>> crossover(
   return {lhs, rhs};
 }
 
+// TODO(novak) deduce N from Fit
 /**
  * @brief
  *
- * @tparam N number of steps in piecewise function
- * @tparam D number of decimals after comma
- * @tparam Fit function which calculates fitness. Should return [1, infinity) (1
- * is best)
+ * @tparam N number of parameters of function being optimized (number of steps
+ * in piecewise function)
+ * @tparam D multiplier for gray code
+ * @tparam Fit function which calculates fitness. Should return [1, infinity)
+ * (where 1 is best)
  * @tparam P number of individuals in population
  */
-template <int N, int D, Regular1OutFunction<Vector<N, double>> Fit, int P = 100>
+template <int N, uint64_t D, Regular1OutFunction<Vector<N, double>> Fit,
+          int P = 100>
 class Evolution {
   using Gray = DoubleGrayCode<D>;
   using Chromosome = Vector<N, Gray>;
@@ -82,7 +85,8 @@ class Evolution {
   Vector<N, double> solve(int NumIterations) {
     std::pair<Chromosome, double> best{{}, std::numeric_limits<double>::max()};
     std::array<Chromosome, P> population{Evolution::generatePopulation()};
-    for (int i{0}; i < NumIterations; ++i) {
+
+    for (int i{0}; best.second > 1 + kEps && i < NumIterations; ++i) {
       auto [fitness, minIndex] = evaluatePopulation(population);
       if (fitness[minIndex] < best.second) {
         best = {population[minIndex], fitness[minIndex]};
@@ -104,7 +108,9 @@ class Evolution {
 
   static void mutatePopulation(std::array<Chromosome, P>& population) {
     for (auto& individual : population) {
-      mutateGen(individual);
+      for (auto& gen : individual) {
+        mutateGen(gen);
+      }
     }
   }
 
@@ -121,13 +127,15 @@ class Evolution {
           --rhsIndex;
         }
       }
-      const auto lhsFit{fitness(lhsIndex)};
-      const auto rhsFit{fitness(rhsIndex)};
+      const auto lhsFit{fitness[lhsIndex]};
+      const auto rhsFit{fitness[rhsIndex]};
       if (std::max(1 / lhsFit, 1 / rhsFit) > Probability::get()) {
-        auto [childLhs, childRhs] =
-            crossover(population[lhsIndex], population[rhsIndex]);
-        newPop[i] = childLhs;
-        newPop[i + 1] = childRhs;
+        for (int j{0}; j < N; ++j) {
+          auto [childLhs, childRhs] =
+              crossover(population[lhsIndex][j], population[rhsIndex][j]);
+          newPop[i][j] = childLhs;
+          newPop[i + 1][j] = childRhs;
+        }
       } else {
         newPop[i] = population[lhsIndex];
         newPop[i + 1] = population[rhsIndex];
@@ -140,7 +148,7 @@ class Evolution {
     double min = std::numeric_limits<double>::max();
     std::pair<std::array<double, P>, int> fitness{{}, -1};
     for (int i{0}; i < P; ++i) {
-      fitness.first[i] = fit_(population[i]);
+      fitness.first[i] = fitAdapter(population[i]);
       if (fitness.first[i] < min) {
         fitness.second = i;
         min = fitness.first[i];
@@ -161,6 +169,14 @@ class Evolution {
                     return chromosome;
                   });
     return population;
+  }
+
+  double fitAdapter(const Vector<N, DoubleGrayCode<D>>& q) {
+    Vector<N, double> qDouble;
+    for (int i{0}; i < N; ++i) {
+      qDouble[i] = q[i].getDouble();
+    }
+    return fit_(qDouble);
   }
 
   Fit fit_;

@@ -45,9 +45,15 @@ struct Vector {
   }
 
   class Iterator;
+  class ConstIterator;
 
   Iterator begin();
   Iterator end();
+
+  ConstIterator begin() const;
+  ConstIterator end() const;
+  ConstIterator cbegin() const;
+  ConstIterator cend() const;
 
   [[nodiscard]] static constexpr int size() noexcept {
     return N;
@@ -153,6 +159,7 @@ bool operator!=(const Vector<N, T>& lhs, const Vector<N, T>& rhs) {
   return !(lhs == rhs);
 }
 
+// iterators
 template <int N, typename T>
 class Vector<N, T>::Iterator {
  public:
@@ -231,6 +238,83 @@ class Vector<N, T>::Iterator {
 };
 
 template <int N, typename T>
+class Vector<N, T>::ConstIterator {
+ public:
+  // TODO(novak)
+  // using iterator_category = std::random_access_iterator_tag;
+
+  using iterator_category = std::bidirectional_iterator_tag;
+  using value_type = T;
+  using difference_type = std::ptrdiff_t;
+  using pointer = const T*;
+  using reference = const T&;
+
+  /*implicit*/ ConstIterator(pointer ptr) : ptr_(ptr) {
+  }
+
+  reference operator*() const {
+    return *ptr_;
+  }
+  pointer operator->() const {
+    return ptr_;
+  }
+
+  ConstIterator operator++() {
+    ++ptr_;
+    return *this;
+  }
+
+  ConstIterator operator++(int) {
+    Iterator temp = *this;
+    ++ptr_;
+    return temp;
+  }
+
+  ConstIterator operator--() {
+    --ptr_;
+    return *this;
+  }
+
+  ConstIterator operator--(int) {
+    Iterator temp = *this;
+    --ptr_;
+    return temp;
+  }
+
+  ConstIterator operator+(difference_type n) const {
+    return ConstIterator(ptr_ + n);
+  }
+
+  ConstIterator operator-(difference_type n) const {
+    return ConstIterator(ptr_ - n);
+  }
+
+  difference_type operator-(const ConstIterator& other) const {
+    return ptr_ - other.ptr_;
+  }
+
+  ConstIterator operator+=(difference_type n) {
+    ptr_ += n;
+    return *this;
+  }
+
+  ConstIterator operator-=(difference_type n) {
+    ptr_ -= n;
+    return *this;
+  }
+
+  // TODO(novak)
+  // reference operator[](difference_type n) const {
+  //   return *(this + n);
+  // }
+
+  friend auto operator<=>(const ConstIterator&, const ConstIterator&) = default;
+
+ private:
+  pointer ptr_;
+};
+
+template <int N, typename T>
 typename Vector<N, T>::Iterator Vector<N, T>::begin() {
   return {&data_[0]};
 }
@@ -238,6 +322,26 @@ typename Vector<N, T>::Iterator Vector<N, T>::begin() {
 template <int N, typename T>
 typename Vector<N, T>::Iterator Vector<N, T>::end() {
   return {&data_[N - 1] + 1};
+}
+
+template <int N, typename T>
+typename Vector<N, T>::ConstIterator Vector<N, T>::begin() const {
+  return {&data_[0]};
+}
+
+template <int N, typename T>
+typename Vector<N, T>::ConstIterator Vector<N, T>::end() const {
+  return {&data_[N - 1] + 1};
+}
+
+template <int N, typename T>
+typename Vector<N, T>::ConstIterator Vector<N, T>::cbegin() const {
+  return begin();
+}
+
+template <int N, typename T>
+typename Vector<N, T>::ConstIterator Vector<N, T>::cend() const {
+  return end();
 }
 
 template <int N, typename T>
