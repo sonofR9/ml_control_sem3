@@ -3,12 +3,14 @@
 #include "two-wheel-robot.h"
 // import runge_kutte1;
 #include "global.h"
-#include "matplotlibcpp.h"
 #include "pontryagin-method.h"
 
 #include <cmath>
 
+#ifdef MATPLOTLIB
+#include "matplotlibcpp.h"
 namespace plt = matplotlibcpp;
+#endif
 
 using namespace optimization;
 

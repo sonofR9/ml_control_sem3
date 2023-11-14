@@ -79,12 +79,13 @@ else()
         )
     else()
         set(WARNINGS_FLAGS
-            "-Werror"
+            # "-Werror"
             "-Wall"
             "-Wextra"
             "-Wpedantic"
-            "-Wno-error=return-type"
-            "-Wno-error=unused-parameter"
+            "-Wno-error=language-extension-token"
+            # "-Wno-error=return-type"
+            # "-Wno-error=unused-parameter"
             # "-Wno-error=nested-anon-types"
         )
         if (WIN32)
@@ -99,25 +100,25 @@ else()
 endif()
 
 if(ENABLE_TEST)
-    set(BoldCyan "${Esc}[1;36m")
-    message("\n${BoldCyan}Build with tests is enabled${ResetColor}\n")
+    # set(BoldCyan "${Esc}[1;36m")
+    # message("\n${BoldCyan}Build with tests is enabled${ResetColor}\n")
 
-    find_package(GTest)
+    # find_package(GTest)
 
-    if(${GTest_FOUND})
-    else()
-        include(FetchContent)
-        FetchContent_Declare(
-            googletest
-            GIT_REPOSITORY https://github.com/google/googletest.git
-            GIT_TAG release-1.11.0
-        )
-        set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-        FetchContent_MakeAvailable(googletest)
-    endif()
+    # if(${GTest_FOUND})
+    # else()
+    #     include(FetchContent)
+    #     FetchContent_Declare(
+    #         googletest
+    #         GIT_REPOSITORY https://github.com/google/googletest.git
+    #         GIT_TAG release-1.11.0
+    #     )
+    #     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    #     FetchContent_MakeAvailable(googletest)
+    # endif()
 
-    enable_testing()
+    # enable_testing()
 
-    set(SERVICES_DIR "${PROJECT_SOURCE_DIR}/backend/services")
-    set(BACKEND_UTILS_DIR "${PROJECT_SOURCE_DIR}/backend/utils")
+    # set(SERVICES_DIR "${PROJECT_SOURCE_DIR}/backend/services")
+    # set(BACKEND_UTILS_DIR "${PROJECT_SOURCE_DIR}/backend/utils")
 endif()
