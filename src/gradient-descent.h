@@ -26,8 +26,7 @@ T GradientDescent(const T& qMin, const T& qMax, F functional, G grad,
   auto q1{qStar};
   auto q2{qStar};
 
-  int K1{1};
-  for (int i{0}; i < K1; ++i) {
+  for (int i{0}; i < maxIter; ++i) {
     const auto& gradStar{grad(qStar)};
 
     const auto golden = [qMin, qMax](const double kGold, const T& q,
@@ -53,7 +52,7 @@ T GradientDescent(const T& qMin, const T& qMax, F functional, G grad,
     auto fQ2{functional(q2)};
 
     int iter{0};
-    while (norm(q2 - q1) > kEps && iter < maxIter) {
+    while (norm(q2 - q1) > kEps) {
       // std::cout << iter << " " << norm(q2 - q1) << std::endl;
       if (fQ1 < fQ2) {
         qWave = q2;
