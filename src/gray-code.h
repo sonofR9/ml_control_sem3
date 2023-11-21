@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <iostream>
 #include <ostream>
 
 namespace optimization {
@@ -22,20 +23,24 @@ uint64_t from_gray(uint64_t n) {
   return ans;
 }
 
-template <uint64_t D>
+/**
+ * @brief
+ *
+ * @tparam D
+ * @tparam Z zero offset
+ */
+template <uint64_t D, uint64_t Z = 1000>
 class DoubleGrayCode {
-  static const uint64_t zero_{std::numeric_limits<uint64_t>::max() / D / 2};
-
  public:
-  DoubleGrayCode() : DoubleGrayCode(static_cast<double>(zero_)) {
+  DoubleGrayCode() : DoubleGrayCode(static_cast<double>(Z)) {
   }
   /*implicit*/ DoubleGrayCode(double value) {
-    code_ = to_gray(
-        static_cast<uint64_t>(D * (value + static_cast<double>(zero_))));
+    code_ =
+        to_gray(static_cast<uint64_t>(D * (value + static_cast<double>(Z))));
   }
   DoubleGrayCode& operator=(double value) {
-    code_ = to_gray(
-        static_cast<uint64_t>(D * (value + static_cast<double>(zero_))));
+    code_ =
+        to_gray(static_cast<uint64_t>(D * (value + static_cast<double>(Z))));
     return *this;
   }
   // /*implicit*/ DoubleGrayCode(uint64_t value) {
@@ -54,8 +59,7 @@ class DoubleGrayCode {
     return code_;
   }
   [[nodiscard]] double getDouble() const {
-    return static_cast<double>(from_gray(code_)) / D -
-           static_cast<double>(zero_);
+    return static_cast<double>(from_gray(code_)) / D - static_cast<double>(Z);
   }
 
   void changeBit(int bit) {

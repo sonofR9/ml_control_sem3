@@ -31,7 +31,7 @@ void testGradientDescent() {
     return std::pow(q[0] - 5, 2) + std::pow(q[1], 2) + std::pow(q[2], 2) +
            std::pow(q[3] - 5, 2) + std::pow(q[4] - 10, 2);
   };
-  const auto& res{GradientDescent(qMin, qMax, functional, grad)};
+  const auto& res{GradientDescent(qMin, qMax, functional, grad, 0.5, 1e4)};
   std::cout << "GradientDescent: [" << res << "] True: [5 0 0 5 10]"
             << std::endl;
 }
@@ -84,7 +84,7 @@ void testEvolution() {
     return 1 + std::pow(q[0] - 5, 2) + std::pow(q[1], 2) + std::pow(q[2], 2) +
            std::pow(q[3] - 5, 2) + std::pow(q[4] - 10, 2);
   };
-  Evolution<5, 1000, decltype(fitness)> solver(fitness);
+  Evolution<5, 1000, 1000, decltype(fitness), 100> solver(fitness);
   const auto best{solver.solve(100)};
   std::cout << "Evolution: [" << best << "] True: [5 0 0 5 10]" << std::endl;
 }

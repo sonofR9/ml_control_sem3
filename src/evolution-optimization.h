@@ -10,7 +10,6 @@
 
 namespace optimization {
 constexpr int seed{1};
-constexpr double threshold{0.6};
 
 struct DoubleGenerator {
   static double get() {
@@ -30,24 +29,24 @@ struct IntGenerator {
 };
 
 struct Probability {
-  static int get() {
+  static double get() {
     static std::mt19937 gen(seed);
     static std::uniform_real_distribution<> dis(0, 1);
     return dis(gen);
   }
 };
 
-template <uint64_t D>
-void mutateGen(DoubleGrayCode<D>& code) {
+template <uint64_t N, uint64_t D>
+void mutateGen(DoubleGrayCode<D>& code, double threshold) {
   if (Probability::get() > threshold) {
-    code.changeBit(IntGenerator<D>::get());
+    code.changeBit(IntGenerator<N>::get());
   }
 }
 
-template <uint64_t D>
+template <uint64_t N, uint64_t D>
 std::pair<DoubleGrayCode<D>, DoubleGrayCode<D>> crossover(
     DoubleGrayCode<D> lhs, DoubleGrayCode<D> rhs) {
-  uint64_t mask = (1ULL << IntGenerator<D>::get()) - 1;
+  uint64_t mask = (1ULL << IntGenerator<N>::get()) - 1;
 
   uint64_t bitsFromNum1 = lhs.getGray() & mask;
   uint64_t bitsFromNum2 = rhs.getGray() & mask;
@@ -68,12 +67,13 @@ std::pair<DoubleGrayCode<D>, DoubleGrayCode<D>> crossover(
  * @tparam N number of parameters of function being optimized (number of steps
  * in piecewise function)
  * @tparam D multiplier for gray code
+ * @tparam Z zero for gray code
  * @tparam Fit function which calculates fitness. Should return [1, infinity)
  * (where 1 is best)
  * @tparam P number of individuals in population
  */
-template <int N, uint64_t D, Regular1OutFunction<Vector<N, double>> Fit,
-          int P = 100>
+template <int N, uint64_t D, uint64_t Z,
+          Regular1OutFunction<Vector<N, double>> Fit, int P = 100>
 class Evolution {
   using Gray = DoubleGrayCode<D>;
   using Chromosome = Vector<N, Gray>;
@@ -91,9 +91,9 @@ class Evolution {
       if (fitness[minIndex] < best.second) {
         best = {population[minIndex], fitness[minIndex]};
       }
-      crossoverPopulation(population, fitness);
+      crossoverPopulation(population, fitness, 1 / best.second);
       population[0] = best.first;
-      Evolution::mutatePopulation(population);
+      Evolution::mutatePopulation(population, 0.9);
     }
     return chromosomeToDoubles(best.first);
   }
@@ -106,16 +106,17 @@ class Evolution {
     return doubles;
   }
 
-  static void mutatePopulation(std::array<Chromosome, P>& population) {
+  static void mutatePopulation(std::array<Chromosome, P>& population,
+                               double threshold) {
     for (auto& individual : population) {
       for (auto& gen : individual) {
-        mutateGen(gen);
+        mutateGen<Z * 2, D>(gen, threshold);
       }
     }
   }
 
   void crossoverPopulation(std::array<Chromosome, P>& population,
-                           std::array<double, P> fitness) {
+                           std::array<double, P> fitness, double probModifier) {
     std::array<Chromosome, P> newPop;
     for (int i = 0; i < P; i += 2) {
       const auto lhsIndex{IntGenerator<P>::get()};
@@ -129,10 +130,11 @@ class Evolution {
       }
       const auto lhsFit{fitness[lhsIndex]};
       const auto rhsFit{fitness[rhsIndex]};
-      if (std::max(1 / lhsFit, 1 / rhsFit) > Probability::get()) {
+      const auto prob{std::max(1 / lhsFit, 1 / rhsFit)};
+      if (prob > Probability::get() * probModifier) {
         for (int j{0}; j < N; ++j) {
-          auto [childLhs, childRhs] =
-              crossover(population[lhsIndex][j], population[rhsIndex][j]);
+          auto [childLhs, childRhs] = crossover<Z * 2, D>(
+              population[lhsIndex][j], population[rhsIndex][j]);
           newPop[i][j] = childLhs;
           newPop[i + 1][j] = childRhs;
         }
