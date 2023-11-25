@@ -6,7 +6,7 @@ endif()
 
 project(ml_control VERSION 0.1.0)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(ENABLE_BACKEND "Set to \"ON\" to build back" ON)

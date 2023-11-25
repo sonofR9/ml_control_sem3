@@ -6,10 +6,11 @@
 #include <algorithm>
 #include <array>
 #include <random>
+#include <ranges>
 #include <vector>
 
 namespace optimization {
-constexpr int seed{1};
+constexpr int seed{20};
 
 struct DoubleGenerator {
   static double get() {
@@ -40,6 +41,13 @@ template <uint64_t N, uint64_t D>
 void mutateGen(DoubleGrayCode<D>& code, double threshold) {
   if (Probability::get() > threshold) {
     code.changeBit(IntGenerator<N>::get());
+  }
+}
+
+template <uint64_t D>
+void mutateGenSimple(DoubleGrayCode<D>& code, double threshold) {
+  if (Probability::get() > threshold) {
+    code += DoubleGenerator::get() / 100;
   }
 }
 
@@ -91,9 +99,30 @@ class Evolution {
       if (fitness[minIndex] < best.second) {
         best = {population[minIndex], fitness[minIndex]};
       }
-      crossoverPopulation(population, fitness, 1 / best.second);
-      population[0] = best.first;
-      Evolution::mutatePopulation(population, 0.9);
+
+      auto newPopulation{population};
+      auto newFitness{fitness};
+      newPopulation[0] = best.first;
+      for (int i{0}; i < N; ++i) {
+        int n1, n2, n3;
+        do {
+          n1 = IntGenerator<N>::get();
+          n2 = IntGenerator<N>::get();
+          n3 = IntGenerator<N>::get();
+        } while (n1 == n2 || n2 == n3 || n3 == n1);
+
+        int j{n1};
+        j = fitness[n2] < fitness[j] ? n2 : j;
+        j = fitness[n3] < fitness[j] ? n3 : j;
+        newPopulation[i] = population[j];
+        newFitness[i] = fitness[j];
+      }
+
+      crossoverPopulation(newPopulation, newFitness, 1 / best.second);
+      newPopulation[0] = best.first;
+
+      Evolution::mutatePopulation(newPopulation, 0.9);
+      population = std::move(newPopulation);
     }
     return chromosomeToDoubles(best.first);
   }
@@ -110,7 +139,8 @@ class Evolution {
                                double threshold) {
     for (auto& individual : population) {
       for (auto& gen : individual) {
-        mutateGen<Z * 2, D>(gen, threshold);
+        // mutateGen<Z * 2, D>(gen, threshold);
+        mutateGenSimple(gen, threshold);
       }
     }
   }

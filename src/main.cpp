@@ -85,7 +85,7 @@ void testEvolution() {
            std::pow(q[3] - 5, 2) + std::pow(q[4] - 10, 2);
   };
   Evolution<5, 1000, 1000, decltype(fitness), 100> solver(fitness);
-  const auto best{solver.solve(100)};
+  const auto best{solver.solve(200)};
   std::cout << "Evolution: [" << best << "] True: [5 0 0 5 10]" << std::endl;
 }
 
