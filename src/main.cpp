@@ -4,6 +4,7 @@
 // import runge_kutte1;
 #include "evolution-optimization.h"
 #include "global.h"
+#include "particle-sworm.h"
 #include "pontryagin-method.h"
 
 #include <cmath>
@@ -89,10 +90,21 @@ void testEvolution() {
   std::cout << "Evolution: [" << best << "] True: [5 0 0 5 10]" << std::endl;
 }
 
+void testParticle() {
+  auto fitness = [](const Vector<5>& q) -> double {
+    return 1 + std::pow(q[0] - 5, 2) + std::pow(q[1], 2) + std::pow(q[2], 2) +
+           std::pow(q[3] - 5, 2) + std::pow(q[4] - 10, 2);
+  };
+  GrayWolfAlgorithm<5, decltype(fitness), 100> solver(fitness);
+  const auto best{solver.solve(200)};
+  std::cout << "Evolution: [" << best << "] True: [5 0 0 5 10]" << std::endl;
+}
+
 int main() {
   testPontryagin();
   testGradientDescent();
   testEvolution();
+  testParticle();
   // plt::figure();
   // plt::plot(solvedFun[0], solvedFun[1]);
   // plt::show();
