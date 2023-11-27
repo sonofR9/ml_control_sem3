@@ -5,38 +5,10 @@
 
 #include <algorithm>
 #include <array>
-#include <random>
 #include <ranges>
 #include <vector>
 
 namespace optimization {
-constexpr int seed{20};
-
-struct DoubleGenerator {
-  static double get() {
-    static std::mt19937 gen(seed);
-    static std::uniform_real_distribution<> dis(-100, 100);
-    return dis(gen);
-  }
-};
-
-template <uint64_t D>
-struct IntGenerator {
-  static int get() {
-    static std::mt19937 gen(seed);
-    static std::uniform_int_distribution<> dis(0, D - 1);
-    return dis(gen);
-  }
-};
-
-struct Probability {
-  static double get() {
-    static std::mt19937 gen(seed);
-    static std::uniform_real_distribution<> dis(0, 1);
-    return dis(gen);
-  }
-};
-
 template <uint64_t N, uint64_t D>
 void mutateGen(DoubleGrayCode<D>& code, double threshold) {
   if (Probability::get() > threshold) {
@@ -130,7 +102,7 @@ class Evolution {
  private:
   static Vector<N, double> chromosomeToDoubles(const Chromosome& chromosome) {
     Vector<N, double> doubles;
-    std::transform(chromosome.begin(), chromosome.end(), doubles.begin(),
+    std::transform(chromosome.cbegin(), chromosome.cend(), doubles.begin(),
                    [](const Gray& code) { return code.getDouble(); });
     return doubles;
   }

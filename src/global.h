@@ -7,6 +7,7 @@
 #include <functional>
 #include <numeric>
 #include <ostream>
+#include <random>
 #include <ranges>
 
 namespace optimization {
@@ -50,8 +51,8 @@ struct Vector {
   Iterator begin();
   Iterator end();
 
-  ConstIterator begin() const;
-  ConstIterator end() const;
+  // ConstIterator begin() const;
+  // ConstIterator end() const;
   ConstIterator cbegin() const;
   ConstIterator cend() const;
 
@@ -324,24 +325,24 @@ typename Vector<N, T>::Iterator Vector<N, T>::end() {
   return {&data_[N - 1] + 1};
 }
 
+// template <int N, typename T>
+// typename Vector<N, T>::ConstIterator Vector<N, T>::begin() const {
+//   return {&data_[0]};
+// }
+
+// template <int N, typename T>
+// typename Vector<N, T>::ConstIterator Vector<N, T>::end() const {
+//   return {&data_[N - 1] + 1};
+// }
+
 template <int N, typename T>
-typename Vector<N, T>::ConstIterator Vector<N, T>::begin() const {
+typename Vector<N, T>::ConstIterator Vector<N, T>::cbegin() const {
   return {&data_[0]};
 }
 
 template <int N, typename T>
-typename Vector<N, T>::ConstIterator Vector<N, T>::end() const {
-  return {&data_[N - 1] + 1};
-}
-
-template <int N, typename T>
-typename Vector<N, T>::ConstIterator Vector<N, T>::cbegin() const {
-  return begin();
-}
-
-template <int N, typename T>
 typename Vector<N, T>::ConstIterator Vector<N, T>::cend() const {
-  return end();
+  return {&data_[N - 1] + 1};
 }
 
 template <int N, typename T>
@@ -361,20 +362,45 @@ double norm(Vector<100, double> self) {
 // export {
 template <typename F, int N>
 concept StateSpaceFunction = requires(F func, Vector<N> point, double time) {
-                               {
-                                 func(point, time)
-                                 } -> std::same_as<StateDerivativesPoint<N>>;
-                             };
+  { func(point, time) } -> std::same_as<StateDerivativesPoint<N>>;
+};
 
 template <typename F, typename T>
 concept GradientFunction = requires(F func, const T& inp) {
-                             { func(inp) } -> std::same_as<T>;
-                           };
+  { func(inp) } -> std::same_as<T>;
+};
 
 template <typename F, typename T>
 concept Regular1OutFunction = requires(F func, const T& inp) {
-                                { func(inp) } -> std::same_as<double>;
-                              };
+  { func(inp) } -> std::same_as<double>;
+};
+
+constexpr int seed{20};
+
+struct DoubleGenerator {
+  static double get() {
+    static std::mt19937 gen(seed);
+    static std::uniform_real_distribution<> dis(-100, 100);
+    return dis(gen);
+  }
+};
+
+template <uint64_t D>
+struct IntGenerator {
+  static int get() {
+    static std::mt19937 gen(seed);
+    static std::uniform_int_distribution<> dis(0, D - 1);
+    return dis(gen);
+  }
+};
+
+struct Probability {
+  static double get() {
+    static std::mt19937 gen(seed);
+    static std::uniform_real_distribution<> dis(0, 1);
+    return dis(gen);
+  }
+};
 }  // namespace optimization
 
 template <int N, typename T>
