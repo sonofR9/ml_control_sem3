@@ -58,24 +58,24 @@ class GrayWolfAlgorithm {
     return result;
   }
 
-  std::array<Specimen, B> getBest(const Population& population) {
-    using CalcSpecimen = std::pair<typename Specimen::Iterator, double>;
-    std::array<CalcSpecimen, P> calcPop{{population.begin(), 0}};
+  std::array<Specimen, B> getBest(Population& population) {
+    using CalcSpecimen = std::pair<int, double>;
+    std::array<CalcSpecimen, P> calcPop{};
     for (int i{0}; i < P; ++i) {
-      calcPop[i].first = population.begin() + i;
+      calcPop[i].first = i;
       calcPop[i].second = fit_(population[i]);
     }
 
     std::array<CalcSpecimen, B> best;
     std::partial_sort_copy(
-        population.begin(), population.end(), best.begin(), best.end(),
-        [this](const CalcSpecimen& lhs, const CalcSpecimen& rhs) {
+        calcPop.begin(), calcPop.end(), best.begin(), best.end(),
+        [](const CalcSpecimen& lhs, const CalcSpecimen& rhs) {
           return lhs.second > rhs.second;
         });
 
     std::array<Specimen, B> result;
     for (int i{0}; i < B; ++i) {
-      result[i] = *best[i].first;
+      result[i] = population[best[i].first];
     }
     return result;
   }

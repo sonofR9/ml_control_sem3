@@ -97,7 +97,7 @@ void testParticle() {
   };
   GrayWolfAlgorithm<5, decltype(fitness), 100> solver(fitness);
   const auto best{solver.solve(200)};
-  std::cout << "Evolution: [" << best << "] True: [5 0 0 5 10]" << std::endl;
+  std::cout << "Gray wolf: [" << best << "] True: [5 0 0 5 10]" << std::endl;
 }
 
 int main() {
