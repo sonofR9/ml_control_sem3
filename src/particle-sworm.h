@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <iostream>
 
 namespace optimization {
 /**
@@ -27,6 +28,8 @@ class GrayWolfAlgorithm {
 
     for (int i{0}; i < numIterations; ++i) {
       const auto& best{getBest(population)};
+      std::cout << best[0] << std::endl;
+
       const double alpha{2.0 * (1 - 1.0 * i / numIterations)};
 
       for (auto& spec : population) {
@@ -39,14 +42,14 @@ class GrayWolfAlgorithm {
                    2.0 * ksi[2 * k + 1] *
                        std::abs((2 * ksi[2 * k] - 1) * alpha * best[k][j] - qj);
           }
-          qj = res / B;
+          spec[j] = res / B;
         }
       }
     }
 
     return *std::max_element(population.begin(), population.end(),
                              [this](const auto& lhs, const auto& rhs) {
-                               return fit_(lhs) > fit_(rhs);
+                               return fit_(lhs) < fit_(rhs);
                              });
   }
 
@@ -70,7 +73,7 @@ class GrayWolfAlgorithm {
     std::partial_sort_copy(
         calcPop.begin(), calcPop.end(), best.begin(), best.end(),
         [](const CalcSpecimen& lhs, const CalcSpecimen& rhs) {
-          return lhs.second > rhs.second;
+          return lhs.second < rhs.second;
         });
 
     std::array<Specimen, B> result;

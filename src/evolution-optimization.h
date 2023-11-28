@@ -41,6 +41,7 @@ std::pair<DoubleGrayCode<D>, DoubleGrayCode<D>> crossover(
 }
 
 // TODO(novak) deduce N from Fit
+// TODO(novak) Vector<N, typename T>?
 /**
  * @brief
  *
@@ -59,7 +60,8 @@ class Evolution {
   using Chromosome = Vector<N, Gray>;
 
  public:
-  Evolution(Fit fit) : fit_{fit} {
+  Evolution(Fit fit, double uMin, double uMax)
+      : fit_{fit}, uMin_{uMin}, uMax_{uMax} {
   }
 
   Vector<N, double> solve(int NumIterations) {
@@ -95,6 +97,16 @@ class Evolution {
 
       Evolution::mutatePopulation(newPopulation, 0.9);
       population = std::move(newPopulation);
+
+      for (auto& chromosome : population) {
+        for (auto& gen : chromosome) {
+          if (gen.getDouble() < uMin_) {
+            gen = uMin_;
+          } else if (gen.getDouble() > uMax_) {
+            gen = uMax_;
+          }
+        }
+      }
     }
     return chromosomeToDoubles(best.first);
   }
@@ -184,5 +196,7 @@ class Evolution {
   }
 
   Fit fit_;
+  double uMin_;
+  double uMax_;
 };
 }  // namespace optimization
