@@ -28,7 +28,7 @@ class GrayWolfAlgorithm {
 
     for (int i{0}; i < numIterations; ++i) {
       const auto& best{getBest(population)};
-      std::cout << best[0] << std::endl;
+      std::cout << best[0] << "\n";
 
       const double alpha{2.0 * (1 - 1.0 * i / numIterations)};
 
