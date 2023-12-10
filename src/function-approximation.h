@@ -41,10 +41,15 @@ class PiecewiseLinearApproximation {
 
   Vector<N, U> operator()(double time) const {
     auto lb{points_.lower_bound(time)};
-    if (lb == points_.end()) {
-      return lb->second;
+    auto next{lb};
+    ++next;
+    if (lb == points_.end() || next == points_.end()) {
+      next = lb--;
+      return (lb->second + next->second) / (next->first - lb->first) *
+             (time - lb->first);
     }
-    return (lb->second + (++lb)->second) / (lb->first - (--lb)->first) *
+
+    return (lb->second + next->second) / (next->first - lb->first) *
            (time - lb->first);
   }
 

@@ -103,8 +103,8 @@ void testParticle() {
 
 void modelTestEvolution() {
   using namespace two_wheeled_robot;
-  Evolution<2000, 1000, 1000, decltype(&functional<1000>), 100> solver(
-      &functional<1000>, -10, 10);
+  Evolution<100, 1000, 1000, decltype(&functional<50>), 100> solver(
+      &functional<50>, -10, 10);
   const auto best{solver.solve(200)};
   std::cout << "model: [" << best << "]" << std::endl;
 }
@@ -114,6 +114,7 @@ int main() {
   testGradientDescent();
   testEvolution();
   testParticle();
+  modelTestEvolution();
   // plt::figure();
   // plt::plot(solvedFun[0], solvedFun[1]);
   // plt::show();
