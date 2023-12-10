@@ -29,7 +29,7 @@ class GrayWolfAlgorithm {
 
     for (int i{0}; i < numIterations; ++i) {
       const auto& best{getBest(population)};
-      std::cout << best[0] << " fit " << fit_(best[0]) << std::endl;
+      // std::cout << best[0] << " fit " << fit_(best[0]) << std::endl;
 
       const double alpha{2.0 * (1 - 1.0 * i / numIterations)};
 
@@ -53,7 +53,7 @@ class GrayWolfAlgorithm {
       }
     }
 
-    return *std::max_element(population.begin(), population.end(),
+    return *std::min_element(population.begin(), population.end(),
                              [this](const auto& lhs, const auto& rhs) {
                                return fit_(lhs) < fit_(rhs);
                              });
