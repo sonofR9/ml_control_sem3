@@ -33,11 +33,12 @@ template <int N>
 double functional(const Vector<2 * N, double>& solverResult) {
   double dt = 0.01;
 
-  const auto& approx{approximationFrom1D(solverResult)};
+  auto approx{approximationFrom1D<N>(solverResult)};
 
-  const ControlApproximation<N>& func{dt, approx.begin(), approx.end()};
+  const PiecewiseLinearApproximation<2, double>& func{dt, approx.begin(),
+                                                      approx.end()};
 
-  const auto control = [&func](const Vector<3>&, double time) -> double {
+  const auto control = [&func](const Vector<3>&, double time) -> Vector<2> {
     return func(time);
   };
   Model robot{control, 1};
@@ -49,7 +50,7 @@ double functional(const Vector<2 * N, double>& solverResult) {
 
   Vector<3> xf{0, 0, 0};
   int i{0};
-  for (i; i < N; ++i) {
+  for (; i < N; ++i) {
     if (std::abs(solvedX[i][0] - xf[0]) + std::abs(solvedX[i][1] - xf[1]) +
             std::abs(solvedX[i][2] - xf[2]) >
         kEps) {

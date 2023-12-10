@@ -11,24 +11,25 @@ namespace two_wheeled_robot {
 template <typename T>
 concept ControlFunctionFullLvalue =
     requires(T fun, const optimization::Vector<3>& state, double time) {
-  { fun(state, time) } -> std::same_as<optimization::Vector<2>>;
-};
+      { fun(state, time) } -> std::same_as<optimization::Vector<2>>;
+    };
 
 template <typename T>
-concept ControlFunctionTimeOnly = requires(T fun, double time) {
-  { fun(time) } -> std::same_as<optimization::Vector<2>>;
-};
+concept ControlFunctionTimeOnly =
+    requires(T fun, double time) {
+      { fun(time) } -> std::same_as<optimization::Vector<2>>;
+    };
 
 template <typename T>
-concept ControlFunctionFullRvalue = requires(T fun,
-                                             optimization::Vector<3>&& state,
-                                             double time) {
-  { fun(std::move(state), time) } -> std::same_as<optimization::Vector<2>>;
-};
+concept ControlFunctionFullRvalue =
+    requires(T fun, optimization::Vector<3>&& state, double time) {
+      { fun(std::move(state), time) } -> std::same_as<optimization::Vector<2>>;
+    };
 
 template <typename T>
-concept ControlFunction = ControlFunctionFullLvalue<T> ||
-    ControlFunctionTimeOnly<T> || ControlFunctionFullRvalue<T>;
+concept ControlFunction =
+    ControlFunctionFullLvalue<T> || ControlFunctionTimeOnly<T> ||
+    ControlFunctionFullRvalue<T>;
 
 template <ControlFunction C>
 class Model {
@@ -136,44 +137,46 @@ class Model<C> {
   double a_;
 };
 
-template <ControlFunctionFullRvalue C>
-class Model<C> {
- public:
-  Model(C control, double r = 2, double a = 1) : u_{control}, r_{r}, a_{a} {
-  }
+// template <ControlFunctionFullRvalue C>
+// class Model<C> {
+//  public:
+//   Model(C control, double r = 2, double a = 1) : u_{control}, r_{r}, a_{a} {
+//   }
 
-  /**
-   * @brief models equations system of robot (preferred version)
-   *
-   * @param state current state
-   * @param time current time
-   * @return optimization::StateDerivativesPoint<3> left-hand side of equations
-   * system (derivatives of state variables)
-   */
-  optimization::Vector<3> operator()(optimization::Vector<3>&& state,
-                                     double time) {
-    auto res{u_(state, time)};
-    return {r_ / 2 * (res[0] + res[1]) * std::cos(state[2]),
-            r_ / 2 * (res[0] + res[1]) * std::sin(state[2]),
-            (res[0] - res[1]) * r_ / a_};
-  }
+//   /**
+//    * @brief models equations system of robot (preferred version)
+//    *
+//    * @param state current state
+//    * @param time current time
+//    * @return optimization::StateDerivativesPoint<3> left-hand side of
+//    equations
+//    * system (derivatives of state variables)
+//    */
+//   optimization::Vector<3> operator()(optimization::Vector<3>&& state,
+//                                      double time) {
+//     auto res{u_(state, time)};
+//     return {r_ / 2 * (res[0] + res[1]) * std::cos(state[2]),
+//             r_ / 2 * (res[0] + res[1]) * std::sin(state[2]),
+//             (res[0] - res[1]) * r_ / a_};
+//   }
 
-  /**
-   * @brief Overload of models equations system (So it could accept lvalues too)
-   * (not preferred)
-   */
-  optimization::Vector<3> operator()(optimization::Vector<3> state,
-                                     double time) {
-    auto res{u_(state, time)};
-    return {r_ / 2 * (res[0] + res[1]) * std::cos(state[2]),
-            r_ / 2 * (res[0] + res[1]) * std::sin(state[2]),
-            (res[0] - res[1]) * r_ / a_};
-  }
+//   /**
+//    * @brief Overload of models equations system (So it could accept lvalues
+//    too)
+//    * (not preferred)
+//    */
+//   optimization::Vector<3> operator()(optimization::Vector<3> state,
+//                                      double time) {
+//     auto res{u_(state, time)};
+//     return {r_ / 2 * (res[0] + res[1]) * std::cos(state[2]),
+//             r_ / 2 * (res[0] + res[1]) * std::sin(state[2]),
+//             (res[0] - res[1]) * r_ / a_};
+//   }
 
- private:
-  C u_;
+//  private:
+//   C u_;
 
-  double r_;
-  double a_;
-};
+//   double r_;
+//   double a_;
+// };
 }  // namespace two_wheeled_robot

@@ -7,13 +7,13 @@
 namespace optimization {
 template <typename T, int N, typename U>
 concept VectorIterator = requires(const T& it) {
-                           { *it } -> std::same_as<Vector<N, U>>;
+                           { *it } -> std::same_as<Vector<N, U>&>;
                          };
 
 template <typename T, int N, typename U>
 concept TimeAndVectorIterator =
     requires(const T& it) {
-      { *it } -> std::same_as<std::pair<double, Vector<N>>>;
+      { *it } -> std::same_as<std::pair<double, Vector<N>>&>;
     };
 
 template <int N, typename U = double>
@@ -40,7 +40,7 @@ class PiecewiseLinearApproximation {
   }
 
   Vector<N, U> operator()(double time) const {
-    const auto& lb{points_.lower_bound(time)};
+    auto lb{points_.lower_bound(time)};
     if (lb == points_.end()) {
       return lb->second;
     }
