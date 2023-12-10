@@ -23,7 +23,9 @@ constexpr double kEps = 1e-10;
 template <int N, typename T = double>
 struct Vector {
   Vector() {
-    for (int i{0}; i < N; ++i) data_[i] = 0;
+    if constexpr (std::is_convertible_v<int, T>) {
+      for (int i{0}; i < N; ++i) data_[i] = 0;
+    }
   }
   ~Vector() = default;
   Vector(const Vector&) = default;
