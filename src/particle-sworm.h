@@ -39,9 +39,9 @@ class GrayWolfAlgorithm {
           double qj{spec[j]};
           double res{0};
           for (int k{0}; k < B; ++k) {
-            res += best[k][j] +
+            res += best[k][j] -
                    2.0 * ksi[2 * k + 1] *
-                       ((2 * ksi[2 * k] - 1) * alpha * best[k][j] - qj);
+                       std::abs((2 * ksi[2 * k] - 1) * alpha * best[k][j] - qj);
           }
           spec[j] = res / B;
           if (spec[j] > limit_) {
@@ -63,7 +63,7 @@ class GrayWolfAlgorithm {
   static std::array<double, 2ZU * B> generateKsi() {
     std::array<double, 2ZU * B> result{};
     std::generate(result.begin(), result.end(),
-                  []() -> double { return Probability::get(); });
+                  []() -> double { return 2.0 * (Probability::get() - 0.5); });
     return result;
   }
 
