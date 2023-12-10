@@ -106,7 +106,8 @@ void modelTestEvolution() {
   Evolution<100, 1000, 1000, decltype(&functional<50>), 100> solver(
       &functional<50>, -10, 10);
   const auto best{solver.solve(200)};
-  std::cout << "model: [" << best << "]" << std::endl;
+  std::cout << "model: [" << best << "] functional: " << functional<50>(best)
+            << std::endl;
 }
 
 int main() {
