@@ -29,6 +29,24 @@ Vector<N, double> stdVectorToVector(const std::vector<double>& vec) {
   return result;
 }
 
+template <int T, StateSpaceFunction<T> F>
+double integrate(double startT, const Vector<T>& startX, F fun,
+                 double interestT, double delta = 0.001) {
+  double curT{startT};
+  Vector<T> curX{startX};
+
+  while (curT < interestT) {
+    auto k1 = fun(curX, curT);
+    auto k2 = fun(curX + delta / 2 * k1, curT + delta / 2);
+    auto k3 = fun(curX + delta / 2 * k2, curT + delta / 2);
+    auto k4 = fun(curX + delta * k3, curT + delta);
+
+    curX += delta / 6 * (k1 + 2 * k2 + 2 * k3 + k4);
+    curT += delta;
+  }
+  return curX;
+}
+
 template <int N>
 double functional(const Vector<2 * N, double>& solverResult) {
   double dt = 0.01;
@@ -60,24 +78,26 @@ double functional(const Vector<2 * N, double>& solverResult) {
 
   int iFinal{i == N ? N - 1 : i};
 
+  const auto subIntegrative = [dt](const Vector<3>& point) -> double {
+    const double h1{2.5 - std::sqrt(std::pow(point[0] - 2.5, 2) +
+                                    std::pow(point[1] - 2.5, 2))};
+    const double h2{2.5 - std::sqrt(std::pow(point[0] - 7.5, 2) +
+                                    std::pow(point[1] - 7.5, 2))};
+    if (h1 > 0 || h2 > 0) {
+      const double kBigNumber = 1e5;
+      return kBigNumber * dt;
+    }
+    return 0.0;
+  };
+  double integral{0};
+  for (int i{0}; i < iFinal; ++i) {
+    integral += subIntegrative({solvedX[0][i], solvedX[1][i], solvedX[2][i]});
+  }
+
   return iFinal * dt +
          std::sqrt(std::pow(solvedX[iFinal][0] - xf[0], 2) +
                    std::pow(solvedX[iFinal][1] - xf[1], 2) +
                    std::pow(solvedX[iFinal][2] - xf[2], 2)) +
-         RungeKutteStep(
-             0, x0,
-             [](const Vector<3>& point, double time) {
-               double h1{2.5 - std::sqrt(std::pow(point[0] - 2.5, 2) +
-                                         std::pow(point[1] - 2.5, 2))};
-               double h2{2.5 - std::sqrt(std::pow(point[0] - 7.5, 2) +
-                                         std::pow(point[1] - 7.5, 2))};
-               if (h1 > 0 || h2 > 0) {
-                 double kBigNumber = 1e6;
-                 return kBigNumber;
-               }
-               return 0;
-             },
-             iFinal * dt);
+         integral;
 }
-
 }  // namespace two_wheeled_robot

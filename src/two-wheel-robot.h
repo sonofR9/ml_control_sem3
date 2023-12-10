@@ -79,16 +79,6 @@ class Model<C> {
             (res[0] + res[1]) * std::sin(state[2]), res[0] - res[1]};
   }
 
-  /**
-   * @brief Overload of models equations system (So it could accept rvalues too)
-   */
-  optimization::Vector<3> operator()(optimization::Vector<3>&& state,
-                                     double time) {
-    auto res{u_(time)};
-    return {(res[0] + res[1]) * std::cos(state[2]),
-            (res[0] + res[1]) * std::sin(state[2]), res[0] - res[1]};
-  }
-
  private:
   C u_;
 
@@ -112,18 +102,6 @@ class Model<C> {
    */
   optimization::StateDerivativesPoint<3> operator()(
       const optimization::Vector<3>& state, double time) {
-    auto res{u_(state, time)};
-    return {r_ / 2 * (res[0] + res[1]) * std::cos(state[2]),
-            r_ / 2 * (res[0] + res[1]) * std::sin(state[2]),
-            (res[0] - res[1]) * r_ / a_};
-  }
-
-  /**
-   * @brief Overload of models equations system (So it could accept rvalues too)
-   * (not preferred)
-   */
-  optimization::Vector<3> operator()(optimization::Vector<3> state,
-                                     double time) {
     auto res{u_(state, time)};
     return {r_ / 2 * (res[0] + res[1]) * std::cos(state[2]),
             r_ / 2 * (res[0] + res[1]) * std::sin(state[2]),
@@ -159,20 +137,7 @@ class Model<C> {
 //             r_ / 2 * (res[0] + res[1]) * std::sin(state[2]),
 //             (res[0] - res[1]) * r_ / a_};
 //   }
-
-//   /**
-//    * @brief Overload of models equations system (So it could accept lvalues
-//    too)
-//    * (not preferred)
-//    */
-//   optimization::Vector<3> operator()(optimization::Vector<3> state,
-//                                      double time) {
-//     auto res{u_(state, time)};
-//     return {r_ / 2 * (res[0] + res[1]) * std::cos(state[2]),
-//             r_ / 2 * (res[0] + res[1]) * std::sin(state[2]),
-//             (res[0] - res[1]) * r_ / a_};
-//   }
-
+//
 //  private:
 //   C u_;
 

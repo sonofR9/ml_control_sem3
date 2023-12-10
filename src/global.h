@@ -362,6 +362,9 @@ double norm(Vector<100, double> self) {
 // }
 // --------------------------------StatePoint end------------------------------
 // export {
+
+// TODO(novak) should accept type instead and check that it is Vector<N> after
+// removing cv-qualifiers
 template <typename F, int N>
 concept StateSpaceFunction = requires(F func, Vector<N> point, double time) {
                                {
