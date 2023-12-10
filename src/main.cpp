@@ -95,7 +95,7 @@ void testParticle() {
     return 1 + std::pow(q[0] - 5, 2) + std::pow(q[1], 2) + std::pow(q[2], 2) +
            std::pow(q[3] - 5, 2) + std::pow(q[4] - 10, 2);
   };
-  GrayWolfAlgorithm<5, decltype(fitness), 100, 3> solver(fitness);
+  GrayWolfAlgorithm<5, decltype(fitness), 100, 5> solver(fitness, 100);
   const auto best{solver.solve(200)};
   std::cout << "Gray wolf: [" << best << "] True: [5 0 0 5 10]" << std::endl;
 }

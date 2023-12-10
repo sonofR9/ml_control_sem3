@@ -362,18 +362,20 @@ double norm(Vector<100, double> self) {
 // export {
 template <typename F, int N>
 concept StateSpaceFunction = requires(F func, Vector<N> point, double time) {
-  { func(point, time) } -> std::same_as<StateDerivativesPoint<N>>;
-};
+                               {
+                                 func(point, time)
+                                 } -> std::same_as<StateDerivativesPoint<N>>;
+                             };
 
 template <typename F, typename T>
 concept GradientFunction = requires(F func, const T& inp) {
-  { func(inp) } -> std::same_as<T>;
-};
+                             { func(inp) } -> std::same_as<T>;
+                           };
 
 template <typename F, typename T>
 concept Regular1OutFunction = requires(F func, const T& inp) {
-  { func(inp) } -> std::same_as<double>;
-};
+                                { func(inp) } -> std::same_as<double>;
+                              };
 
 constexpr int seed{20};
 
@@ -382,6 +384,10 @@ struct DoubleGenerator {
     static std::mt19937 gen(seed);
     static std::uniform_real_distribution<> dis(-100, 100);
     return dis(gen);
+  }
+
+  static double absLimit() {
+    return 100;
   }
 };
 

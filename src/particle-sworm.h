@@ -20,7 +20,8 @@ class GrayWolfAlgorithm {
   using Population = std::array<Specimen, P>;
 
  public:
-  GrayWolfAlgorithm(Fit fit) : fit_{fit} {
+  GrayWolfAlgorithm(Fit fit, double limit)
+      : fit_{fit}, limit_{std::abs(limit)} {
   }
 
   Vector<N, double> solve(int numIterations) {
@@ -28,7 +29,7 @@ class GrayWolfAlgorithm {
 
     for (int i{0}; i < numIterations; ++i) {
       const auto& best{getBest(population)};
-      std::cout << best[0] << "\n";
+      std::cout << best[0] << " fit " << fit_(best[0]) << std::endl;
 
       const double alpha{2.0 * (1 - 1.0 * i / numIterations)};
 
@@ -38,11 +39,16 @@ class GrayWolfAlgorithm {
           double qj{spec[j]};
           double res{0};
           for (int k{0}; k < B; ++k) {
-            res += best[k][j] -
+            res += best[k][j] +
                    2.0 * ksi[2 * k + 1] *
-                       std::abs((2 * ksi[2 * k] - 1) * alpha * best[k][j] - qj);
+                       ((2 * ksi[2 * k] - 1) * alpha * best[k][j] - qj);
           }
           spec[j] = res / B;
+          if (spec[j] > limit_) {
+            spec[j] = limit_;
+          } else if (spec[j] < -limit_) {
+            spec[j] = -limit_;
+          }
         }
       }
     }
@@ -83,19 +89,22 @@ class GrayWolfAlgorithm {
     return result;
   }
 
-  static Population generatePopulation() {
+  Population generatePopulation() {
     // generate random population (P chromosomes of size N each)
     std::array<Vector<N, double>, P> population;
-    std::generate(population.begin(), population.end(),
-                  []() -> Vector<N, double> {
-                    Vector<N, double> chromosome;
-                    std::generate(chromosome.begin(), chromosome.end(),
-                                  []() { return DoubleGenerator::get(); });
-                    return chromosome;
-                  });
+    std::generate(
+        population.begin(), population.end(), [this]() -> Vector<N, double> {
+          Vector<N, double> chromosome;
+          std::generate(chromosome.begin(), chromosome.end(), [this]() {
+            return DoubleGenerator::get() / DoubleGenerator::absLimit() *
+                   limit_;
+          });
+          return chromosome;
+        });
     return population;
   }
 
   Fit fit_;
+  double limit_;
 };
 }  // namespace optimization
