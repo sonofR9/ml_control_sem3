@@ -103,13 +103,13 @@ void testParticle() {
 
 void modelTestEvolution() {
   using namespace two_wheeled_robot;
-  Evolution<100, 1000, 1000, decltype(&functional<50>), 100> solver(
-      &functional<50>, -10, 10);
+  Evolution<1000, 1000, 1000, decltype(&functional<500>), 100> solver(
+      &functional<500>, -10, 10);
   const auto best{solver.solve(200)};
-  std::cout << "model: [" << best << "] functional: " << functional<50>(best)
+  std::cout << "model: [" << best << "] functional: " << functional<500>(best)
             << std::endl;
 
-  const auto trajectory{getTrajectoryFromControl<50>(best)};
+  const auto trajectory{getTrajectoryFromControl<500>(best)};
   std::cout << "--------------------\n\n\n";
   for (std::size_t i{0}; i < trajectory[0].size(); ++i) {
     std::cout << "x: " << trajectory[0][i] << " y: " << trajectory[1][i]

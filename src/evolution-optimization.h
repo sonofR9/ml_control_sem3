@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <memory>
 #include <ranges>
 #include <vector>
 
@@ -66,39 +67,40 @@ class Evolution {
 
   Vector<N, double> solve(int NumIterations) {
     std::pair<Chromosome, double> best{{}, std::numeric_limits<double>::max()};
-    std::array<Chromosome, P> population{generatePopulation()};
+    auto population{generatePopulation()};
 
     for (int i{0}; best.second > 1 + kEps && i < NumIterations; ++i) {
-      auto [fitness, minIndex] = evaluatePopulation(population);
+      auto [fitness, minIndex] = evaluatePopulation(*population);
       if (fitness[minIndex] < best.second) {
-        best = {population[minIndex], fitness[minIndex]};
+        best = {(*population)[minIndex], fitness[minIndex]};
       }
 
-      auto newPopulation{population};
+      auto newPopulation{
+          std::make_unique<std::array<Chromosome, P>>(*population)};
       auto newFitness{fitness};
-      newPopulation[0] = best.first;
+      (*newPopulation)[0] = best.first;
       for (int i{0}; i < N; ++i) {
         int n1, n2, n3;
         do {
-          n1 = IntGenerator<N>::get();
-          n2 = IntGenerator<N>::get();
-          n3 = IntGenerator<N>::get();
+          n1 = IntGenerator<P>::get();
+          n2 = IntGenerator<P>::get();
+          n3 = IntGenerator<P>::get();
         } while (n1 == n2 || n2 == n3 || n3 == n1);
 
         int j{n1};
         j = fitness[n2] < fitness[j] ? n2 : j;
         j = fitness[n3] < fitness[j] ? n3 : j;
-        newPopulation[i] = population[j];
+        (*newPopulation)[i] = (*population)[j];
         newFitness[i] = fitness[j];
       }
 
-      crossoverPopulation(newPopulation, newFitness, 1 / best.second);
-      newPopulation[0] = best.first;
+      crossoverPopulation(*newPopulation, newFitness, 1 / best.second);
+      (*newPopulation)[0] = best.first;
 
-      Evolution::mutatePopulation(newPopulation, 0.9);
+      Evolution::mutatePopulation(*newPopulation, 0.9);
       population = std::move(newPopulation);
 
-      for (auto& chromosome : population) {
+      for (auto& chromosome : *population) {
         for (auto& gen : chromosome) {
           if (gen.getDouble() < uMin_) {
             gen = uMin_;
@@ -173,12 +175,12 @@ class Evolution {
     return fitness;
   }
 
-  std::array<Vector<N, Gray>, P> generatePopulation() {
+  std::unique_ptr<std::array<Chromosome, P>> generatePopulation() {
     // generate random population (P chromosomes of size N each)
-    std::array<Vector<N, Gray>, P> population;
+    auto population{std::make_unique<std::array<Chromosome, P>>()};
     std::generate(
-        population.begin(), population.end(), [this]() -> Vector<N, Gray> {
-          Vector<N, Gray> chromosome;
+        population->begin(), population->end(), [this]() -> Chromosome {
+          Chromosome chromosome;
           std::generate(chromosome.begin(), chromosome.end(), [this]() {
             return DoubleGrayCode<D>{(uMax_ + uMin_) / 2 +
                                      DoubleGenerator::get() /
