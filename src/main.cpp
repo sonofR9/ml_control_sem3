@@ -120,15 +120,16 @@ void testParticle() {
   std::cout << "Gray wolf: [" << best << "] True: [5 0 0 5 10]" << std::endl;
 }
 
+template <int N>
 void modelTestEvolution() {
   using namespace two_wheeled_robot;
-  Evolution<100, 1000, 1000, decltype(&functional<50>), 100> solver(
-      &functional<50>, -10, 10);
-  const auto best{solver.solve(200)};
-  std::cout << "model: [" << best << "] functional: " << functional<50>(best)
+  Evolution<2 * N, 1000, 1000, decltype(&functional<N>), 100> solver(
+      &functional<N>, -10, 10);
+  const auto best{solver.solve(2000)};
+  std::cout << "model: [" << best << "] functional: " << functional<N>(best)
             << std::endl;
 
-  const auto trajectory{getTrajectoryFromControl<50>(best)};
+  const auto trajectory{getTrajectoryFromControl<N>(best)};
   // std::cout << "--------------------\n\n\n";
   // for (std::size_t i{0}; i < trajectory[0].size(); ++i) {
   //   std::cout << "x: " << trajectory[0][i] << " y: " << trajectory[1][i]
@@ -142,7 +143,7 @@ int main() {
   testGradientDescent();
   testEvolution();
   testParticle();
-  modelTestEvolution();
+  modelTestEvolution<200>();
   // plt::figure();
   // plt::plot(solvedFun[0], solvedFun[1]);
   // plt::show();

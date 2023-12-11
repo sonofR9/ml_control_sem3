@@ -68,7 +68,7 @@ std::array<std::vector<double>, 3 + 1> getTrajectoryFromControl(
 
 template <int N>
 double functional(const Vector<2 * N, double>& solverResult) {
-  double dt = 0.01;
+  double dt = 0.1;
   const auto solvedX = getTrajectoryFromControl<N>(solverResult, dt);
 
   Vector<3> xf{0, 0, 0};
