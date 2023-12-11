@@ -382,7 +382,7 @@ concept Regular1OutFunction = requires(F func, const T& inp) {
                                 { func(inp) } -> std::same_as<double>;
                               };
 
-constexpr int seed{20};
+extern int seed;
 
 struct DoubleGenerator {
   static double get() {

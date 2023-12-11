@@ -16,6 +16,10 @@
 namespace plt = matplotlibcpp;
 #endif
 
+namespace optimization {
+int seed = 10;
+}
+
 void writeTrajectoryToFiles(
     const std::array<std::vector<double>, 4>& trajectory) {
   std::ofstream fileX("trajectory_x.txt");
@@ -129,7 +133,7 @@ void modelTestEvolution() {
   std::cout << "model: [" << best << "] functional: " << functional<N>(best)
             << std::endl;
 
-  const auto trajectory{getTrajectoryFromControl<N>(best)};
+  const auto trajectory{getTrajectoryFromControl<N>(best, 0.1)};
   // std::cout << "--------------------\n\n\n";
   // for (std::size_t i{0}; i < trajectory[0].size(); ++i) {
   //   std::cout << "x: " << trajectory[0][i] << " y: " << trajectory[1][i]
@@ -138,7 +142,32 @@ void modelTestEvolution() {
   writeTrajectoryToFiles(trajectory);
 }
 
-int main() {
+int main(int argc, char** argv) {
+  for (int i = 1; i < argc; ++i) {
+    const std::string arg{argv[i]};
+    if (arg == "--seed") {
+      if (i + 1 < argc) {
+        try {
+          seed = std::stoi(argv[i + 1]);
+        } catch (std::invalid_argument& e) {
+          std::cerr << "Error: Invalid seed value provided." << std::endl;
+          return 1;
+        }
+      } else {
+        std::cerr << "Error: Missing seed value after -seed flag." << std::endl;
+        return 1;
+      }
+    } else if (arg == "-help") {
+      std::cout << "Usage: program --seed <seed_value>\n"
+                   "Options:\n"
+                   "     --seed <seed_value>: Specify a seed value for the "
+                   "random number generator.\n"
+                   "     --help: Display this help message."
+                << std::endl;
+      return 0;
+    }
+  }
+
   testPontryagin();
   testGradientDescent();
   testEvolution();
