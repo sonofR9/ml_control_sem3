@@ -79,7 +79,7 @@ class Evolution {
           std::make_unique<std::array<Chromosome, P>>(*population)};
       auto newFitness{fitness};
       (*newPopulation)[0] = best.first;
-      for (int i{0}; i < N; ++i) {
+      for (int i{0}; i < P; ++i) {
         int n1, n2, n3;
         do {
           n1 = IntGenerator<P>::get();
