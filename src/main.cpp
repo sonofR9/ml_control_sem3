@@ -9,11 +9,30 @@
 #include "pontryagin-method.h"
 
 #include <cmath>
+#include <fstream>
 
 #ifdef MATPLOTLIB
 #include "matplotlibcpp.h"
 namespace plt = matplotlibcpp;
 #endif
+
+void writeTrajectoryToFiles(
+    const std::array<std::vector<double>, 4>& trajectory) {
+  std::ofstream fileX("trajectory_x.txt");
+  std::ofstream fileY("trajectory_y.txt");
+
+  if (!fileX.is_open() || !fileY.is_open()) {
+    throw std::runtime_error("Error opening files");
+  }
+
+  for (size_t i = 0; i < trajectory[0].size(); ++i) {
+    fileX << trajectory[0][i] << std::endl;
+    fileY << trajectory[1][i] << std::endl;
+  }
+
+  fileX.close();
+  fileY.close();
+}
 
 using namespace optimization;
 
@@ -103,19 +122,19 @@ void testParticle() {
 
 void modelTestEvolution() {
   using namespace two_wheeled_robot;
-  Evolution<1000, 1000, 1000, decltype(&functional<500>), 100> solver(
-      &functional<500>, -10, 10);
+  Evolution<100, 1000, 1000, decltype(&functional<50>), 100> solver(
+      &functional<50>, -10, 10);
   const auto best{solver.solve(200)};
-  std::cout << "model: [" << best << "] functional: " << functional<500>(best)
+  std::cout << "model: [" << best << "] functional: " << functional<50>(best)
             << std::endl;
 
-  const auto trajectory{getTrajectoryFromControl<500>(best)};
-  std::cout << "--------------------\n\n\n";
-  for (std::size_t i{0}; i < trajectory[0].size(); ++i) {
-    std::cout << "x: " << trajectory[0][i] << " y: " << trajectory[1][i]
-              << "\n";
-  }
-  std::cout << std::endl;
+  const auto trajectory{getTrajectoryFromControl<50>(best)};
+  // std::cout << "--------------------\n\n\n";
+  // for (std::size_t i{0}; i < trajectory[0].size(); ++i) {
+  //   std::cout << "x: " << trajectory[0][i] << " y: " << trajectory[1][i]
+  //             << "\n";
+  // }
+  writeTrajectoryToFiles(trajectory);
 }
 
 int main() {
