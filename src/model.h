@@ -48,9 +48,8 @@ double integrate(double startT, const Vector<T>& startX, F fun,
 }
 
 template <int N>
-double functional(const Vector<2 * N, double>& solverResult) {
-  double dt = 0.01;
-
+std::array<std::vector<double>, 3 + 1> getTrajectoryFromControl(
+    const Vector<2 * N, double>& solverResult, double dt = 0.01) {
   auto approx{approximationFrom1D<N>(solverResult)};
 
   const PiecewiseLinearApproximation<2, double>& func{dt, approx.begin(),
@@ -64,7 +63,13 @@ double functional(const Vector<2 * N, double>& solverResult) {
   Vector<3> x0{10, 10, 0};
   double curT{0};
   double endT{dt * N};
-  const auto solvedX = SolveDiffEqRungeKutte(curT, x0, robot, endT, dt);
+  return SolveDiffEqRungeKutte(curT, x0, robot, endT, dt);
+}
+
+template <int N>
+double functional(const Vector<2 * N, double>& solverResult) {
+  double dt = 0.01;
+  const auto solvedX = getTrajectoryFromControl<N>(solverResult, dt);
 
   Vector<3> xf{0, 0, 0};
   int i{0};
@@ -89,6 +94,7 @@ double functional(const Vector<2 * N, double>& solverResult) {
     }
     return 0.0;
   };
+
   double integral{0};
   for (int i{0}; i < iFinal; ++i) {
     integral += subIntegrative({solvedX[0][i], solvedX[1][i], solvedX[2][i]});

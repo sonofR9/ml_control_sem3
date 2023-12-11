@@ -66,7 +66,7 @@ class Evolution {
 
   Vector<N, double> solve(int NumIterations) {
     std::pair<Chromosome, double> best{{}, std::numeric_limits<double>::max()};
-    std::array<Chromosome, P> population{Evolution::generatePopulation()};
+    std::array<Chromosome, P> population{generatePopulation()};
 
     for (int i{0}; best.second > 1 + kEps && i < NumIterations; ++i) {
       auto [fitness, minIndex] = evaluatePopulation(population);
@@ -173,17 +173,20 @@ class Evolution {
     return fitness;
   }
 
-  static std::array<Vector<N, Gray>, P> generatePopulation() {
+  std::array<Vector<N, Gray>, P> generatePopulation() {
     // generate random population (P chromosomes of size N each)
     std::array<Vector<N, Gray>, P> population;
-    std::generate(population.begin(), population.end(),
-                  []() -> Vector<N, Gray> {
-                    Vector<N, Gray> chromosome;
-                    std::generate(chromosome.begin(), chromosome.end(), []() {
-                      return DoubleGrayCode<D>{DoubleGenerator::get()};
-                    });
-                    return chromosome;
-                  });
+    std::generate(
+        population.begin(), population.end(), [this]() -> Vector<N, Gray> {
+          Vector<N, Gray> chromosome;
+          std::generate(chromosome.begin(), chromosome.end(), [this]() {
+            return DoubleGrayCode<D>{(uMax_ + uMin_) / 2 +
+                                     DoubleGenerator::get() /
+                                         DoubleGenerator::absLimit() *
+                                         (uMax_ - uMin_) / 2};
+          });
+          return chromosome;
+        });
     return population;
   }
 
