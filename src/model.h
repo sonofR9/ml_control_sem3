@@ -74,8 +74,8 @@ double functional(const Vector<2 * N, double>& solverResult) {
   Vector<3> xf{0, 0, 0};
   int i{0};
   for (; i < N; ++i) {
-    if (std::abs(solvedX[i][0] - xf[0]) + std::abs(solvedX[i][1] - xf[1]) +
-            std::abs(solvedX[i][2] - xf[2]) >
+    if (std::abs(solvedX[0][i] - xf[0]) + std::abs(solvedX[1][i] - xf[1]) +
+            std::abs(solvedX[2][i] - xf[2]) <
         kEps) {
       break;
     }
@@ -100,10 +100,10 @@ double functional(const Vector<2 * N, double>& solverResult) {
     integral += subIntegrative({solvedX[0][i], solvedX[1][i], solvedX[2][i]});
   }
 
-  return iFinal * dt +
-         std::sqrt(std::pow(solvedX[iFinal][0] - xf[0], 2) +
-                   std::pow(solvedX[iFinal][1] - xf[1], 2) +
-                   std::pow(solvedX[iFinal][2] - xf[2], 2)) +
+  return 100 * iFinal * dt +
+         std::sqrt(std::pow(solvedX[0][iFinal] - xf[0], 2) +
+                   std::pow(solvedX[1][iFinal] - xf[1], 2) +
+                   std::pow(solvedX[2][iFinal] - xf[2], 2)) +
          integral;
 }
 }  // namespace two_wheeled_robot
