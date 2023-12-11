@@ -17,7 +17,7 @@ namespace plt = matplotlibcpp;
 #endif
 
 namespace optimization {
-int seed = 10;
+int seed = 50;
 }
 
 void writeTrajectoryToFiles(
@@ -149,6 +149,7 @@ int main(int argc, char** argv) {
       if (i + 1 < argc) {
         try {
           seed = std::stoi(argv[i + 1]);
+          std::cout << "seed provided: " << seed << std::endl;
         } catch (std::invalid_argument& e) {
           std::cerr << "Error: Invalid seed value provided." << std::endl;
           return 1;
