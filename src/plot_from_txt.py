@@ -9,10 +9,15 @@ data_y = np.loadtxt("trajectory_y.txt")
 time = np.arange(len(data_x))
 
 # Plot the trajectory
-plt.plot(time, data_x, label="X")
-plt.plot(time, data_y, label="Y")
-plt.xlabel("Time")
-plt.ylabel("Position")
+plt.plot(data_x, data_y, label="trajectory")
+
+circle = plt.Circle((2.5, 2.5), np.sqrt(2.5), color='r')
+plt.gca().add_patch(circle)
+circle2 = plt.Circle((7.5, 7.5), np.sqrt(2.5), color='r')
+plt.gca().add_patch(circle2)
+
+plt.xlabel("x")
+plt.ylabel("y")
 plt.title("Trajectory")
 plt.legend()
 plt.show()
