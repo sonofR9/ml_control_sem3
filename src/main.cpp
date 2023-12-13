@@ -125,11 +125,11 @@ void testParticle() {
 }
 
 template <int N>
-void modelTestEvolution() {
+void modelTestEvolution(int iters = 500) {
   using namespace two_wheeled_robot;
   Evolution<2 * N, 1000, 1000, decltype(&functional<N>), 100> solver(
       &functional<N>, -10, 10);
-  const auto best{solver.solve(2000)};
+  const auto best{solver.solve(iters)};
   std::cout << "model: [" << best << "] functional: " << functional<N>(best)
             << std::endl;
 
@@ -143,6 +143,7 @@ void modelTestEvolution() {
 }
 
 int main(int argc, char** argv) {
+  int iter{500};
   for (int i = 1; i < argc; ++i) {
     const std::string arg{argv[i]};
     if (arg == "--seed") {
@@ -155,14 +156,31 @@ int main(int argc, char** argv) {
           return 1;
         }
       } else {
-        std::cerr << "Error: Missing seed value after -seed flag." << std::endl;
+        std::cerr << "Error: Missing seed value after --seed flag."
+                  << std::endl;
+        return 1;
+      }
+    }
+    if (arg == "--iter") {
+      if (i + 1 < argc) {
+        try {
+          iter = std::stoi(argv[i + 1]);
+        } catch (std::invalid_argument& e) {
+          std::cerr << "Error: Invalid iter value provided." << std::endl;
+          return 1;
+        }
+      } else {
+        std::cerr << "Error: Missing iter value after --iter flag."
+                  << std::endl;
         return 1;
       }
     } else if (arg == "-help") {
-      std::cout << "Usage: program --seed <seed_value>\n"
+      std::cout << "Usage: program --seed <seed_value> --iter <iter_value>\n"
                    "Options:\n"
                    "     --seed <seed_value>: Specify a seed value for the "
                    "random number generator.\n"
+                   "     --iter <iter_value>: Specify number of iterations for "
+                   "model optimization algorithm.\n"
                    "     --help: Display this help message."
                 << std::endl;
       return 0;
@@ -173,7 +191,7 @@ int main(int argc, char** argv) {
   testGradientDescent();
   testEvolution();
   testParticle();
-  modelTestEvolution<200>();
+  modelTestEvolution<75>(iter);
   // plt::figure();
   // plt::plot(solvedFun[0], solvedFun[1]);
   // plt::show();
