@@ -124,11 +124,29 @@ void testParticle() {
   std::cout << "Gray wolf: [" << best << "] True: [5 0 0 5 10]" << std::endl;
 }
 
+template <int N, int P = 10 * N>
+void testGraySin(int iter) {
+  auto fitness = [](const Vector<1>& q) -> double {
+    return 1 + std::sin(q[0]);
+  };
+  GrayWolfAlgorithm<1, decltype(fitness), P, N> solver(fitness, 100);
+  const auto best{solver.solve(iter)};
+  std::cout << "<" << N << ">, ", iter,
+      ": " << best << " fit " << fitness(best) << std::endl;
+}
+
+void testGraySin() {
+  std::cout << "gray with different number of best wolfs\n <wolfs> iters: "
+               "best_val fit fitness_val";
+}
+
 template <int N>
 void modelTestEvolution(int iters = 500) {
   using namespace two_wheeled_robot;
-  Evolution<2 * N, 1000, 1000, decltype(&functional<N>), 100> solver(
-      &functional<N>, -10, 10);
+  const auto adap = [](const Vector<2 * N, double>& solverResult) {
+    return functional<N>(solverResult, 10, 0.01);
+  };
+  Evolution<2 * N, 1000, 1000, decltype(adap), 100> solver(adap, -10, 10);
   const auto best{solver.solve(iters)};
   std::cout << "model: [" << best << "] functional: " << functional<N>(best)
             << std::endl;
@@ -191,7 +209,7 @@ int main(int argc, char** argv) {
   testGradientDescent();
   testEvolution();
   testParticle();
-  modelTestEvolution<75>(iter);
+  modelTestEvolution<50>(iter);
   // plt::figure();
   // plt::plot(solvedFun[0], solvedFun[1]);
   // plt::show();

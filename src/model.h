@@ -49,10 +49,10 @@ double integrate(double startT, const Vector<T>& startX, F fun,
 
 template <int N>
 std::array<std::vector<double>, 3 + 1> getTrajectoryFromControl(
-    const Vector<2 * N, double>& solverResult, double dt = 0.01) {
+    const Vector<2 * N, double>& solverResult, double tMax, double dt = 0.01) {
   auto approx{approximationFrom1D<N>(solverResult)};
 
-  const PiecewiseLinearApproximation<2, double>& func{dt, approx.begin(),
+  const PiecewiseLinearApproximation<2, double>& func{tMax / N, approx.begin(),
                                                       approx.end()};
 
   const auto control = [&func](const Vector<3>&, double time) -> Vector<2> {
@@ -62,23 +62,25 @@ std::array<std::vector<double>, 3 + 1> getTrajectoryFromControl(
 
   Vector<3> x0{10, 10, 0};
   double curT{0};
-  double endT{dt * N};
+  double endT{tMax};
   return SolveDiffEqRungeKutte(curT, x0, robot, endT, dt);
 }
 
 template <int N>
-double functional(const Vector<2 * N, double>& solverResult) {
-  double dt = 0.1;
-  const auto solvedX = getTrajectoryFromControl<N>(solverResult, dt);
+double functional(const Vector<2 * N, double>& solverResult, double tMax = 10,
+                  double dt = 0.01) {
+  const auto solvedX = getTrajectoryFromControl<N>(solverResult, tMax, dt);
 
   Vector<3> xf{0, 0, 0};
   int i{0};
-  for (; i < N; ++i) {
+  double tEnd{0};
+  for (; tEnd < tMax; tEnd += tMax / N) {
     if (std::abs(solvedX[0][i] - xf[0]) + std::abs(solvedX[1][i] - xf[1]) +
             std::abs(solvedX[2][i] - xf[2]) <
         kEps) {
       break;
     }
+    ++i;
   }
 
   int iFinal{i == N ? N - 1 : i};
@@ -100,7 +102,7 @@ double functional(const Vector<2 * N, double>& solverResult) {
     integral += subIntegrative({solvedX[0][i], solvedX[1][i], solvedX[2][i]});
   }
 
-  return 100 * iFinal * dt +
+  return 100 * tEnd +
          std::sqrt(std::pow(solvedX[0][iFinal] - xf[0], 2) +
                    std::pow(solvedX[1][iFinal] - xf[1], 2) +
                    std::pow(solvedX[2][iFinal] - xf[2], 2)) +
