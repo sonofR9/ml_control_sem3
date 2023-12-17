@@ -48,9 +48,9 @@ if(ENABLE_MATPLOTLIB)
     add_compile_definitions(MATPLOTLIB)
 endif()
 
-# if (ENABLE_TEST)
-#     add_subdirectory(tests)
-# endif()
+if (ENABLE_TEST)
+    add_subdirectory(test)
+endif()
 
 if (CLEAR_CACHE)
     unset(ENABLE_TEST CACHE)

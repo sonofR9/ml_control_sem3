@@ -74,7 +74,7 @@ double functional(const Vector<2 * N, double>& solverResult, double tMax = 10,
   Vector<3> xf{0, 0, 0};
   int i{0};
   double tEnd{0};
-  for (; tEnd < tMax; tEnd += tMax / N) {
+  for (; tEnd < tMax - kEps; tEnd += tMax / N) {
     if (std::abs(solvedX[0][i] - xf[0]) + std::abs(solvedX[1][i] - xf[1]) +
             std::abs(solvedX[2][i] - xf[2]) <
         kEps) {
@@ -85,14 +85,15 @@ double functional(const Vector<2 * N, double>& solverResult, double tMax = 10,
 
   int iFinal{i == N ? N - 1 : i};
 
-  const auto subIntegrative = [dt](const Vector<3>& point) -> double {
+  // TODO (novak) lower step and pass values from approximation
+  const auto subIntegrative = [dt, tMax](const Vector<3>& point) -> double {
     const double h1{2.5 - std::sqrt(std::pow(point[0] - 2.5, 2) +
                                     std::pow(point[1] - 2.5, 2))};
     const double h2{2.5 - std::sqrt(std::pow(point[0] - 7.5, 2) +
                                     std::pow(point[1] - 7.5, 2))};
     if (h1 > 0 || h2 > 0) {
       const double kBigNumber = 1e5;
-      return kBigNumber * dt;
+      return kBigNumber * tMax / N;
     }
     return 0.0;
   };

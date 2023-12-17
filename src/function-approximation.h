@@ -30,14 +30,14 @@ class PiecewiseLinearApproximation {
     }
   }
 
-  template <TimeAndVectorIterator<N, U> It>
-  PiecewiseLinearApproximation(const It& begin, const It& end) {
-    It curr{begin};
-    while (curr != end) {
-      points_.insert(*curr);
-      ++curr;
-    }
-  }
+  // template <TimeAndVectorIterator<N, U> It>
+  // PiecewiseLinearApproximation(const It& begin, const It& end) {
+  //   It curr{begin};
+  //   while (curr != end) {
+  //     points_.insert(*curr);
+  //     ++curr;
+  //   }
+  // }
 
   Vector<N, U> operator()(double time) const {
     auto lb{points_.lower_bound(time)};

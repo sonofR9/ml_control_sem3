@@ -8,6 +8,7 @@
 #include "particle-sworm.h"
 #include "pontryagin-method.h"
 
+#include <chrono>
 #include <cmath>
 #include <fstream>
 
@@ -142,6 +143,8 @@ void testGraySin() {
 
 template <int N>
 void modelTestEvolution(int iters = 500) {
+  auto start = std::chrono::high_resolution_clock::now();
+
   using namespace two_wheeled_robot;
   const auto adap = [](const Vector<2 * N, double>& solverResult) {
     return functional<N>(solverResult, 10, 0.01);
@@ -158,6 +161,16 @@ void modelTestEvolution(int iters = 500) {
   //             << "\n";
   // }
   writeTrajectoryToFiles(trajectory);
+
+  auto end = std::chrono::high_resolution_clock::now();
+
+#ifdef NDEBUG
+  std::cout << "Release build" << std::endl;
+#else
+  std::cout << "Debug build" << std::endl;
+#endif
+  std::cout << "Time of excecution: " << (end - start).count() / 1e9 << " s"
+            << std::endl;
 }
 
 int main(int argc, char** argv) {

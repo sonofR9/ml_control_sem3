@@ -152,7 +152,7 @@ Vector<N, T> operator/(const Vector<N, T>& self, M divider) {
 template <int N, typename T>
 bool operator==(const Vector<N, T>& lhs, const Vector<N, T>& rhs) {
   constexpr double eps{1e-3};
-  const auto& diff{lhs - rhs};
+  auto diff{lhs - rhs};
   return !std::any_of(diff.begin(), diff.end(),
                       [eps](const T& value) { return fabs(value) > eps; });
 }
