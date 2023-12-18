@@ -6,13 +6,13 @@
 
 #include <algorithm>
 #include <array>
-#include <cstdint> // <cstdint> requires c++11 support
+#include <cstdint>  // <cstdint> requires c++11 support
 #include <functional>
 #include <iostream>
 #include <map>
 #include <numeric>
 #include <stdexcept>
-#include <string> // std::stod
+#include <string>  // std::stod
 #include <vector>
 
 #ifndef WITHOUT_NUMPY
@@ -21,7 +21,7 @@
 
 #ifdef WITH_OPENCV
 #include <opencv2/opencv.hpp>
-#endif // WITH_OPENCV
+#endif  // WITH_OPENCV
 
 /*
  * A bunch of constants were removed in OpenCV 4 in favour of enum classes, so
@@ -31,7 +31,7 @@
 #define CV_BGR2RGB   cv::COLOR_BGR2RGB
 #define CV_BGRA2RGBA cv::COLOR_BGRA2RGBA
 #endif
-#endif // WITHOUT_NUMPY
+#endif  // WITHOUT_NUMPY
 
 #if PY_MAJOR_VERSION >= 3
 #define PyString_FromString PyUnicode_FromString
@@ -150,14 +150,14 @@ struct _interpreter {
 #if PY_MAJOR_VERSION >= 3
 
   void* import_numpy() {
-    import_array(); // initialize C-API
+    import_array();  // initialize C-API
     return NULL;
   }
 
 #else
 
   void import_numpy() {
-    import_array(); // initialize C-API
+    import_array();  // initialize C-API
   }
 
 #endif
@@ -175,7 +175,7 @@ struct _interpreter {
 
     wchar_t const* dummy_args[] = {
         L"Python",
-        NULL}; // const is needed because literals must not be modified
+        NULL};  // const is needed because literals must not be modified
     wchar_t const** argv = dummy_args;
     int argc = sizeof(dummy_args) / sizeof(dummy_args[0]) - 1;
 
@@ -186,7 +186,7 @@ struct _interpreter {
 #endif
 
 #ifndef WITHOUT_NUMPY
-    import_numpy(); // initialize numpy C-API
+    import_numpy();  // initialize numpy C-API
 #endif
 
     PyObject* matplotlibname = PyString_FromString("matplotlib");
@@ -295,7 +295,7 @@ struct _interpreter {
   }
 };
 
-} // end namespace detail
+}  // end namespace detail
 
 /// Select the backend
 ///
@@ -344,7 +344,7 @@ namespace detail {
 template <typename T>
 struct select_npy_type {
   const static NPY_TYPES type = NPY_NOTYPE;
-}; // Default
+};  // Default
 template <>
 struct select_npy_type<double> {
   const static NPY_TYPES type = NPY_DOUBLE;
@@ -444,7 +444,8 @@ PyObject* get_2darray(const std::vector<::std::vector<Numeric>>& v) {
   return reinterpret_cast<PyObject*>(varray);
 }
 
-#else // fallback if we don't have numpy: copy every element of the given vector
+#else  // fallback if we don't have numpy: copy every element of the given
+       // vector
 
 template <typename Numeric>
 PyObject* get_array(const std::vector<Numeric>& v) {
@@ -455,7 +456,7 @@ PyObject* get_array(const std::vector<Numeric>& v) {
   return list;
 }
 
-#endif // WITHOUT_NUMPY
+#endif  // WITHOUT_NUMPY
 
 // sometimes, for labels and such, we need string arrays
 inline PyObject* get_array(const std::vector<std::string>& strings) {
@@ -476,7 +477,7 @@ PyObject* get_listlist(const std::vector<std::vector<Numeric>>& ll) {
   return listlist;
 }
 
-} // namespace detail
+}  // namespace detail
 
 /// Plot a line through the given x and y data points..
 ///
@@ -515,8 +516,6 @@ bool plot(const std::vector<Numeric>& x, const std::vector<Numeric>& y,
   return res;
 }
 
-// TODO - it should be possible to make this work by implementing
-// a non-numpy alternative for `detail::get_2darray()`.
 #ifndef WITHOUT_NUMPY
 template <typename Numeric>
 void plot_surface(const std::vector<::std::vector<Numeric>>& x,
@@ -676,7 +675,7 @@ void contour(const std::vector<::std::vector<Numeric>>& x,
 
 template <typename Numeric>
 void spy(const std::vector<::std::vector<Numeric>>& x,
-         const double markersize = -1, // -1 for default matplotlib size
+         const double markersize = -1,  // -1 for default matplotlib size
          const std::map<std::string, std::string>& keywords = {}) {
   detail::_interpreter::get();
 
@@ -702,7 +701,7 @@ void spy(const std::vector<::std::vector<Numeric>>& x,
   Py_DECREF(kwargs);
   if (res) Py_DECREF(res);
 }
-#endif // WITHOUT_NUMPY
+#endif  // WITHOUT_NUMPY
 
 template <typename Numeric>
 void plot3(const std::vector<Numeric>& x, const std::vector<Numeric>& y,
@@ -1005,7 +1004,7 @@ inline void imshow(void* ptr, const NPY_TYPES type, const int rows,
     Py_DECREF(res);
 }
 
-} // namespace detail
+}  // namespace detail
 
 inline void imshow(const unsigned char* ptr, const int rows, const int columns,
                    const int colors,
@@ -1051,12 +1050,12 @@ void imshow(const cv::Mat& image,
   detail::imshow(image2.data, npy_type, image2.rows, image2.cols,
                  image2.channels(), keywords);
 }
-#endif // WITH_OPENCV
-#endif // WITHOUT_NUMPY
+#endif  // WITH_OPENCV
+#endif  // WITHOUT_NUMPY
 
 template <typename NumericX, typename NumericY>
 bool scatter(const std::vector<NumericX>& x, const std::vector<NumericY>& y,
-             const double s = 1.0, // The marker size in points**2
+             const double s = 1.0,  // The marker size in points**2
              const std::map<std::string, std::string>& keywords = {}) {
   detail::_interpreter::get();
 
@@ -1090,7 +1089,7 @@ template <typename NumericX, typename NumericY, typename NumericColors>
 bool scatter_colored(const std::vector<NumericX>& x,
                      const std::vector<NumericY>& y,
                      const std::vector<NumericColors>& colors,
-                     const double s = 1.0, // The marker size in points**2
+                     const double s = 1.0,  // The marker size in points**2
                      const std::map<std::string, std::string>& keywords = {}) {
   detail::_interpreter::get();
 
@@ -1126,7 +1125,7 @@ bool scatter_colored(const std::vector<NumericX>& x,
 template <typename NumericX, typename NumericY, typename NumericZ>
 bool scatter(const std::vector<NumericX>& x, const std::vector<NumericY>& y,
              const std::vector<NumericZ>& z,
-             const double s = 1.0, // The marker size in points**2
+             const double s = 1.0,  // The marker size in points**2
              const std::map<std::string, std::string>& keywords = {},
              const long fig_number = 0) {
   detail::_interpreter::get();
@@ -1369,8 +1368,8 @@ bool barh(const std::vector<Numeric>& x, const std::vector<Numeric>& y,
   return res;
 }
 
-inline bool
-subplots_adjust(const std::map<std::string, double>& keywords = {}) {
+inline bool subplots_adjust(
+    const std::map<std::string, double>& keywords = {}) {
   detail::_interpreter::get();
 
   PyObject* kwargs = PyDict_New();
@@ -2588,9 +2587,9 @@ inline void ylabel(const std::string& str,
   Py_DECREF(res);
 }
 
-inline void
-set_zlabel(const std::string& str,
-           const std::map<std::string, std::string>& keywords = {}) {
+inline void set_zlabel(
+    const std::string& str,
+    const std::map<std::string, std::string>& keywords = {}) {
   detail::_interpreter::get();
 
   // Same as with plot_surface: We lazily load the moduleVars here the first
@@ -2824,9 +2823,9 @@ inline void ion() {
   Py_DECREF(res);
 }
 
-inline std::vector<std::array<double, 2>>
-ginput(const int numClicks = 1,
-       const std::map<std::string, std::string>& keywords = {}) {
+inline std::vector<std::array<double, 2>> ginput(
+    const int numClicks = 1,
+    const std::map<std::string, std::string>& keywords = {}) {
   detail::_interpreter::get();
 
   PyObject* args = PyTuple_New(1);
@@ -2889,7 +2888,7 @@ struct is_callable_impl;
 template <typename T>
 struct is_callable_impl<false, T> {
   typedef is_function<T> type;
-}; // a non-object is callable iff it is a function
+};  // a non-object is callable iff it is a function
 
 template <typename T>
 struct is_callable_impl<true, T> {
@@ -2902,8 +2901,8 @@ struct is_callable_impl<true, T> {
   struct Check;
 
   template <typename U>
-  static std::true_type
-  test(...); // use a variadic function to make sure (1) it accepts everything
+  static std::true_type test(
+      ...);  // use a variadic function to make sure (1) it accepts everything
              // and (2) its always the worst match
 
   template <typename U>
@@ -2913,7 +2912,7 @@ struct is_callable_impl<true, T> {
   typedef decltype(test<Derived>(nullptr)) type;
   typedef decltype(&Fallback::operator()) dtype;
   static constexpr bool value = type::value;
-}; // an object is callable iff it defines operator()
+};  // an object is callable iff it defines operator()
 
 template <typename T>
 struct is_callable {
@@ -2981,7 +2980,7 @@ struct plot_impl<std::true_type> {
   }
 };
 
-} // end namespace detail
+}  // end namespace detail
 
 // recursion stop for the above
 template <typename... Args>
@@ -3112,4 +3111,4 @@ class Plot {
   PyObject* set_data_fct = nullptr;
 };
 
-} // end namespace matplotlibcpp
+}  // end namespace matplotlibcpp

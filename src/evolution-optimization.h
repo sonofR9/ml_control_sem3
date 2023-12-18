@@ -41,8 +41,6 @@ std::pair<DoubleGrayCode<D>, DoubleGrayCode<D>> crossover(
   return {lhs, rhs};
 }
 
-// TODO(novak) deduce N from Fit
-// TODO(novak) Vector<N, typename T>?
 /**
  * @brief
  *

@@ -142,19 +142,19 @@ void testGraySin() {
 }
 
 template <int N>
-void modelTestEvolution(int iters = 500) {
+void modelTestEvolution(int iters, double tMax, double dt) {
   auto start = std::chrono::high_resolution_clock::now();
 
   using namespace two_wheeled_robot;
-  const auto adap = [](const Vector<2 * N, double>& solverResult) {
-    return functional<N>(solverResult, 10, 0.01);
+  const auto adap = [tMax, dt](const Vector<2 * N, double>& solverResult) {
+    return functional<N>(solverResult, tMax, dt);
   };
   Evolution<2 * N, 1000, 1000, decltype(adap), 100> solver(adap, -10, 10);
   const auto best{solver.solve(iters)};
   std::cout << "model: [" << best << "] functional: " << functional<N>(best)
             << std::endl;
 
-  const auto trajectory{getTrajectoryFromControl<N>(best, 0.1)};
+  const auto trajectory{getTrajectoryFromControl<N>(best, tMax)};
   // std::cout << "--------------------\n\n\n";
   // for (std::size_t i{0}; i < trajectory[0].size(); ++i) {
   //   std::cout << "x: " << trajectory[0][i] << " y: " << trajectory[1][i]
@@ -175,6 +175,8 @@ void modelTestEvolution(int iters = 500) {
 
 int main(int argc, char** argv) {
   int iter{500};
+  double tMax{100};
+  double dt{0.1};
   for (int i = 1; i < argc; ++i) {
     const std::string arg{argv[i]};
     if (arg == "--seed") {
@@ -191,8 +193,7 @@ int main(int argc, char** argv) {
                   << std::endl;
         return 1;
       }
-    }
-    if (arg == "--iter") {
+    } else if (arg == "--iter") {
       if (i + 1 < argc) {
         try {
           iter = std::stoi(argv[i + 1]);
@@ -205,6 +206,31 @@ int main(int argc, char** argv) {
                   << std::endl;
         return 1;
       }
+    } else if (arg == "--tmax") {
+      if (i + 1 < argc) {
+        try {
+          tMax = std::stod(argv[i + 1]);
+        } catch (std::invalid_argument& e) {
+          std::cerr << "Error: Invalid tMax value provided." << std::endl;
+          return 1;
+        }
+      } else {
+        std::cerr << "Error: Missing tMax value after --tMax flag."
+                  << std::endl;
+        return 1;
+      }
+    } else if (arg == "--dt") {
+      if (i + 1 < argc) {
+        try {
+          dt = std::stod(argv[i + 1]);
+        } catch (std::invalid_argument& e) {
+          std::cerr << "Error: Invalid dt value provided." << std::endl;
+          return 1;
+        }
+      } else {
+        std::cerr << "Error: Missing dt value after --dt flag." << std::endl;
+        return 1;
+      }
     } else if (arg == "-help") {
       std::cout << "Usage: program --seed <seed_value> --iter <iter_value>\n"
                    "Options:\n"
@@ -212,6 +238,10 @@ int main(int argc, char** argv) {
                    "random number generator.\n"
                    "     --iter <iter_value>: Specify number of iterations for "
                    "model optimization algorithm.\n"
+                   "     --tmax <tmax_value>: Specify the maximum time value "
+                   "for the model.\n"
+                   "     --dt <dt_value>: Specify the time step value for the "
+                   "model.\n"
                    "     --help: Display this help message."
                 << std::endl;
       return 0;
@@ -222,7 +252,7 @@ int main(int argc, char** argv) {
   testGradientDescent();
   testEvolution();
   testParticle();
-  modelTestEvolution<50>(iter);
+  modelTestEvolution<50>(iter, tMax, dt);
   // plt::figure();
   // plt::plot(solvedFun[0], solvedFun[1]);
   // plt::show();

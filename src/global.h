@@ -166,9 +166,6 @@ bool operator!=(const Vector<N, T>& lhs, const Vector<N, T>& rhs) {
 template <int N, typename T>
 class Vector<N, T>::Iterator {
  public:
-  // TODO(novak)
-  // using iterator_category = std::random_access_iterator_tag;
-
   using iterator_category = std::bidirectional_iterator_tag;
   using value_type = T;
   using difference_type = std::ptrdiff_t;
@@ -229,11 +226,6 @@ class Vector<N, T>::Iterator {
     return *this;
   }
 
-  // TODO(novak)
-  // reference operator[](difference_type n) const {
-  //   return *(this + n);
-  // }
-
   friend auto operator<=>(const Iterator&, const Iterator&) = default;
 
  private:
@@ -243,9 +235,6 @@ class Vector<N, T>::Iterator {
 template <int N, typename T>
 class Vector<N, T>::ConstIterator {
  public:
-  // TODO(novak)
-  // using iterator_category = std::random_access_iterator_tag;
-
   using iterator_category = std::bidirectional_iterator_tag;
   using value_type = T;
   using difference_type = std::ptrdiff_t;
@@ -306,11 +295,6 @@ class Vector<N, T>::ConstIterator {
     return *this;
   }
 
-  // TODO(novak)
-  // reference operator[](difference_type n) const {
-  //   return *(this + n);
-  // }
-
   friend auto operator<=>(const ConstIterator&, const ConstIterator&) = default;
 
  private:
@@ -363,8 +347,6 @@ double norm(Vector<100, double> self) {
 // --------------------------------StatePoint end------------------------------
 // export {
 
-// TODO(novak) should accept type instead and check that it is Vector<N> after
-// removing cv-qualifiers
 template <typename F, int N>
 concept StateSpaceFunction = requires(F func, Vector<N> point, double time) {
                                {
