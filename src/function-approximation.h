@@ -50,12 +50,12 @@ class PiecewiseLinearApproximation {
       auto tmp = points_.end();
       lb = --tmp;
       next = lb--;
-      return (lb->second + next->second) / (next->first - lb->first) *
-             (time - lb->first);
+      return lb->second + (next->second - lb->second) /
+                              (next->first - lb->first) * (time - lb->first);
     }
 
-    return (lb->second + next->second) / (next->first - lb->first) *
-           (time - lb->first);
+    return lb->second + (next->second - lb->second) /
+                            (next->first - lb->first) * (time - lb->first);
   }
 
   void insert(double time, const Vector<N, U>& point) {

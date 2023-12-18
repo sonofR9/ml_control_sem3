@@ -20,9 +20,12 @@ TEST(PiecewiseLinearApproximation, ValidTest) {
                                                         vector2d.end()};
 
   for (int i{0}; i < 20; ++i) {
-    const double val{1.0 * i / 2};
+    const double time{1.0 * i / 2};
+    const double val{1.0 + time};
     expected = {val, val};
-    const auto actual{approx(val)};
-    ASSERT_EQ(actual, expected) << actual << " expected " << expected;
+    const auto actual{approx(time)};
+    ASSERT_EQ(actual, expected)
+        << "actual: " << actual << " expected: " << expected
+        << " time: " << time;
   }
 }

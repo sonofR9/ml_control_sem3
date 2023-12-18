@@ -79,17 +79,14 @@ else()
         )
     else()
         set(WARNINGS_FLAGS
-            # "-Werror"
             "-Wall"
             "-Wextra"
             "-Wpedantic"
             "-Wno-error=language-extension-token"
-            # "-Wno-error=return-type"
-            # "-Wno-error=unused-parameter"
-            # "-Wno-error=nested-anon-types"
         )
+        message("${WARNINGS_FLAGS}")
         if (WIN32)
-            list(APPEND ${WARNINGS_FLAGS} "-Wno-error=nested-anon-types") # boost/winapi/file_management.hpp
+            list(APPEND ${WARNINGS_FLAGS} "-Wno-error=nested-anon-types") 
         endif()
         if(NOT ENABLE_CLANG_TIDY)
             list(APPEND ${WARNINGS_FLAGS} "-Wabi=${CMAKE_CXX_STANDARD}")
