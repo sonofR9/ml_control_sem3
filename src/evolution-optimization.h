@@ -108,7 +108,8 @@ class Evolution {
         }
       }
 
-      std::cout << "iter " << i << " functional " << best.second << std::endl;
+      std::cout << "\33[2K\riter " << i << " functional " << best.second
+                << std::flush;
     }
     return chromosomeToDoubles(best.first);
   }

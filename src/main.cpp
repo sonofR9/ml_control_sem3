@@ -151,8 +151,8 @@ void modelTestEvolution(int iters, double tMax, double dt) {
   };
   Evolution<2 * N, 1000, 1000, decltype(adap), 500> solver(adap, -10, 10);
   const auto best{solver.solve(iters)};
-  std::cout << "model: [" << best << "] functional: " << functional<N>(best)
-            << std::endl;
+  std::cout << "model: [" << best
+            << "] functional: " << functional<N>(best, tMax, dt) << std::endl;
 
   const auto trajectory{getTrajectoryFromControl<N>(best, tMax)};
   // std::cout << "--------------------\n\n\n";
@@ -183,8 +183,8 @@ void modelTestGrey(int iters, double tMax, double dt) {
   };
   GrayWolfAlgorithm<2 * N, decltype(adap), 512, 7> solver(adap, 10);
   const auto best{solver.solve(iters)};
-  std::cout << "model: [" << best << "] functional: " << functional<N>(best)
-            << std::endl;
+  std::cout << "model: [" << best
+            << "] functional: " << functional<N>(best, tMax, dt) << std::endl;
 
   const auto trajectory{getTrajectoryFromControl<N>(best, tMax)};
   // std::cout << "--------------------\n\n\n";

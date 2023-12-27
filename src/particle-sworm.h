@@ -52,7 +52,8 @@ class GrayWolfAlgorithm {
         }
       }
 
-      std::cout << "iter " << i << " functional " << fit_(best[0]) << std::endl;
+      std::cout << "\33[2K\riter " << i << " functional " << fit_(best[0])
+                << std::flush;
     }
 
     return *std::min_element(population.begin(), population.end(),
