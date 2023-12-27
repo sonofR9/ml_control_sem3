@@ -169,8 +169,40 @@ void modelTestEvolution(int iters, double tMax, double dt) {
 #else
   std::cout << "Debug build" << std::endl;
 #endif
-  std::cout << "Time of excecution: " << (end - start).count() / 1e9 << " s"
+  std::cout << "Time of excecution Evolution: " << (end - start).count() / 1e9
+            << " s" << std::endl;
+}
+
+template <int N>
+void modelTestGrey(int iters, double tMax, double dt) {
+  auto start = std::chrono::high_resolution_clock::now();
+
+  using namespace two_wheeled_robot;
+  const auto adap = [tMax, dt](const Vector<2 * N, double>& solverResult) {
+    return functional<N>(solverResult, tMax, dt);
+  };
+  GrayWolfAlgorithm<2 * N, decltype(adap), 1024, 7> solver(adap, 10);
+  const auto best{solver.solve(iters)};
+  std::cout << "model: [" << best << "] functional: " << functional<N>(best)
             << std::endl;
+
+  const auto trajectory{getTrajectoryFromControl<N>(best, tMax)};
+  // std::cout << "--------------------\n\n\n";
+  // for (std::size_t i{0}; i < trajectory[0].size(); ++i) {
+  //   std::cout << "x: " << trajectory[0][i] << " y: " << trajectory[1][i]
+  //             << "\n";
+  // }
+  writeTrajectoryToFiles(trajectory);
+
+  auto end = std::chrono::high_resolution_clock::now();
+
+#ifdef NDEBUG
+  std::cout << "Release build" << std::endl;
+#else
+  std::cout << "Debug build" << std::endl;
+#endif
+  std::cout << "Time of excecution gray wolf: " << (end - start).count() / 1e9
+            << " s" << std::endl;
 }
 
 int main(int argc, char** argv) {
@@ -248,11 +280,12 @@ int main(int argc, char** argv) {
     }
   }
 
-  testPontryagin();
-  testGradientDescent();
-  testEvolution();
-  testParticle();
-  modelTestEvolution<50>(iter, tMax, dt);
+  // testPontryagin();
+  // testGradientDescent();
+  // testEvolution();
+  // testParticle();
+  // modelTestEvolution<50>(iter, tMax, dt);
+  modelTestGrey<20>(iter, tMax, dt);
   // plt::figure();
   // plt::plot(solvedFun[0], solvedFun[1]);
   // plt::show();
