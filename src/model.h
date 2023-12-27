@@ -88,9 +88,9 @@ double functional(const Vector<2 * N, double>& solverResult, double tMax = 10,
 
   // TODO (novak) lower step and pass values from approximation
   const auto subIntegrative = [dt](const Vector<3>& point) -> double {
-    const double h1{2.5 - std::sqrt(std::pow(point[0] - 2.5, 2) +
+    const double h1{std::sqrt(2.5) - std::sqrt(std::pow(point[0] - 2.5, 2) +
                                     std::pow(point[1] - 2.5, 2))};
-    const double h2{2.5 - std::sqrt(std::pow(point[0] - 7.5, 2) +
+    const double h2{std::sqrt(2.5) - std::sqrt(std::pow(point[0] - 7.5, 2) +
                                     std::pow(point[1] - 7.5, 2))};
     if (h1 > 0 || h2 > 0) {
       const double kBigNumber = 1e5;

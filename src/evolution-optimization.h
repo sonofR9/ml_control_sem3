@@ -107,6 +107,8 @@ class Evolution {
           }
         }
       }
+
+      std::cout << "iter " << i << " functional " << best.second << std::endl;
     }
     return chromosomeToDoubles(best.first);
   }

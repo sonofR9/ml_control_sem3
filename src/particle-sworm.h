@@ -51,6 +51,8 @@ class GrayWolfAlgorithm {
           }
         }
       }
+
+      std::cout << "iter " << i << " functional " << fit_(best) << std::endl;
     }
 
     return *std::min_element(population.begin(), population.end(),

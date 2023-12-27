@@ -149,7 +149,7 @@ void modelTestEvolution(int iters, double tMax, double dt) {
   const auto adap = [tMax, dt](const Vector<2 * N, double>& solverResult) {
     return functional<N>(solverResult, tMax, dt);
   };
-  Evolution<2 * N, 1000, 1000, decltype(adap), 100> solver(adap, -10, 10);
+  Evolution<2 * N, 1000, 1000, decltype(adap), 500> solver(adap, -10, 10);
   const auto best{solver.solve(iters)};
   std::cout << "model: [" << best << "] functional: " << functional<N>(best)
             << std::endl;
@@ -181,7 +181,7 @@ void modelTestGrey(int iters, double tMax, double dt) {
   const auto adap = [tMax, dt](const Vector<2 * N, double>& solverResult) {
     return functional<N>(solverResult, tMax, dt);
   };
-  GrayWolfAlgorithm<2 * N, decltype(adap), 1024, 7> solver(adap, 10);
+  GrayWolfAlgorithm<2 * N, decltype(adap), 512, 7> solver(adap, 10);
   const auto best{solver.solve(iters)};
   std::cout << "model: [" << best << "] functional: " << functional<N>(best)
             << std::endl;
@@ -284,8 +284,8 @@ int main(int argc, char** argv) {
   // testGradientDescent();
   // testEvolution();
   // testParticle();
-  // modelTestEvolution<50>(iter, tMax, dt);
-  modelTestGrey<20>(iter, tMax, dt);
+  // modelTestEvolution<100>(iter, tMax, dt);
+  modelTestGrey<40>(iter, tMax, dt);
   // plt::figure();
   // plt::plot(solvedFun[0], solvedFun[1]);
   // plt::show();
