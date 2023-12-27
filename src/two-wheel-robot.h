@@ -15,10 +15,9 @@ concept ControlFunctionFullLvalue =
     };
 
 template <typename T>
-concept ControlFunctionTimeOnly =
-    requires(T fun, double time) {
-      { fun(time) } -> std::same_as<optimization::Vector<2>>;
-    };
+concept ControlFunctionTimeOnly = requires(T fun, double time) {
+  { fun(time) } -> std::same_as<optimization::Vector<2>>;
+};
 
 template <typename T>
 concept ControlFunctionFullRvalue =
@@ -44,7 +43,7 @@ class Model {
    * @param r radius of wheels
    * @param a distance between wheels
    */
-  Model(C control, double r = 2, double a = 1);
+  Model(C control, double r = 1, double a = 1);
 
   /**
    * @brief models equations system of robot
@@ -61,7 +60,7 @@ class Model {
 template <ControlFunctionTimeOnly C>
 class Model<C> {
  public:
-  Model(C control, double r = 2, double a = 1) : u_{control}, r_{r}, a_{a} {
+  Model(C control, double r = 1, double a = 1) : u_{control}, r_{r}, a_{a} {
   }
 
   /**
@@ -75,8 +74,9 @@ class Model<C> {
   optimization::StateDerivativesPoint<3> operator()(
       const optimization::Vector<3>& state, double time) {
     auto res{u_(time)};
-    return {(res[0] + res[1]) * std::cos(state[2]),
-            (res[0] + res[1]) * std::sin(state[2]), res[0] - res[1]};
+    return {r_ / 2 * (res[0] + res[1]) * std::cos(state[2]),
+            r_ / 2 * (res[0] + res[1]) * std::sin(state[2]),
+            (res[0] - res[1]) * r_ / a_};
   }
 
  private:

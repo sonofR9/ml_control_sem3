@@ -4,7 +4,7 @@
 
 namespace two_wheeled_robot {
 using namespace optimization;
-constexpr double kEpsTrajectory{1e-4};
+constexpr double kEpsTrajectory{1e-1};
 
 template <int N>
 using ControlParams = Vector<N, Vector<2, double>>;
@@ -89,9 +89,9 @@ double functional(const Vector<2 * N, double>& solverResult, double tMax = 10,
   // TODO (novak) lower step and pass values from approximation
   const auto subIntegrative = [dt](const Vector<3>& point) -> double {
     const double h1{std::sqrt(2.5) - std::sqrt(std::pow(point[0] - 2.5, 2) +
-                                    std::pow(point[1] - 2.5, 2))};
+                                               std::pow(point[1] - 2.5, 2))};
     const double h2{std::sqrt(2.5) - std::sqrt(std::pow(point[0] - 7.5, 2) +
-                                    std::pow(point[1] - 7.5, 2))};
+                                               std::pow(point[1] - 7.5, 2))};
     if (h1 > 0 || h2 > 0) {
       const double kBigNumber = 1e5;
       return kBigNumber * dt;
@@ -104,7 +104,7 @@ double functional(const Vector<2 * N, double>& solverResult, double tMax = 10,
     integral += subIntegrative({solvedX[0][i], solvedX[1][i], solvedX[2][i]});
   }
 
-  return 10 * tEnd +
+  return tEnd +
          std::sqrt(std::pow(solvedX[0][iFinal] - xf[0], 2) +
                    std::pow(solvedX[1][iFinal] - xf[1], 2) +
                    std::pow(solvedX[2][iFinal] - xf[2], 2)) +

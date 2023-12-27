@@ -9,6 +9,7 @@
 #include <ostream>
 #include <random>
 #include <ranges>
+#include <sstream>
 
 namespace optimization {
 constexpr double kEps = 1e-10;
@@ -349,20 +350,18 @@ double norm(Vector<100, double> self) {
 
 template <typename F, int N>
 concept StateSpaceFunction = requires(F func, Vector<N> point, double time) {
-                               {
-                                 func(point, time)
-                                 } -> std::same_as<StateDerivativesPoint<N>>;
-                             };
+  { func(point, time) } -> std::same_as<StateDerivativesPoint<N>>;
+};
 
 template <typename F, typename T>
 concept GradientFunction = requires(F func, const T& inp) {
-                             { func(inp) } -> std::same_as<T>;
-                           };
+  { func(inp) } -> std::same_as<T>;
+};
 
 template <typename F, typename T>
 concept Regular1OutFunction = requires(F func, const T& inp) {
-                                { func(inp) } -> std::same_as<double>;
-                              };
+  { func(inp) } -> std::same_as<double>;
+};
 
 extern int seed;
 
@@ -399,6 +398,15 @@ struct Probability {
 template <int N, typename T>
 std::ostream& operator<<(std::ostream& stream,
                          const optimization::Vector<N, T>& state) {
+  for (int i{0}; i < N; ++i) {
+    stream << state[i] << " ";
+  }
+  return stream;
+}
+
+template <int N, typename T>
+std::stringstream& operator<<(std::stringstream& stream,
+                              const optimization::Vector<N, T>& state) {
   for (int i{0}; i < N; ++i) {
     stream << state[i] << " ";
   }
