@@ -40,8 +40,12 @@ class GrayWolfAlgorithm {
           double res{0};
           for (int k{0}; k < B; ++k) {
             res += best[k][j] -
-                   2.0 * ksi[2 * k + 1] *
+                   (2.0 * ksi[2 * k + 1]) *
                        std::abs((2 * ksi[2 * k] - 1) * alpha * best[k][j] - qj);
+
+            // res += best[k][j] -
+            //  (2.0 * ksi[2 * k + 1] - 1) *alpha *
+            //  std::abs((2 * ksi[2 * k]) * best[k][j] - qj);
           }
           spec[j] = res / B;
           if (spec[j] > limit_) {
@@ -53,7 +57,7 @@ class GrayWolfAlgorithm {
       }
 
       std::stringstream ss{};
-      ss << "\33[2K\riter " << i << " functional " << best.second;
+      ss << "\33[2K\riter " << i << " functional " << fit_(best[0]);
       std::cout << ss.rdbuf() << std::flush;
     }
 

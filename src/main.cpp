@@ -284,8 +284,8 @@ int main(int argc, char** argv) {
   // testGradientDescent();
   // testEvolution();
   // testParticle();
-  // modelTestEvolution<20>(iter, tMax, dt);
-  modelTestGrey<20>(iter, tMax, dt);
+  modelTestEvolution<100>(iter, tMax, dt);
+  // modelTestGrey<20>(iter, tMax, dt);
   // plt::figure();
   // plt::plot(solvedFun[0], solvedFun[1]);
   // plt::show();
