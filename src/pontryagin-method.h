@@ -1,5 +1,5 @@
-#include "runge-kutte.h"
 #include "global.h"
+#include "runge-kutte.h"
 
 #include <concepts>
 #include <functional>
@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+
 
 namespace optimization {
 class ControlFunction {
@@ -24,29 +25,29 @@ class ControlFunction {
 };
 
 template <typename F, int N, int M>
-concept FindMaximumFunction = requires(F func, const Vector<N>& x,
-                                       const Vector<N>& psi, double time) {
-  { func(x, psi, time) } -> std::same_as<Vector<M>>;
-};
+concept FindMaximumFunction =
+    requires(F func, const Tensor<N>& x, const Tensor<N>& psi, double time) {
+      { func(x, psi, time) } -> std::same_as<Tensor<M>>;
+    };
 
 template <typename F, int N, int M>
-concept ConjugateFunction = requires(F func, const Vector<N>& x,
-                                     const Vector<M>& u, const Vector<N>& psi,
-                                     double time) {
-  { func(x, u, psi, time) } -> std::same_as<StateDerivativesPoint<N>>;
-};
+concept ConjugateFunction =
+    requires(F func, const Tensor<N>& x, const Tensor<M>& u,
+             const Tensor<N>& psi, double time) {
+      { func(x, u, psi, time) } -> std::same_as<StateDerivativesPoint<N>>;
+    };
 
 template <int M, int N, StateSpaceFunction<N> MS, ConjugateFunction<N, N> CS,
           FindMaximumFunction<N, M> FM>
-ControlFunction SolveUsingPontryagin(const Vector<N>& x0, const Vector<N>& psi0,
+ControlFunction SolveUsingPontryagin(const Tensor<N>& x0, const Tensor<N>& psi0,
                                      MS main, CS conjugate, FM findMaximum,
-                                     const Vector<N>& xf) {
+                                     const Tensor<N>& xf) {
   ControlFunction result;
 
   double dt{1e-2};
 
   double t{0};
-  Vector<M> u;
+  Tensor<M> u;
   auto x{x0};
   auto psi{psi0};
   while (x != xf) {

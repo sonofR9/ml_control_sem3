@@ -9,7 +9,7 @@ namespace optimization {
 /**
  * @brief
  *
- * @tparam T smth like Vector<N, typename smth>
+ * @tparam T smth like Tensor<N, typename smth>
  * @tparam G
  * @param qMin
  * @param qMax

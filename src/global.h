@@ -22,19 +22,19 @@ constexpr double kEps = 1e-10;
  * @tparam T number of state variables
  */
 template <int N, typename T = double>
-struct Vector {
-  Vector() {
+struct Tensor {
+  Tensor() {
     if constexpr (std::is_convertible_v<int, T>) {
       for (int i{0}; i < N; ++i) data_[i] = 0;
     }
   }
-  ~Vector() = default;
-  Vector(const Vector&) = default;
-  Vector(Vector&&) noexcept = default;
-  Vector& operator=(const Vector&) = default;
-  Vector& operator=(Vector&&) noexcept = default;
+  ~Tensor() = default;
+  Tensor(const Tensor&) = default;
+  Tensor(Tensor&&) noexcept = default;
+  Tensor& operator=(const Tensor&) = default;
+  Tensor& operator=(Tensor&&) noexcept = default;
 
-  Vector(std::initializer_list<T> list) {
+  Tensor(std::initializer_list<T> list) {
     if (list.size() != N)
       throw std::length_error("Initializer list size dffers from data size");
     auto el = list.begin();
@@ -68,17 +68,17 @@ struct Vector {
 };
 
 template <int N>
-using StatePoint = Vector<N>;
+using StatePoint = Tensor<N>;
 
 /**
  * @brief represents current derivatives (left-hand side of equations system)
  */
 template <int N>
-using StateDerivativesPoint = Vector<N>;
+using StateDerivativesPoint = Tensor<N>;
 
 template <int N, typename T>
-Vector<N, T> operator+(const Vector<N, T>& self, const Vector<N, T>& other) {
-  Vector<N, T> result;
+Tensor<N, T> operator+(const Tensor<N, T>& self, const Tensor<N, T>& other) {
+  Tensor<N, T> result;
   for (int i{0}; i < N; ++i) {
     result[i] = other[i] + self[i];
   }
@@ -86,7 +86,7 @@ Vector<N, T> operator+(const Vector<N, T>& self, const Vector<N, T>& other) {
 }
 
 template <int N, typename T>
-Vector<N, T>& operator+=(Vector<N, T>& self, const Vector<N, T>& other) {
+Tensor<N, T>& operator+=(Tensor<N, T>& self, const Tensor<N, T>& other) {
   for (int i{0}; i < N; ++i) {
     self[i] += other[i];
   }
@@ -94,8 +94,8 @@ Vector<N, T>& operator+=(Vector<N, T>& self, const Vector<N, T>& other) {
 }
 
 template <int N, typename T>
-Vector<N, T> operator-(const Vector<N, T>& self, const Vector<N, T>& other) {
-  Vector<N, T> result;
+Tensor<N, T> operator-(const Tensor<N, T>& self, const Tensor<N, T>& other) {
+  Tensor<N, T> result;
   for (int i{0}; i < N; ++i) {
     result[i] = self[i] - other[i];
   }
@@ -103,8 +103,8 @@ Vector<N, T> operator-(const Vector<N, T>& self, const Vector<N, T>& other) {
 }
 
 template <int N, typename T>
-Vector<N, T> operator-(const Vector<N, T>& self) {
-  Vector<N, T> result;
+Tensor<N, T> operator-(const Tensor<N, T>& self) {
+  Tensor<N, T> result;
   for (int i{0}; i < N; ++i) {
     result[i] = -self[i];
   }
@@ -112,7 +112,7 @@ Vector<N, T> operator-(const Vector<N, T>& self) {
 }
 
 template <int N, typename T>
-Vector<N, T>& operator-=(Vector<N, T>& self, const Vector<N, T>& other) {
+Tensor<N, T>& operator-=(Tensor<N, T>& self, const Tensor<N, T>& other) {
   for (int i{0}; i < N; ++i) {
     self[i] -= other[i];
   }
@@ -120,8 +120,8 @@ Vector<N, T>& operator-=(Vector<N, T>& self, const Vector<N, T>& other) {
 }
 
 template <int N, typename T, typename M>
-Vector<N, T> operator*(const Vector<N, T>& self, M multiplier) {
-  Vector<N, T> result;
+Tensor<N, T> operator*(const Tensor<N, T>& self, M multiplier) {
+  Tensor<N, T> result;
   for (int i{0}; i < N; ++i) {
     result[i] = multiplier * self[i];
   }
@@ -130,11 +130,11 @@ Vector<N, T> operator*(const Vector<N, T>& self, M multiplier) {
   return result;
 }
 template <int N, typename T, typename M>
-Vector<N, T> operator*(M multiplier, const Vector<N, T>& self) {
+Tensor<N, T> operator*(M multiplier, const Tensor<N, T>& self) {
   return self * multiplier;
 }
 template <int N, typename T>
-Vector<N, T>& operator*=(Vector<N, T>& self, const Vector<N, T>& other) {
+Tensor<N, T>& operator*=(Tensor<N, T>& self, const Tensor<N, T>& other) {
   for (int i{0}; i < N; ++i) {
     self[i] *= other[i];
   }
@@ -142,8 +142,8 @@ Vector<N, T>& operator*=(Vector<N, T>& self, const Vector<N, T>& other) {
 }
 
 template <int N, typename T, typename M>
-Vector<N, T> operator/(const Vector<N, T>& self, M divider) {
-  Vector<N, T> result;
+Tensor<N, T> operator/(const Tensor<N, T>& self, M divider) {
+  Tensor<N, T> result;
   for (int i{0}; i < N; ++i) {
     result[i] = self[i] / divider;
   }
@@ -151,7 +151,7 @@ Vector<N, T> operator/(const Vector<N, T>& self, M divider) {
 }
 
 template <int N, typename T>
-bool operator==(const Vector<N, T>& lhs, const Vector<N, T>& rhs) {
+bool operator==(const Tensor<N, T>& lhs, const Tensor<N, T>& rhs) {
   constexpr double eps{1e-3};
   auto diff{lhs - rhs};
   return !std::any_of(diff.begin(), diff.end(),
@@ -159,13 +159,13 @@ bool operator==(const Vector<N, T>& lhs, const Vector<N, T>& rhs) {
 }
 
 template <int N, typename T>
-bool operator!=(const Vector<N, T>& lhs, const Vector<N, T>& rhs) {
+bool operator!=(const Tensor<N, T>& lhs, const Tensor<N, T>& rhs) {
   return !(lhs == rhs);
 }
 
 // iterators
 template <int N, typename T>
-class Vector<N, T>::Iterator {
+class Tensor<N, T>::Iterator {
  public:
   using iterator_category = std::bidirectional_iterator_tag;
   using value_type = T;
@@ -234,7 +234,7 @@ class Vector<N, T>::Iterator {
 };
 
 template <int N, typename T>
-class Vector<N, T>::ConstIterator {
+class Tensor<N, T>::ConstIterator {
  public:
   using iterator_category = std::bidirectional_iterator_tag;
   using value_type = T;
@@ -303,43 +303,43 @@ class Vector<N, T>::ConstIterator {
 };
 
 template <int N, typename T>
-typename Vector<N, T>::Iterator Vector<N, T>::begin() {
+typename Tensor<N, T>::Iterator Tensor<N, T>::begin() {
   return {&data_[0]};
 }
 
 template <int N, typename T>
-typename Vector<N, T>::Iterator Vector<N, T>::end() {
+typename Tensor<N, T>::Iterator Tensor<N, T>::end() {
   return {&data_[N - 1] + 1};
 }
 
 // template <int N, typename T>
-// typename Vector<N, T>::ConstIterator Vector<N, T>::begin() const {
+// typename Tensor<N, T>::ConstIterator Tensor<N, T>::begin() const {
 //   return {&data_[0]};
 // }
 
 // template <int N, typename T>
-// typename Vector<N, T>::ConstIterator Vector<N, T>::end() const {
+// typename Tensor<N, T>::ConstIterator Tensor<N, T>::end() const {
 //   return {&data_[N - 1] + 1};
 // }
 
 template <int N, typename T>
-typename Vector<N, T>::ConstIterator Vector<N, T>::cbegin() const {
+typename Tensor<N, T>::ConstIterator Tensor<N, T>::cbegin() const {
   return {&data_[0]};
 }
 
 template <int N, typename T>
-typename Vector<N, T>::ConstIterator Vector<N, T>::cend() const {
+typename Tensor<N, T>::ConstIterator Tensor<N, T>::cend() const {
   return {&data_[N - 1] + 1};
 }
 
 template <int N, typename T>
-double norm(Vector<N, T> self) {
+double norm(Tensor<N, T> self) {
   return std::sqrt(
       std::transform_reduce(self.begin(), self.end(), 0.0, std::plus<>(),
                             [](const T& val) { return val * val; }));
 }
 
-double norm(Vector<100, double> self) {
+double norm(Tensor<100, double> self) {
   return std::sqrt(std::transform_reduce(self.begin(), self.end(), 0.0,
                                          std::plus{},
                                          [](double val) { return val * val; }));
@@ -349,7 +349,7 @@ double norm(Vector<100, double> self) {
 // export {
 
 template <typename F, int N>
-concept StateSpaceFunction = requires(F func, Vector<N> point, double time) {
+concept StateSpaceFunction = requires(F func, Tensor<N> point, double time) {
   { func(point, time) } -> std::same_as<StateDerivativesPoint<N>>;
 };
 
@@ -397,7 +397,7 @@ struct Probability {
 
 template <int N, typename T>
 std::ostream& operator<<(std::ostream& stream,
-                         const optimization::Vector<N, T>& state) {
+                         const optimization::Tensor<N, T>& state) {
   for (int i{0}; i < N; ++i) {
     stream << state[i] << " ";
   }
@@ -406,7 +406,7 @@ std::ostream& operator<<(std::ostream& stream,
 
 template <int N, typename T>
 std::stringstream& operator<<(std::stringstream& stream,
-                              const optimization::Vector<N, T>& state) {
+                              const optimization::Tensor<N, T>& state) {
   for (int i{0}; i < N; ++i) {
     stream << state[i] << " ";
   }

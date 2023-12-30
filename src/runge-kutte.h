@@ -13,10 +13,10 @@
 
 namespace optimization {
 template <int T, StateSpaceFunction<T> F>
-Vector<T> RungeKutteStep(double startT, const Vector<T>& startX, F fun,
+Tensor<T> RungeKutteStep(double startT, const Tensor<T>& startX, F fun,
                          double interestT, double delta = 0.001) {
   double curT{startT};
-  Vector<T> curX{startX};
+  Tensor<T> curX{startX};
 
   while (curT < interestT) {
     auto k1 = fun(curX, curT);
@@ -37,18 +37,18 @@ Vector<T> RungeKutteStep(double startT, const Vector<T>& startX, F fun,
  */
 template <int T, StateSpaceFunction<T> F>
 std::array<std::vector<double>, T + 1> SolveDiffEqRungeKutte(
-    double startT, const Vector<T>& startX, F fun, double lastT,
+    double startT, const Tensor<T>& startX, F fun, double lastT,
     double delta = 0.001) {
   std::array<std::vector<double>, T + 1> result;
   double curT{startT};
-  Vector<T> curX{startX};
+  Tensor<T> curX{startX};
 
   for (int i{0}; i < T; ++i) result[i].push_back(curX[i]);
   result[T].push_back(curT);
 
   while (curT < lastT - kEps) {
     curX = RungeKutteStep(curT, curX,
-                          std::function<Vector<3>(Vector<3>, double)>(fun),
+                          std::function<Tensor<3>(Tensor<3>, double)>(fun),
                           curT + delta, delta);
     curT += delta;
     for (int i{0}; i < T; ++i) result[i].push_back(curX[i]);
@@ -59,4 +59,3 @@ std::array<std::vector<double>, T + 1> SolveDiffEqRungeKutte(
 }
 // }
 }  // namespace optimization
-

@@ -6,20 +6,19 @@
 
 namespace optimization {
 template <typename T, int N, typename U>
-concept VectorIterator = requires(const T& it) {
-                           { *it } -> std::same_as<Vector<N, U>&>;
-                         };
+concept TensorIterator = requires(const T& it) {
+  { *it } -> std::same_as<Tensor<N, U>&>;
+};
 
 template <typename T, int N, typename U>
-concept TimeAndVectorIterator =
-    requires(const T& it) {
-      { *it } -> std::same_as<std::pair<double, Vector<N>>&>;
-    };
+concept TimeAndTensorIterator = requires(const T& it) {
+  { *it } -> std::same_as<std::pair<double, Tensor<N>>&>;
+};
 
 template <int N, typename U = double>
 class PiecewiseLinearApproximation {
  public:
-  template <VectorIterator<N, U> It>
+  template <TensorIterator<N, U> It>
   PiecewiseLinearApproximation(double dt, const It& begin, const It& end) {
     double t{0};
     It curr{begin};
@@ -30,7 +29,7 @@ class PiecewiseLinearApproximation {
     }
   }
 
-  // template <TimeAndVectorIterator<N, U> It>
+  // template <TimeAndTensorIterator<N, U> It>
   // PiecewiseLinearApproximation(const It& begin, const It& end) {
   //   It curr{begin};
   //   while (curr != end) {
@@ -39,7 +38,7 @@ class PiecewiseLinearApproximation {
   //   }
   // }
 
-  Vector<N, U> operator()(double time) const {
+  Tensor<N, U> operator()(double time) const {
     auto lb{points_.lower_bound(time)};
     auto next{lb};
     if (next != points_.end()) {
@@ -58,11 +57,11 @@ class PiecewiseLinearApproximation {
                             (next->first - lb->first) * (time - lb->first);
   }
 
-  void insert(double time, const Vector<N, U>& point) {
+  void insert(double time, const Tensor<N, U>& point) {
     points_.insert({time, point});
   }
 
  private:
-  std::map<double, Vector<N, U>> points_;
+  std::map<double, Tensor<N, U>> points_;
 };
 }  // namespace optimization

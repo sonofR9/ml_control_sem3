@@ -7,11 +7,11 @@ using namespace optimization;
 using namespace two_wheeled_robot;
 
 TEST(PiecewiseLinearApproximation, ValidTest) {
-  const Vector<20, double> vec{1, 1, 2, 2, 3, 3, 4, 4, 5,  5,
+  const Tensor<20, double> vec{1, 1, 2, 2, 3, 3, 4, 4, 5,  5,
                                6, 6, 7, 7, 8, 8, 9, 9, 10, 10};
   auto vector2d{approximationFrom1D<10>(vec)};
 
-  Vector<2, double> expected{1, 1};
+  Tensor<2, double> expected{1, 1};
   ASSERT_EQ(vector2d[0], expected);
   expected = {10, 10};
   ASSERT_EQ(vector2d[9], expected);

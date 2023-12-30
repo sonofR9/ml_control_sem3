@@ -46,14 +46,14 @@ template <int N, StateSpaceFunction<N> MS, ConjugateFunction<N, N> CS,
 using PontryaginSolver = decltype(SolveUsingPontryagin<2, N, MS, CS, FM>);
 
 void testGradientDescent() {
-  const Vector<5> qMin{-3, -3, -3, -3, -3};
-  const Vector<5> qMax{30, 30, 30, 30, 30};
+  const Tensor<5> qMin{-3, -3, -3, -3, -3};
+  const Tensor<5> qMax{30, 30, 30, 30, 30};
   // func = (q0-5)^2 + (q1)^2 + (q2)^2 + (q3-5)^2 + (q4-10)^2
-  auto grad = [](const Vector<5>& q) -> Vector<5> {
+  auto grad = [](const Tensor<5>& q) -> Tensor<5> {
     return {2 * (q[0] - 5), 2 * q[1], 2 * q[2], 2 * (q[3] - 5),
             2 * (q[4] - 10)};
   };
-  auto functional = [](const Vector<5>& q) -> double {
+  auto functional = [](const Tensor<5>& q) -> double {
     return std::pow(q[0] - 5, 2) + std::pow(q[1], 2) + std::pow(q[2], 2) +
            std::pow(q[3] - 5, 2) + std::pow(q[4] - 10, 2);
   };
@@ -68,15 +68,15 @@ void testPontryagin() {
   // constexpr double umax{1};
 
   // two_wheeled_robot::Model robot(u, 2, 1);
-  // auto conjugate = [](const Vector<3>& x, const Vector<2>& u,
-  //                     const Vector<3>& psi,
+  // auto conjugate = [](const Tensor<3>& x, const Tensor<2>& u,
+  //                     const Tensor<3>& psi,
   //                     double time) -> StateDerivativesPoint<3> {
   //   return {0, 0,
   //           -psi[0] * sin(x[2]) * (u[0] + u[1]) / 2 +
   //               psi[1] * cos(x[2]) * (u[0] + u[1]) / 2};
   // };
-  // auto findMaximum = [](const Vector<3>& x, const Vector<3>& psi,
-  //                       double) -> Vector<2> {
+  // auto findMaximum = [](const Tensor<3>& x, const Tensor<3>& psi,
+  //                       double) -> Tensor<2> {
   //   double ul;
   //   double ur;
   //   if (psi[0] * cos(x[2]) + psi[1] * sin(x[2]) + psi[2] > 0) {
@@ -93,9 +93,9 @@ void testPontryagin() {
   // };
 
   // double delta{0.01};
-  // Vector<3> x0{0, 0, 0};
-  // Vector<3> psi0{0, 0, 0};
-  // Vector<3> xf{0, 0, 0};
+  // Tensor<3> x0{0, 0, 0};
+  // Tensor<3> psi0{0, 0, 0};
+  // Tensor<3> xf{0, 0, 0};
   // double curT{0};
   // double endT{100};
   // const auto solvedFun = SolveDiffEqRungeKutte(curT, curX, robot, endT,
@@ -106,7 +106,7 @@ void testPontryagin() {
 }
 
 void testEvolution() {
-  auto fitness = [](const Vector<5>& q) -> double {
+  auto fitness = [](const Tensor<5>& q) -> double {
     return 1 + std::pow(q[0] - 5, 2) + std::pow(q[1], 2) + std::pow(q[2], 2) +
            std::pow(q[3] - 5, 2) + std::pow(q[4] - 10, 2);
   };
@@ -116,7 +116,7 @@ void testEvolution() {
 }
 
 void testParticle() {
-  auto fitness = [](const Vector<5>& q) -> double {
+  auto fitness = [](const Tensor<5>& q) -> double {
     return 1 + std::pow(q[0] - 5, 2) + std::pow(q[1], 2) + std::pow(q[2], 2) +
            std::pow(q[3] - 5, 2) + std::pow(q[4] - 10, 2);
   };
@@ -127,7 +127,7 @@ void testParticle() {
 
 template <int N, int P = 10 * N>
 void testGraySin(int iter) {
-  auto fitness = [](const Vector<1>& q) -> double {
+  auto fitness = [](const Tensor<1>& q) -> double {
     return 1 + std::sin(q[0]);
   };
   GrayWolfAlgorithm<1, decltype(fitness), P, N> solver(fitness, 100);
@@ -146,7 +146,7 @@ void modelTestEvolution(int iters, double tMax, double dt) {
   auto start = std::chrono::high_resolution_clock::now();
 
   using namespace two_wheeled_robot;
-  const auto adap = [tMax, dt](const Vector<2 * N, double>& solverResult) {
+  const auto adap = [tMax, dt](const Tensor<2 * N, double>& solverResult) {
     return functional<N>(solverResult, tMax, dt);
   };
   Evolution<2 * N, 1000, 1000, decltype(adap), 500> solver(adap, -10, 10);
@@ -178,7 +178,7 @@ void modelTestGrey(int iters, double tMax, double dt) {
   auto start = std::chrono::high_resolution_clock::now();
 
   using namespace two_wheeled_robot;
-  const auto adap = [tMax, dt](const Vector<2 * N, double>& solverResult) {
+  const auto adap = [tMax, dt](const Tensor<2 * N, double>& solverResult) {
     return functional<N>(solverResult, tMax, dt);
   };
   GrayWolfAlgorithm<2 * N, decltype(adap), 512, 3> solver(adap, 10);

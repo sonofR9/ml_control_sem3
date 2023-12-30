@@ -13,10 +13,10 @@ namespace optimization {
  * @tparam P number of in population
  * @tparam B number of best wolfs
  */
-template <int N, Regular1OutFunction<Vector<N, double>> Fit, int P = 100,
+template <int N, Regular1OutFunction<Tensor<N, double>> Fit, int P = 100,
           int B = 3>
 class GrayWolfAlgorithm {
-  using Specimen = Vector<N, double>;
+  using Specimen = Tensor<N, double>;
   using Population = std::array<Specimen, P>;
 
  public:
@@ -24,7 +24,7 @@ class GrayWolfAlgorithm {
       : fit_{fit}, limit_{std::abs(limit)} {
   }
 
-  Vector<N, double> solve(int numIterations) {
+  Tensor<N, double> solve(int numIterations) {
     auto population{GrayWolfAlgorithm::generatePopulation()};
 
     for (int i{0}; i < numIterations; ++i) {
@@ -99,10 +99,10 @@ class GrayWolfAlgorithm {
 
   Population generatePopulation() {
     // generate random population (P chromosomes of size N each)
-    std::array<Vector<N, double>, P> population;
+    std::array<Tensor<N, double>, P> population;
     std::generate(
-        population.begin(), population.end(), [this]() -> Vector<N, double> {
-          Vector<N, double> chromosome;
+        population.begin(), population.end(), [this]() -> Tensor<N, double> {
+          Tensor<N, double> chromosome;
           std::generate(chromosome.begin(), chromosome.end(), [this]() {
             return DoubleGenerator::get() / DoubleGenerator::absLimit() *
                    limit_;
