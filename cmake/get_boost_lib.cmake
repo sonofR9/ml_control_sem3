@@ -1,11 +1,38 @@
 function(find_boost_libs LIBRARIES)
-  # Find Boost using find_package
-  find_package(Boost 1.84 CONFIG COMPONENTS ${LIBRARIES})
+#   # Find Boost using find_package
+#   find_package(Boost 1.84 CONFIG COMPONENTS ${LIBRARIES} QUIET)
 
-  # If Boost was found, return
-  if(Boost_FOUND)
-    return()
-  endif()
+#   # check if each library was found
+#   set(FOUND_ALL TRUE)
+#   if (${Boost_FOUND})
+#     foreach(LIBRARY ${LIBRARIES})
+#         if(NOT ${Boost_${LIBRARY}_FOUND})
+#             set(FOUND_ALL FALSE)
+#             message("Boost ${LIBRARY} was not found")
+#         endif()
+#     endforeach()
+#   else()
+#     set(FOUND_ALL FALSE)
+#     message(Boost was not found)
+#   endif()
+
+#   # If Boost was found, return
+#   if(${FOUND_ALL})
+#     return()
+#   elseif(${Boost_FOUND})
+#     foreach(LIBRARY ${LIBRARIES})
+#         if (NOT ${Boost_${LIBRARY}_FOUND})
+#             continue()
+#         endif()
+
+#         set_target_properties(Boost::${LIBRARY} PROPERTIES OUTPUT_NAME rm_Boost_${LIBRARY})
+#         unset(Boost::${LIBRARY})
+#         unset(Boost_${LIBRARY}_FOUND)
+#         unset(Boost_${LIBRARY}_LIBRARY)
+#         unset(Boost_${LIBRARY}_INCLUDE_DIR)
+#         unset(Boost_${LIBRARY})
+#     endforeach()
+#   endif()
 
   # Otherwise, fetch Boost using FetchContent
   set(BOOST_INCLUDE_LIBRARIES ${LIBRARIES})
