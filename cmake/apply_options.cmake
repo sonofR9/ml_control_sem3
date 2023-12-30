@@ -50,10 +50,7 @@ if(ENABLE_CLANG_FORMAT)
     clangformat_setup(${ALL_SOURCE_FILES})
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(BoldGreen "${Esc}[1;32m")
-    message("\n${BoldGreen}Release build${ResetColor}\n")
-else()
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(BoldMagenta "${Esc}[1;35m")
     set(DEBUG_MESSAGE "\n${BoldMagenta}Debug build")
 
@@ -94,6 +91,9 @@ else()
     endif()
 
     add_compile_options(${WARNINGS_FLAGS})
+else()
+    set(BoldGreen "${Esc}[1;32m")
+    message("\n${BoldGreen}${CMAKE_BUILD_TYPE}${ResetColor}\n")
 endif()
 
 if(ENABLE_TEST)
