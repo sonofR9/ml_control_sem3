@@ -10,19 +10,21 @@ namespace two_wheeled_robot {
 
 template <typename T>
 concept ControlFunctionFullLvalue =
-    requires(T fun, const optimization::Tensor<3>& state, double time) {
-      { fun(state, time) } -> std::same_as<optimization::Tensor<2>>;
+    requires(T fun, const optimization::StaticTensor<3>& state, double time) {
+      { fun(state, time) } -> std::same_as<optimization::StaticTensor<2>>;
     };
 
 template <typename T>
 concept ControlFunctionTimeOnly = requires(T fun, double time) {
-  { fun(time) } -> std::same_as<optimization::Tensor<2>>;
+  { fun(time) } -> std::same_as<optimization::StaticTensor<2>>;
 };
 
 template <typename T>
 concept ControlFunctionFullRvalue =
-    requires(T fun, optimization::Tensor<3>&& state, double time) {
-      { fun(std::move(state), time) } -> std::same_as<optimization::Tensor<2>>;
+    requires(T fun, optimization::StaticTensor<3>&& state, double time) {
+      {
+        fun(std::move(state), time)
+      } -> std::same_as<optimization::StaticTensor<2>>;
     };
 
 template <typename T>
@@ -54,7 +56,7 @@ class Model {
    * system (derivatives of state variables)
    */
   optimization::StateDerivativesPoint<3> operator()(
-      optimization::Tensor<3> state, double time);
+      optimization::StaticTensor<3> state, double time);
 };
 
 template <ControlFunctionTimeOnly C>
@@ -72,7 +74,7 @@ class Model<C> {
    * system (derivatives of state variables)
    */
   optimization::StateDerivativesPoint<3> operator()(
-      const optimization::Tensor<3>& state, double time) {
+      const optimization::StaticTensor<3>& state, double time) {
     auto res{u_(time)};
     return {r_ / 2 * (res[0] + res[1]) * std::cos(state[2]),
             r_ / 2 * (res[0] + res[1]) * std::sin(state[2]),
@@ -101,7 +103,7 @@ class Model<C> {
    * system (derivatives of state variables)
    */
   optimization::StateDerivativesPoint<3> operator()(
-      const optimization::Tensor<3>& state, double time) {
+      const optimization::StaticTensor<3>& state, double time) {
     auto res{u_(state, time)};
     return {r_ / 2 * (res[0] + res[1]) * std::cos(state[2]),
             r_ / 2 * (res[0] + res[1]) * std::sin(state[2]),
@@ -130,7 +132,8 @@ class Model<C> {
 //    equations
 //    * system (derivatives of state variables)
 //    */
-//   optimization::Tensor<3> operator()(optimization::Tensor<3>&& state,
+//   optimization::StaticTensor<3> operator()(optimization::StaticTensor<3>&&
+//   state,
 //                                      double time) {
 //     auto res{u_(state, time)};
 //     return {r_ / 2 * (res[0] + res[1]) * std::cos(state[2]),

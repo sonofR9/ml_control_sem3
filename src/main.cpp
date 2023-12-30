@@ -31,8 +31,8 @@ void writeTrajectoryToFiles(
   }
 
   for (size_t i = 0; i < trajectory[0].size(); ++i) {
-    fileX << trajectory[0][i] << std::endl;
-    fileY << trajectory[1][i] << std::endl;
+    fileX << trajectory[0][i] << "\n";
+    fileY << trajectory[1][i] << "\n";
   }
 
   fileX.close();
@@ -46,20 +46,19 @@ template <int N, StateSpaceFunction<N> MS, ConjugateFunction<N, N> CS,
 using PontryaginSolver = decltype(SolveUsingPontryagin<2, N, MS, CS, FM>);
 
 void testGradientDescent() {
-  const Tensor<5> qMin{-3, -3, -3, -3, -3};
-  const Tensor<5> qMax{30, 30, 30, 30, 30};
+  const StaticTensor<5> qMin{-3, -3, -3, -3, -3};
+  const StaticTensor<5> qMax{30, 30, 30, 30, 30};
   // func = (q0-5)^2 + (q1)^2 + (q2)^2 + (q3-5)^2 + (q4-10)^2
-  auto grad = [](const Tensor<5>& q) -> Tensor<5> {
+  auto grad = [](const StaticTensor<5>& q) -> StaticTensor<5> {
     return {2 * (q[0] - 5), 2 * q[1], 2 * q[2], 2 * (q[3] - 5),
             2 * (q[4] - 10)};
   };
-  auto functional = [](const Tensor<5>& q) -> double {
+  auto functional = [](const StaticTensor<5>& q) -> double {
     return std::pow(q[0] - 5, 2) + std::pow(q[1], 2) + std::pow(q[2], 2) +
            std::pow(q[3] - 5, 2) + std::pow(q[4] - 10, 2);
   };
   const auto& res{GradientDescent(qMin, qMax, functional, grad, 0.5, 1e4)};
-  std::cout << "GradientDescent: [" << res << "] True: [5 0 0 5 10]"
-            << std::endl;
+  std::cout << "GradientDescent: [" << res << "] True: [5 0 0 5 10]\n";
 }
 
 void testPontryagin() {
@@ -68,15 +67,15 @@ void testPontryagin() {
   // constexpr double umax{1};
 
   // two_wheeled_robot::Model robot(u, 2, 1);
-  // auto conjugate = [](const Tensor<3>& x, const Tensor<2>& u,
-  //                     const Tensor<3>& psi,
+  // auto conjugate = [](const StaticTensor<3>& x, const StaticTensor<2>& u,
+  //                     const StaticTensor<3>& psi,
   //                     double time) -> StateDerivativesPoint<3> {
   //   return {0, 0,
   //           -psi[0] * sin(x[2]) * (u[0] + u[1]) / 2 +
   //               psi[1] * cos(x[2]) * (u[0] + u[1]) / 2};
   // };
-  // auto findMaximum = [](const Tensor<3>& x, const Tensor<3>& psi,
-  //                       double) -> Tensor<2> {
+  // auto findMaximum = [](const StaticTensor<3>& x, const StaticTensor<3>& psi,
+  //                       double) -> StaticTensor<2> {
   //   double ul;
   //   double ur;
   //   if (psi[0] * cos(x[2]) + psi[1] * sin(x[2]) + psi[2] > 0) {
@@ -93,9 +92,9 @@ void testPontryagin() {
   // };
 
   // double delta{0.01};
-  // Tensor<3> x0{0, 0, 0};
-  // Tensor<3> psi0{0, 0, 0};
-  // Tensor<3> xf{0, 0, 0};
+  // StaticTensor<3> x0{0, 0, 0};
+  // StaticTensor<3> psi0{0, 0, 0};
+  // StaticTensor<3> xf{0, 0, 0};
   // double curT{0};
   // double endT{100};
   // const auto solvedFun = SolveDiffEqRungeKutte(curT, curX, robot, endT,
@@ -106,34 +105,34 @@ void testPontryagin() {
 }
 
 void testEvolution() {
-  auto fitness = [](const Tensor<5>& q) -> double {
+  auto fitness = [](const StaticTensor<5>& q) -> double {
     return 1 + std::pow(q[0] - 5, 2) + std::pow(q[1], 2) + std::pow(q[2], 2) +
            std::pow(q[3] - 5, 2) + std::pow(q[4] - 10, 2);
   };
   Evolution<5, 1000, 1000, decltype(fitness), 100> solver(fitness, -100, 100);
   const auto best{solver.solve(200)};
-  std::cout << "Evolution: [" << best << "] True: [5 0 0 5 10]" << std::endl;
+  std::cout << "Evolution: [" << best << "] True: [5 0 0 5 10]\n";
 }
 
 void testParticle() {
-  auto fitness = [](const Tensor<5>& q) -> double {
+  auto fitness = [](const StaticTensor<5>& q) -> double {
     return 1 + std::pow(q[0] - 5, 2) + std::pow(q[1], 2) + std::pow(q[2], 2) +
            std::pow(q[3] - 5, 2) + std::pow(q[4] - 10, 2);
   };
   GrayWolfAlgorithm<5, decltype(fitness), 500, 5> solver(fitness, 100);
   const auto best{solver.solve(800)};
-  std::cout << "Gray wolf: [" << best << "] True: [5 0 0 5 10]" << std::endl;
+  std::cout << "Gray wolf: [" << best << "] True: [5 0 0 5 10]\n";
 }
 
 template <int N, int P = 10 * N>
 void testGraySin(int iter) {
-  auto fitness = [](const Tensor<1>& q) -> double {
+  auto fitness = [](const StaticTensor<1>& q) -> double {
     return 1 + std::sin(q[0]);
   };
   GrayWolfAlgorithm<1, decltype(fitness), P, N> solver(fitness, 100);
   const auto best{solver.solve(iter)};
   std::cout << "<" << N << ">, ", iter,
-      ": " << best << " fit " << fitness(best) << std::endl;
+      ": " << best << " fit " << fitness(best) << "\n";
 }
 
 void testGraySin() {
@@ -146,13 +145,14 @@ void modelTestEvolution(int iters, double tMax, double dt) {
   auto start = std::chrono::high_resolution_clock::now();
 
   using namespace two_wheeled_robot;
-  const auto adap = [tMax, dt](const Tensor<2 * N, double>& solverResult) {
+  const auto adap = [tMax,
+                     dt](const StaticTensor<2 * N, double>& solverResult) {
     return functional<N>(solverResult, tMax, dt);
   };
   Evolution<2 * N, 1000, 1000, decltype(adap), 500> solver(adap, -10, 10);
   const auto best{solver.solve(iters)};
   std::cout << "model: [" << best
-            << "] functional: " << functional<N>(best, tMax, dt) << std::endl;
+            << "] functional: " << functional<N>(best, tMax, dt) << "\n";
 
   const auto trajectory{getTrajectoryFromControl<N>(best, tMax)};
   // std::cout << "--------------------\n\n\n";
@@ -165,12 +165,12 @@ void modelTestEvolution(int iters, double tMax, double dt) {
   auto end = std::chrono::high_resolution_clock::now();
 
 #ifdef NDEBUG
-  std::cout << "Release build" << std::endl;
+  std::cout << "Release build\n";
 #else
-  std::cout << "Debug build" << std::endl;
+  std::cout << "Debug build\n";
 #endif
   std::cout << "Time of excecution Evolution: " << (end - start).count() / 1e9
-            << " s" << std::endl;
+            << " s\n";
 }
 
 template <int N>
@@ -178,13 +178,14 @@ void modelTestGrey(int iters, double tMax, double dt) {
   auto start = std::chrono::high_resolution_clock::now();
 
   using namespace two_wheeled_robot;
-  const auto adap = [tMax, dt](const Tensor<2 * N, double>& solverResult) {
+  const auto adap = [tMax,
+                     dt](const StaticTensor<2 * N, double>& solverResult) {
     return functional<N>(solverResult, tMax, dt);
   };
   GrayWolfAlgorithm<2 * N, decltype(adap), 512, 3> solver(adap, 10);
   const auto best{solver.solve(iters)};
   std::cout << "model: [" << best
-            << "] functional: " << functional<N>(best, tMax, dt) << std::endl;
+            << "] functional: " << functional<N>(best, tMax, dt) << "\n";
 
   const auto trajectory{getTrajectoryFromControl<N>(best, tMax)};
   // std::cout << "--------------------\n\n\n";
@@ -197,12 +198,12 @@ void modelTestGrey(int iters, double tMax, double dt) {
   auto end = std::chrono::high_resolution_clock::now();
 
 #ifdef NDEBUG
-  std::cout << "Release build" << std::endl;
+  std::cout << "Release build\n";
 #else
-  std::cout << "Debug build" << std::endl;
+  std::cout << "Debug build\n";
 #endif
   std::cout << "Time of excecution gray wolf: " << (end - start).count() / 1e9
-            << " s" << std::endl;
+            << " s\n";
 }
 
 int main(int argc, char** argv) {
@@ -215,14 +216,13 @@ int main(int argc, char** argv) {
       if (i + 1 < argc) {
         try {
           seed = std::stoi(argv[i + 1]);
-          std::cout << "seed provided: " << seed << std::endl;
+          std::cout << "seed provided: " << seed << "\n";
         } catch (std::invalid_argument& e) {
-          std::cerr << "Error: Invalid seed value provided." << std::endl;
+          std::cerr << "Error: Invalid seed value provided.\n";
           return 1;
         }
       } else {
-        std::cerr << "Error: Missing seed value after --seed flag."
-                  << std::endl;
+        std::cerr << "Error: Missing seed value after --seed flag.\n";
         return 1;
       }
     } else if (arg == "--iter") {
@@ -230,12 +230,11 @@ int main(int argc, char** argv) {
         try {
           iter = std::stoi(argv[i + 1]);
         } catch (std::invalid_argument& e) {
-          std::cerr << "Error: Invalid iter value provided." << std::endl;
+          std::cerr << "Error: Invalid iter value provided.\n";
           return 1;
         }
       } else {
-        std::cerr << "Error: Missing iter value after --iter flag."
-                  << std::endl;
+        std::cerr << "Error: Missing iter value after --iter flag.\n";
         return 1;
       }
     } else if (arg == "--tmax") {
@@ -243,12 +242,11 @@ int main(int argc, char** argv) {
         try {
           tMax = std::stod(argv[i + 1]);
         } catch (std::invalid_argument& e) {
-          std::cerr << "Error: Invalid tMax value provided." << std::endl;
+          std::cerr << "Error: Invalid tMax value provided.\n";
           return 1;
         }
       } else {
-        std::cerr << "Error: Missing tMax value after --tMax flag."
-                  << std::endl;
+        std::cerr << "Error: Missing tMax value after --tMax flag.\n";
         return 1;
       }
     } else if (arg == "--dt") {
@@ -256,14 +254,14 @@ int main(int argc, char** argv) {
         try {
           dt = std::stod(argv[i + 1]);
         } catch (std::invalid_argument& e) {
-          std::cerr << "Error: Invalid dt value provided." << std::endl;
+          std::cerr << "Error: Invalid dt value provided.\n";
           return 1;
         }
       } else {
-        std::cerr << "Error: Missing dt value after --dt flag." << std::endl;
+        std::cerr << "Error: Missing dt value after --dt flag.\n";
         return 1;
       }
-    } else if (arg == "-help") {
+    } else if (arg == "--help" || arg == "-h") {
       std::cout << "Usage: program --seed <seed_value> --iter <iter_value>\n"
                    "Options:\n"
                    "     --seed <seed_value>: Specify a seed value for the "
@@ -274,8 +272,7 @@ int main(int argc, char** argv) {
                    "for the model.\n"
                    "     --dt <dt_value>: Specify the time step value for the "
                    "model.\n"
-                   "     --help: Display this help message."
-                << std::endl;
+                   "     --help|-h: Display this help message.\n";
       return 0;
     }
   }

@@ -8,7 +8,6 @@
 #include <utility>
 #include <vector>
 
-
 namespace optimization {
 class ControlFunction {
  public:
@@ -25,29 +24,30 @@ class ControlFunction {
 };
 
 template <typename F, int N, int M>
-concept FindMaximumFunction =
-    requires(F func, const Tensor<N>& x, const Tensor<N>& psi, double time) {
-      { func(x, psi, time) } -> std::same_as<Tensor<M>>;
-    };
+concept FindMaximumFunction = requires(
+    F func, const StaticTensor<N>& x, const StaticTensor<N>& psi, double time) {
+  { func(x, psi, time) } -> std::same_as<StaticTensor<M>>;
+};
 
 template <typename F, int N, int M>
 concept ConjugateFunction =
-    requires(F func, const Tensor<N>& x, const Tensor<M>& u,
-             const Tensor<N>& psi, double time) {
+    requires(F func, const StaticTensor<N>& x, const StaticTensor<M>& u,
+             const StaticTensor<N>& psi, double time) {
       { func(x, u, psi, time) } -> std::same_as<StateDerivativesPoint<N>>;
     };
 
 template <int M, int N, StateSpaceFunction<N> MS, ConjugateFunction<N, N> CS,
           FindMaximumFunction<N, M> FM>
-ControlFunction SolveUsingPontryagin(const Tensor<N>& x0, const Tensor<N>& psi0,
-                                     MS main, CS conjugate, FM findMaximum,
-                                     const Tensor<N>& xf) {
+ControlFunction SolveUsingPontryagin(const StaticTensor<N>& x0,
+                                     const StaticTensor<N>& psi0, MS main,
+                                     CS conjugate, FM findMaximum,
+                                     const StaticTensor<N>& xf) {
   ControlFunction result;
 
   double dt{1e-2};
 
   double t{0};
-  Tensor<M> u;
+  StaticTensor<M> u;
   auto x{x0};
   auto psi{psi0};
   while (x != xf) {

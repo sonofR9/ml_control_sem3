@@ -7,12 +7,13 @@ using namespace optimization;
 constexpr double kEpsTrajectory{1e-1};
 
 template <int N>
-using ControlParams = Tensor<N, Tensor<2, double>>;
+using ControlParams = StaticTensor<N, StaticTensor<2, double>>;
 template <int N>
-using ControlApproximation = PiecewiseLinearApproximation<N, Tensor<2, double>>;
+using ControlApproximation =
+    PiecewiseLinearApproximation<N, StaticTensor<2, double>>;
 
 template <int N>
-ControlParams<N> approximationFrom1D(const Tensor<2 * N>& solverResult) {
+ControlParams<N> approximationFrom1D(const StaticTensor<2 * N>& solverResult) {
   ControlParams<N> result{};
   for (int i = 0; i < N; ++i) {
     result[i][0] = solverResult[2 * i];
@@ -22,8 +23,9 @@ ControlParams<N> approximationFrom1D(const Tensor<2 * N>& solverResult) {
 }
 
 template <int N>
-Tensor<N, double> stdTensorToTensor(const std::vector<double>& vec) {
-  Tensor<N, double> result{};
+StaticTensor<N, double> stdStaticTensorToStaticTensor(
+    const std::vector<double>& vec) {
+  StaticTensor<N, double> result{};
   for (int i = 0; i < N; ++i) {
     result[i] = vec[i];
   }
@@ -31,10 +33,10 @@ Tensor<N, double> stdTensorToTensor(const std::vector<double>& vec) {
 }
 
 template <int T, StateSpaceFunction<T> F>
-double integrate(double startT, const Tensor<T>& startX, F fun,
+double integrate(double startT, const StaticTensor<T>& startX, F fun,
                  double interestT, double delta = 0.001) {
   double curT{startT};
-  Tensor<T> curX{startX};
+  StaticTensor<T> curX{startX};
 
   while (curT < interestT) {
     auto k1 = fun(curX, curT);
@@ -50,29 +52,31 @@ double integrate(double startT, const Tensor<T>& startX, F fun,
 
 template <int N>
 std::array<std::vector<double>, 3 + 1> getTrajectoryFromControl(
-    const Tensor<2 * N, double>& solverResult, double tMax, double dt = 0.01) {
+    const StaticTensor<2 * N, double>& solverResult, double tMax,
+    double dt = 0.01) {
   auto approx{approximationFrom1D<N>(solverResult)};
 
   const PiecewiseLinearApproximation<2, double>& func{tMax / N, approx.begin(),
                                                       approx.end()};
 
-  const auto control = [&func](const Tensor<3>&, double time) -> Tensor<2> {
+  const auto control = [&func](const StaticTensor<3>&,
+                               double time) -> StaticTensor<2> {
     return func(time);
   };
   Model robot{control, 1};
 
-  Tensor<3> x0{10, 10, 0};
+  StaticTensor<3> x0{10, 10, 0};
   double curT{0};
   double endT{tMax};
   return SolveDiffEqRungeKutte(curT, x0, robot, endT, dt);
 }
 
 template <int N>
-double functional(const Tensor<2 * N, double>& solverResult, double tMax = 10,
-                  double dt = 0.01) {
+double functional(const StaticTensor<2 * N, double>& solverResult,
+                  double tMax = 10, double dt = 0.01) {
   const auto solvedX = getTrajectoryFromControl<N>(solverResult, tMax, dt);
 
-  Tensor<3> xf{0, 0, 0};
+  StaticTensor<3> xf{0, 0, 0};
   int i{0};
   double tEnd{0};
   for (; tEnd < tMax - kEps; tEnd += dt) {
@@ -87,7 +91,7 @@ double functional(const Tensor<2 * N, double>& solverResult, double tMax = 10,
   int iFinal{i == solvedX[0].size() ? i - 1 : i};
 
   // TODO (novak) lower step and pass values from approximation
-  const auto subIntegrative = [dt](const Tensor<3>& point) -> double {
+  const auto subIntegrative = [dt](const StaticTensor<3>& point) -> double {
     const double h1{std::sqrt(2.5) - std::sqrt(std::pow(point[0] - 2.5, 2) +
                                                std::pow(point[1] - 2.5, 2))};
     const double h2{std::sqrt(2.5) - std::sqrt(std::pow(point[0] - 7.5, 2) +

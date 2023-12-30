@@ -53,17 +53,17 @@ std::pair<DoubleGrayCode<D>, DoubleGrayCode<D>> crossover(
  * @tparam P number of individuals in population
  */
 template <int N, uint64_t D, uint64_t Z,
-          Regular1OutFunction<Tensor<N, double>> Fit, int P = 100>
+          Regular1OutFunction<StaticTensor<N, double>> Fit, int P = 100>
 class Evolution {
   using Gray = DoubleGrayCode<D>;
-  using Chromosome = Tensor<N, Gray>;
+  using Chromosome = StaticTensor<N, Gray>;
 
  public:
   Evolution(Fit fit, double uMin, double uMax)
       : fit_{fit}, uMin_{uMin}, uMax_{uMax} {
   }
 
-  Tensor<N, double> solve(int NumIterations) {
+  StaticTensor<N, double> solve(int NumIterations) {
     std::pair<Chromosome, double> best{{}, std::numeric_limits<double>::max()};
     auto population{generatePopulation()};
 
@@ -116,8 +116,9 @@ class Evolution {
   }
 
  private:
-  static Tensor<N, double> chromosomeToDoubles(const Chromosome& chromosome) {
-    Tensor<N, double> doubles;
+  static StaticTensor<N, double> chromosomeToDoubles(
+      const Chromosome& chromosome) {
+    StaticTensor<N, double> doubles;
     std::transform(chromosome.cbegin(), chromosome.cend(), doubles.begin(),
                    [](const Gray& code) { return code.getDouble(); });
     return doubles;
@@ -194,8 +195,8 @@ class Evolution {
     return population;
   }
 
-  double fitAdapter(const Tensor<N, DoubleGrayCode<D>>& q) {
-    Tensor<N, double> qDouble;
+  double fitAdapter(const StaticTensor<N, DoubleGrayCode<D>>& q) {
+    StaticTensor<N, double> qDouble;
     for (int i{0}; i < N; ++i) {
       qDouble[i] = q[i].getDouble();
     }

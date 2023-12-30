@@ -13,10 +13,10 @@
 
 namespace optimization {
 template <int T, StateSpaceFunction<T> F>
-Tensor<T> RungeKutteStep(double startT, const Tensor<T>& startX, F fun,
-                         double interestT, double delta = 0.001) {
+StaticTensor<T> RungeKutteStep(double startT, const StaticTensor<T>& startX,
+                               F fun, double interestT, double delta = 0.001) {
   double curT{startT};
-  Tensor<T> curX{startX};
+  StaticTensor<T> curX{startX};
 
   while (curT < interestT) {
     auto k1 = fun(curX, curT);
@@ -37,19 +37,20 @@ Tensor<T> RungeKutteStep(double startT, const Tensor<T>& startX, F fun,
  */
 template <int T, StateSpaceFunction<T> F>
 std::array<std::vector<double>, T + 1> SolveDiffEqRungeKutte(
-    double startT, const Tensor<T>& startX, F fun, double lastT,
+    double startT, const StaticTensor<T>& startX, F fun, double lastT,
     double delta = 0.001) {
   std::array<std::vector<double>, T + 1> result;
   double curT{startT};
-  Tensor<T> curX{startX};
+  StaticTensor<T> curX{startX};
 
   for (int i{0}; i < T; ++i) result[i].push_back(curX[i]);
   result[T].push_back(curT);
 
   while (curT < lastT - kEps) {
-    curX = RungeKutteStep(curT, curX,
-                          std::function<Tensor<3>(Tensor<3>, double)>(fun),
-                          curT + delta, delta);
+    curX = RungeKutteStep(
+        curT, curX,
+        std::function<StaticTensor<3>(StaticTensor<3>, double)>(fun),
+        curT + delta, delta);
     curT += delta;
     for (int i{0}; i < T; ++i) result[i].push_back(curX[i]);
     result[T].push_back(curT);
