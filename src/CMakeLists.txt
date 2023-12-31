@@ -43,6 +43,8 @@ if(Qt6_FOUND)
     message(PRIVATE_PCH: ${PRIVATE_PCH})
 endif()
 
-target_precompile_headers(${TARGET_NAME} PRIVATE
-    ${PRIVATE_PCH}
-)
+if (ENABLE_PCH)
+    target_precompile_headers(${TARGET_NAME} PRIVATE
+        ${PRIVATE_PCH}
+    )
+endif()
