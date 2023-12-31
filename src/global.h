@@ -2,13 +2,36 @@
 
 #include "static-tensor.h"
 
-#include <concepts>
 #include <functional>
 #include <numeric>
 #include <random>
 
 namespace optimization {
 // constexpr double kEps = 1e-10;
+
+template <int N>
+using StatePoint = StaticTensor<N>;
+
+/**
+ * @brief represents current derivatives (left-hand side of equations system)
+ */
+template <int N>
+using StateDerivativesPoint = StaticTensor<N>;
+
+template <int N, typename T>
+double norm(StaticTensor<N, T> self) {
+  return std::sqrt(
+      std::transform_reduce(self.begin(), self.end(), 0.0, std::plus<>(),
+                            [](const T& val) { return val * val; }));
+}
+
+double norm(StaticTensor<100, double> self) {
+  return std::sqrt(std::transform_reduce(self.begin(), self.end(), 0.0,
+                                         std::plus{},
+                                         [](double val) { return val * val; }));
+}
+
+extern int seed;
 
 template <typename F, int N>
 concept StateSpaceFunction =
@@ -25,8 +48,6 @@ template <typename F, typename T>
 concept Regular1OutFunction = requires(F func, const T& inp) {
   { func(inp) } -> std::same_as<double>;
 };
-
-extern int seed;
 
 struct DoubleGenerator {
   static double get() {

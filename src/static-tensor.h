@@ -5,11 +5,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <concepts>
-#include <functional>
-#include <numeric>
 #include <ostream>
-#include <random>
 #include <ranges>
 #include <sstream>
 
@@ -23,38 +19,45 @@ constexpr double kEps = 1e-10;
  */
 template <int N, typename T = double>
 struct StaticTensor {
-  StaticTensor(std::size_t size) {
+  constexpr StaticTensor() noexcept {
     if constexpr (std::is_convertible_v<int, T>) {
-      for (int i{0}; i < size; ++i) data_[i] = 0;
+      for (int i{0}; i < N; ++i) data_[i] = 0;
     }
   }
-  ~StaticTensor() = default;
-  StaticTensor(const StaticTensor&) = default;
-  StaticTensor(StaticTensor&&) noexcept = default;
-  StaticTensor& operator=(const StaticTensor&) = default;
-  StaticTensor& operator=(StaticTensor&&) noexcept = default;
+  constexpr ~StaticTensor() noexcept = default;
+  constexpr StaticTensor(const StaticTensor&) = default;
+  constexpr StaticTensor(StaticTensor&&) noexcept = default;
+  constexpr StaticTensor& operator=(const StaticTensor&) = default;
+  constexpr StaticTensor& operator=(StaticTensor&&) noexcept = default;
 
-  StaticTensor(std::initializer_list<T> list) {
-    if (list.size() != N)
+  constexpr StaticTensor(const std::initializer_list<T>& list) {
+    if (list.size() != N) {
       throw std::length_error("Initializer list size differs from data size");
+    }
+
     auto el = list.begin();
-    for (int i{0}; i < N; ++i) data_[i] = *(el++);
+    for (int i{0}; i < N; ++i) {
+      data_[i] = *(el++);
+    }
   }
 
-  T& operator[](int i) noexcept {
+  constexpr T& operator[](int i) noexcept {
     return data_[i];
   }
-  T operator[](int i) const noexcept {
+  constexpr T operator[](int i) const noexcept {
     return data_[i];
   }
 
   class Iterator;
   class ConstIterator;
 
-  Iterator begin();
-  Iterator end();
-  ConstIterator cbegin() const;
-  ConstIterator cend() const;
+  constexpr Iterator begin() noexcept;
+  constexpr Iterator end() noexcept;
+  [[nodiscard]] constexpr ConstIterator begin() const noexcept;
+  [[nodiscard]] constexpr ConstIterator end() const noexcept;
+
+  [[nodiscard]] constexpr ConstIterator cbegin() const noexcept;
+  [[nodiscard]] constexpr ConstIterator cend() const noexcept;
 
   [[nodiscard]] static constexpr int size() noexcept {
     return N;
@@ -64,18 +67,237 @@ struct StaticTensor {
   std::array<T, N> data_;
 };
 
-template <int N>
-using StatePoint = StaticTensor<N>;
-
-/**
- * @brief represents current derivatives (left-hand side of equations system)
- */
-template <int N>
-using StateDerivativesPoint = StaticTensor<N>;
+// ------------------------------ iterators -----------------------------------
 
 template <int N, typename T>
-StaticTensor<N, T> operator+(const StaticTensor<N, T>& self,
-                             const StaticTensor<N, T>& other) {
+class StaticTensor<N, T>::ConstIterator {
+ public:
+  using iterator_category = std::random_access_iterator_tag;
+  using value_type = T;
+  using difference_type = std::ptrdiff_t;
+  using pointer = const T*;
+  using reference = const T&;
+
+  constexpr ConstIterator() noexcept = default;
+
+  constexpr explicit ConstIterator(pointer ptr,
+                                   difference_type offset = 0) noexcept
+      : ptr_{ptr + offset} {
+  }
+
+  [[nodiscard]] constexpr reference operator*() const noexcept {
+    return *ptr_;
+  }
+  [[nodiscard]] constexpr pointer operator->() const noexcept {
+    return ptr_;
+  }
+
+  constexpr ConstIterator operator++() noexcept {
+    ++ptr_;
+    return *this;
+  }
+
+  constexpr ConstIterator operator++(int) noexcept {
+    Iterator tmp = *this;
+    ++ptr_;
+    return tmp;
+  }
+
+  constexpr ConstIterator operator--() noexcept {
+    --ptr_;
+    return *this;
+  }
+
+  constexpr ConstIterator operator--(int) noexcept {
+    Iterator tmp = *this;
+    --ptr_;
+    return tmp;
+  }
+
+  [[nodiscard]] constexpr ConstIterator operator+(
+      const difference_type n) const noexcept {
+    return {ptr_ + n};
+  }
+
+  [[nodiscard]] friend constexpr ConstIterator operator+(
+      const difference_type n, ConstIterator iter) noexcept {
+    iter += n;
+    return iter;
+  }
+
+  [[nodiscard]] constexpr ConstIterator operator-(
+      const difference_type n) const noexcept {
+    return {ptr_, -n};
+  }
+
+  [[nodiscard]] friend constexpr ConstIterator operator-(
+      const difference_type n, ConstIterator iter) noexcept {
+    iter -= n;
+    return iter;
+  }
+
+  [[nodiscard]] constexpr difference_type operator-(
+      const ConstIterator& other) const noexcept {
+    return ptr_ - other.ptr_;
+  }
+
+  constexpr ConstIterator operator+=(difference_type n) noexcept {
+    ptr_ += n;
+    return *this;
+  }
+
+  constexpr ConstIterator operator-=(difference_type n) noexcept {
+    ptr_ -= n;
+    return *this;
+  }
+
+  [[nodiscard]] constexpr reference operator[](
+      const ptrdiff_t offset) const noexcept {
+    return {ptr_, offset};
+  }
+
+  friend auto operator<=>(const ConstIterator&,
+                          const ConstIterator&) noexcept = default;
+
+ private:
+  pointer ptr_{nullptr};
+};
+
+template <int N, typename T>
+class StaticTensor<N, T>::Iterator : public StaticTensor<N, T>::ConstIterator {
+  using Base = StaticTensor<N, T>::ConstIterator;
+
+ public:
+  using iterator_category = std::random_access_iterator_tag;
+  using value_type = T;
+  using difference_type = std::ptrdiff_t;
+  using pointer = T*;
+  using reference = T&;
+
+  constexpr Iterator() noexcept = default;
+
+  constexpr explicit Iterator(pointer ptr, difference_type offset = 0) noexcept
+      : Base(ptr, offset) {
+  }
+
+  [[nodiscard]] constexpr reference operator*() const noexcept {
+    return const_cast<reference>(Base::operator*());
+  }
+
+  [[nodiscard]] constexpr pointer operator->() const noexcept {
+    return const_cast<pointer>(Base::operator->());
+  }
+
+  constexpr Iterator& operator++() noexcept {
+    Base::operator++();
+    return *this;
+  }
+
+  constexpr Iterator operator++(int) noexcept {
+    Iterator tmp = *this;
+    Base::operator++();
+    return tmp;
+  }
+
+  constexpr Iterator& operator--() noexcept {
+    Base::operator--();
+    return *this;
+  }
+
+  constexpr Iterator operator--(int) noexcept {
+    Iterator tmp = *this;
+    Base::operator--();
+    return tmp;
+  }
+
+  [[nodiscard]] constexpr Iterator operator+(
+      const difference_type n) const noexcept {
+    Iterator tmp = *this;
+    tmp += n;
+    return tmp;
+  }
+
+  [[nodiscard]] friend constexpr Iterator operator+(const difference_type n,
+                                                    Iterator iter) noexcept {
+    iter += n;
+    return iter;
+  }
+
+  [[nodiscard]] constexpr Iterator operator-(
+      const difference_type n) const noexcept {
+    Iterator tmp = *this;
+    tmp -= n;
+    return tmp;
+  }
+
+  [[nodiscard]] friend constexpr Iterator operator-(const difference_type n,
+                                                    Iterator iter) noexcept {
+    iter -= n;
+    return iter;
+  }
+
+  [[nodiscard]] constexpr difference_type operator-(
+      const Iterator& other) const noexcept {
+    return Base::operator-(other);
+  }
+
+  constexpr Iterator& operator+=(difference_type n) noexcept {
+    Base::operator+=(n);
+    return *this;
+  }
+
+  constexpr Iterator& operator-=(difference_type n) noexcept {
+    Base::operator-=(n);
+    return *this;
+  }
+
+  [[nodiscard]] constexpr reference operator[](
+      const ptrdiff_t offset) const noexcept {
+    return const_cast<reference>(Base::operator[](offset));
+  }
+
+  friend auto operator<=>(const Iterator&, const Iterator&) noexcept = default;
+};
+
+template <int N, typename T>
+constexpr typename StaticTensor<N, T>::Iterator
+StaticTensor<N, T>::begin() noexcept {
+  return Iterator{&data_[0]};
+}
+
+template <int N, typename T>
+constexpr typename StaticTensor<N, T>::Iterator
+StaticTensor<N, T>::end() noexcept {
+  return Iterator{&data_[N - 1] + 1};
+}
+
+template <int N, typename T>
+constexpr typename StaticTensor<N, T>::ConstIterator StaticTensor<N, T>::begin()
+    const noexcept {
+  return ConstIterator{&data_[0]};
+}
+
+template <int N, typename T>
+constexpr typename StaticTensor<N, T>::ConstIterator StaticTensor<N, T>::end()
+    const noexcept {
+  return ConstIterator{&data_[N - 1] + 1};
+}
+
+template <int N, typename T>
+constexpr typename StaticTensor<N, T>::ConstIterator
+StaticTensor<N, T>::cbegin() const noexcept {
+  return ConstIterator{&data_[0]};
+}
+
+template <int N, typename T>
+constexpr typename StaticTensor<N, T>::ConstIterator StaticTensor<N, T>::cend()
+    const noexcept {
+  return ConstIterator{&data_[N - 1] + 1};
+}
+
+template <int N, typename T>
+constexpr StaticTensor<N, T> operator+(
+    const StaticTensor<N, T>& self, const StaticTensor<N, T>& other) noexcept {
   StaticTensor<N, T> result;
   for (int i{0}; i < N; ++i) {
     result[i] = other[i] + self[i];
@@ -84,8 +306,8 @@ StaticTensor<N, T> operator+(const StaticTensor<N, T>& self,
 }
 
 template <int N, typename T>
-StaticTensor<N, T>& operator+=(StaticTensor<N, T>& self,
-                               const StaticTensor<N, T>& other) {
+constexpr StaticTensor<N, T>& operator+=(
+    StaticTensor<N, T>& self, const StaticTensor<N, T>& other) noexcept {
   for (int i{0}; i < N; ++i) {
     self[i] += other[i];
   }
@@ -93,8 +315,8 @@ StaticTensor<N, T>& operator+=(StaticTensor<N, T>& self,
 }
 
 template <int N, typename T>
-StaticTensor<N, T> operator-(const StaticTensor<N, T>& self,
-                             const StaticTensor<N, T>& other) {
+constexpr StaticTensor<N, T> operator-(
+    const StaticTensor<N, T>& self, const StaticTensor<N, T>& other) noexcept {
   StaticTensor<N, T> result;
   for (int i{0}; i < N; ++i) {
     result[i] = self[i] - other[i];
@@ -103,7 +325,8 @@ StaticTensor<N, T> operator-(const StaticTensor<N, T>& self,
 }
 
 template <int N, typename T>
-StaticTensor<N, T> operator-(const StaticTensor<N, T>& self) {
+constexpr StaticTensor<N, T> operator-(
+    const StaticTensor<N, T>& self) noexcept {
   StaticTensor<N, T> result;
   for (int i{0}; i < N; ++i) {
     result[i] = -self[i];
@@ -112,8 +335,8 @@ StaticTensor<N, T> operator-(const StaticTensor<N, T>& self) {
 }
 
 template <int N, typename T>
-StaticTensor<N, T>& operator-=(StaticTensor<N, T>& self,
-                               const StaticTensor<N, T>& other) {
+constexpr StaticTensor<N, T>& operator-=(
+    StaticTensor<N, T>& self, const StaticTensor<N, T>& other) noexcept {
   for (int i{0}; i < N; ++i) {
     self[i] -= other[i];
   }
@@ -121,20 +344,24 @@ StaticTensor<N, T>& operator-=(StaticTensor<N, T>& self,
 }
 
 template <int N, typename T, typename M>
-StaticTensor<N, T> operator*(const StaticTensor<N, T>& self, M multiplier) {
+constexpr StaticTensor<N, T> operator*(const StaticTensor<N, T>& self,
+                                       M multiplier) noexcept {
   StaticTensor<N, T> result;
   for (int i{0}; i < N; ++i) {
     result[i] = multiplier * self[i];
   }
   return result;
 }
+
 template <int N, typename T, typename M>
-StaticTensor<N, T> operator*(M multiplier, const StaticTensor<N, T>& self) {
+constexpr StaticTensor<N, T> operator*(
+    M multiplier, const StaticTensor<N, T>& self) noexcept {
   return self * multiplier;
 }
+
 template <int N, typename T>
-StaticTensor<N, T>& operator*=(StaticTensor<N, T>& self,
-                               const StaticTensor<N, T>& other) {
+constexpr StaticTensor<N, T>& operator*=(
+    StaticTensor<N, T>& self, const StaticTensor<N, T>& other) noexcept {
   for (int i{0}; i < N; ++i) {
     self[i] *= other[i];
   }
@@ -142,7 +369,8 @@ StaticTensor<N, T>& operator*=(StaticTensor<N, T>& self,
 }
 
 template <int N, typename T, typename M>
-StaticTensor<N, T> operator/(const StaticTensor<N, T>& self, M divider) {
+constexpr StaticTensor<N, T> operator/(const StaticTensor<N, T>& self,
+                                       M divider) noexcept {
   StaticTensor<N, T> result;
   for (int i{0}; i < N; ++i) {
     result[i] = self[i] / divider;
@@ -151,191 +379,22 @@ StaticTensor<N, T> operator/(const StaticTensor<N, T>& self, M divider) {
 }
 
 template <int N, typename T>
-bool operator==(const StaticTensor<N, T>& lhs, const StaticTensor<N, T>& rhs) {
-  constexpr double eps{1e-3};
+constexpr bool operator==(const StaticTensor<N, T>& lhs,
+                          const StaticTensor<N, T>& rhs) noexcept {
+  constexpr double kEps{1e-3};
   auto diff{lhs - rhs};
   return !std::any_of(diff.begin(), diff.end(),
-                      [eps](const T& value) { return fabs(value) > eps; });
+                      [kEps](const T& value) { return fabs(value) > kEps; });
 }
 
 template <int N, typename T>
-bool operator!=(const StaticTensor<N, T>& lhs, const StaticTensor<N, T>& rhs) {
+constexpr bool operator!=(const StaticTensor<N, T>& lhs,
+                          const StaticTensor<N, T>& rhs) noexcept {
   return !(lhs == rhs);
 }
 
-// ------------------------------ iterators -----------------------------------
-template <int N, typename T>
-class StaticTensor<N, T>::Iterator {
- public:
-  using iterator_category = std::bidirectional_iterator_tag;
-  using value_type = T;
-  using difference_type = std::ptrdiff_t;
-  using pointer = T*;
-  using reference = T&;
-
-  /*implicit*/ Iterator(pointer ptr) : ptr_(ptr) {
-  }
-
-  reference operator*() const {
-    return *ptr_;
-  }
-  pointer operator->() const {
-    return ptr_;
-  }
-
-  Iterator& operator++() {
-    ++ptr_;
-    return *this;
-  }
-
-  Iterator operator++(int) {
-    Iterator temp = *this;
-    ++ptr_;
-    return temp;
-  }
-
-  Iterator& operator--() {
-    --ptr_;
-    return *this;
-  }
-
-  Iterator operator--(int) {
-    Iterator temp = *this;
-    --ptr_;
-    return temp;
-  }
-
-  Iterator operator+(difference_type n) const {
-    return Iterator(ptr_ + n);
-  }
-
-  Iterator operator-(difference_type n) const {
-    return Iterator(ptr_ - n);
-  }
-
-  difference_type operator-(const Iterator& other) const {
-    return ptr_ - other.ptr_;
-  }
-
-  Iterator& operator+=(difference_type n) {
-    ptr_ += n;
-    return *this;
-  }
-
-  Iterator& operator-=(difference_type n) {
-    ptr_ -= n;
-    return *this;
-  }
-
-  friend auto operator<=>(const Iterator&, const Iterator&) = default;
-
- private:
-  pointer ptr_;
-};
-
-template <int N, typename T>
-class StaticTensor<N, T>::ConstIterator {
- public:
-  using iterator_category = std::bidirectional_iterator_tag;
-  using value_type = T;
-  using difference_type = std::ptrdiff_t;
-  using pointer = const T*;
-  using reference = const T&;
-
-  /*implicit*/ ConstIterator(pointer ptr) : ptr_(ptr) {
-  }
-
-  reference operator*() const {
-    return *ptr_;
-  }
-  pointer operator->() const {
-    return ptr_;
-  }
-
-  ConstIterator operator++() {
-    ++ptr_;
-    return *this;
-  }
-
-  ConstIterator operator++(int) {
-    Iterator temp = *this;
-    ++ptr_;
-    return temp;
-  }
-
-  ConstIterator operator--() {
-    --ptr_;
-    return *this;
-  }
-
-  ConstIterator operator--(int) {
-    Iterator temp = *this;
-    --ptr_;
-    return temp;
-  }
-
-  ConstIterator operator+(difference_type n) const {
-    return ConstIterator(ptr_ + n);
-  }
-
-  ConstIterator operator-(difference_type n) const {
-    return ConstIterator(ptr_ - n);
-  }
-
-  difference_type operator-(const ConstIterator& other) const {
-    return ptr_ - other.ptr_;
-  }
-
-  ConstIterator operator+=(difference_type n) {
-    ptr_ += n;
-    return *this;
-  }
-
-  ConstIterator operator-=(difference_type n) {
-    ptr_ -= n;
-    return *this;
-  }
-
-  friend auto operator<=>(const ConstIterator&, const ConstIterator&) = default;
-
- private:
-  pointer ptr_;
-};
-
-template <int N, typename T>
-typename StaticTensor<N, T>::Iterator StaticTensor<N, T>::begin() {
-  return {&data_[0]};
-}
-
-template <int N, typename T>
-typename StaticTensor<N, T>::Iterator StaticTensor<N, T>::end() {
-  return {&data_[N - 1] + 1};
-}
-
-template <int N, typename T>
-typename StaticTensor<N, T>::ConstIterator StaticTensor<N, T>::cbegin() const {
-  return {&data_[0]};
-}
-
-template <int N, typename T>
-typename StaticTensor<N, T>::ConstIterator StaticTensor<N, T>::cend() const {
-  return {&data_[N - 1] + 1};
-}
-
-template <int N, typename T>
-double norm(StaticTensor<N, T> self) {
-  return std::sqrt(
-      std::transform_reduce(self.begin(), self.end(), 0.0, std::plus<>(),
-                            [](const T& val) { return val * val; }));
-}
-
-double norm(StaticTensor<100, double> self) {
-  return std::sqrt(std::transform_reduce(self.begin(), self.end(), 0.0,
-                                         std::plus{},
-                                         [](double val) { return val * val; }));
-}
-
-extern int seed;
+static_assert(std::ranges::range<StaticTensor<100, int>>);
+static_assert(std::ranges::random_access_range<StaticTensor<100, int>>);
 }  // namespace optimization
 
 template <int N, typename T>
