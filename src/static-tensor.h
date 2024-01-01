@@ -102,7 +102,7 @@ class StaticTensor<N, T>::ConstIterator {
   }
 
   constexpr ConstIterator operator++(int) noexcept {
-    Iterator tmp = *this;
+    ConstIterator tmp = *this;
     ++ptr_;
     return tmp;
   }
@@ -113,7 +113,7 @@ class StaticTensor<N, T>::ConstIterator {
   }
 
   constexpr ConstIterator operator--(int) noexcept {
-    Iterator tmp = *this;
+    ConstIterator tmp = *this;
     --ptr_;
     return tmp;
   }
@@ -300,8 +300,8 @@ constexpr typename StaticTensor<N, T>::ConstIterator StaticTensor<N, T>::cend()
 }
 
 template <int N, typename T>
-constexpr StaticTensor<N, T> operator+(
-    const StaticTensor<N, T>& self, const StaticTensor<N, T>& other) noexcept {
+constexpr StaticTensor<N, T> operator+(const StaticTensor<N, T>& self,
+                                       const StaticTensor<N, T>& other) {
   StaticTensor<N, T> result;
   for (int i{0}; i < N; ++i) {
     result[i] = other[i] + self[i];
@@ -319,8 +319,8 @@ constexpr StaticTensor<N, T>& operator+=(
 }
 
 template <int N, typename T>
-constexpr StaticTensor<N, T> operator-(
-    const StaticTensor<N, T>& self, const StaticTensor<N, T>& other) noexcept {
+constexpr StaticTensor<N, T> operator-(const StaticTensor<N, T>& self,
+                                       const StaticTensor<N, T>& other) {
   StaticTensor<N, T> result;
   for (int i{0}; i < N; ++i) {
     result[i] = self[i] - other[i];
@@ -329,8 +329,7 @@ constexpr StaticTensor<N, T> operator-(
 }
 
 template <int N, typename T>
-constexpr StaticTensor<N, T> operator-(
-    const StaticTensor<N, T>& self) noexcept {
+constexpr StaticTensor<N, T> operator-(const StaticTensor<N, T>& self) {
   StaticTensor<N, T> result;
   for (int i{0}; i < N; ++i) {
     result[i] = -self[i];
@@ -349,7 +348,7 @@ constexpr StaticTensor<N, T>& operator-=(
 
 template <int N, typename T, typename M>
 constexpr StaticTensor<N, T> operator*(const StaticTensor<N, T>& self,
-                                       M multiplier) noexcept {
+                                       M multiplier) {
   StaticTensor<N, T> result;
   for (int i{0}; i < N; ++i) {
     result[i] = multiplier * self[i];
@@ -358,8 +357,8 @@ constexpr StaticTensor<N, T> operator*(const StaticTensor<N, T>& self,
 }
 
 template <int N, typename T, typename M>
-constexpr StaticTensor<N, T> operator*(
-    M multiplier, const StaticTensor<N, T>& self) noexcept {
+constexpr StaticTensor<N, T> operator*(M multiplier,
+                                       const StaticTensor<N, T>& self) {
   return self * multiplier;
 }
 
@@ -374,7 +373,7 @@ constexpr StaticTensor<N, T>& operator*=(
 
 template <int N, typename T, typename M>
 constexpr StaticTensor<N, T> operator/(const StaticTensor<N, T>& self,
-                                       M divider) noexcept {
+                                       M divider) {
   StaticTensor<N, T> result;
   for (int i{0}; i < N; ++i) {
     result[i] = self[i] / divider;
@@ -384,7 +383,7 @@ constexpr StaticTensor<N, T> operator/(const StaticTensor<N, T>& self,
 
 template <int N, typename T>
 constexpr bool operator==(const StaticTensor<N, T>& lhs,
-                          const StaticTensor<N, T>& rhs) noexcept {
+                          const StaticTensor<N, T>& rhs) {
   constexpr double kEps{1e-3};
   auto diff{lhs - rhs};
   return !std::any_of(diff.begin(), diff.end(),
@@ -393,7 +392,7 @@ constexpr bool operator==(const StaticTensor<N, T>& lhs,
 
 template <int N, typename T>
 constexpr bool operator!=(const StaticTensor<N, T>& lhs,
-                          const StaticTensor<N, T>& rhs) noexcept {
+                          const StaticTensor<N, T>& rhs) {
   return !(lhs == rhs);
 }
 }  // namespace optimization
