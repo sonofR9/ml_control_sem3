@@ -208,7 +208,6 @@ int main(int argc, const char** argv) {
   dt = options.integrationDt;
   iter = options.iter;
   seed = options.seed;
-  std::cout << tMax << std::endl;
 
   // testPontryagin();
   // testGradientDescent();

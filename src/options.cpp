@@ -32,7 +32,7 @@ constexpr T getValue(const boost::program_options::variables_map& vm,
 }  // namespace
 
 namespace optimization {
-GlobalOptions parseOptions(int argc, const char** argv) noexcept {
+GlobalOptions parseOptions(int argc, const char** argv) noexcept try {
   namespace po = boost::program_options;
 
   // clang-format off
@@ -73,7 +73,7 @@ GlobalOptions parseOptions(int argc, const char** argv) noexcept {
       ("file,f", po::value<std::string>(),
           "Control save file (optimization will start with control saved here and "
           "optimized control will be saved here)")
-      ("clear,c", po::bool_switch()->default_value(false),
+      ("clear", po::bool_switch()->default_value(false),
           "Clear control save file before start")
       ("seed,s", po::value<unsigned int>()->default_value(std::random_device{}()),
           "Random seed (type: unsigned int) (default: random)")
@@ -98,71 +98,70 @@ GlobalOptions parseOptions(int argc, const char** argv) noexcept {
       std::cout << std::format("Config file '{}' does not exist\n", fileName);
       std::exit(1);
     }
+
     po::store(po::parse_config_file(ifs, desc), vm);
   }
 
   po::notify(vm);
 
-  try {
-    GlobalOptions options;
+  GlobalOptions options;
 
-    // Populate general options
-    options.tMax = getValue<double>(vm, "tmax");
-    options.integrationDt = getValue<double>(vm, "dt");
+  // Populate general options
+  options.tMax = getValue<double>(vm, "tmax");
+  options.integrationDt = getValue<double>(vm, "dt");
 
-    // Populate control options
-    options.controlOptions.numOfParams =
-        getValue<std::size_t>(vm, "control.number");
-    options.controlOptions.uMin = getValue<double>(vm, "control.min");
-    options.controlOptions.uMax = getValue<double>(vm, "control.max");
-    options.controlOptions.initialState =
-        getValue<std::vector<double>>(vm, "control.initial");
-    options.controlOptions.targetState =
-        getValue<std::vector<double>>(vm, "control.target");
+  // Populate control options
+  options.controlOptions.numOfParams =
+      getValue<std::size_t>(vm, "control.number");
+  options.controlOptions.uMin = getValue<double>(vm, "control.min");
+  options.controlOptions.uMax = getValue<double>(vm, "control.max");
+  options.controlOptions.initialState =
+      getValue<std::vector<double>>(vm, "control.initial");
+  options.controlOptions.targetState =
+      getValue<std::vector<double>>(vm, "control.target");
 
-    // Populate optimization method options
-    const auto& method{getValue<std::string>(vm, "method")};
-    if (method == methodToName(GlobalOptions::Method::kGrayWolf)) {
-      options.method = GlobalOptions::Method::kGrayWolf;
-    } else if (method == methodToName(GlobalOptions::Method::kEvolution)) {
-      options.method = GlobalOptions::Method::kEvolution;
-    } else {
-      std::cout << std::format(
-          "Invalid method name '{}' was provided.\nValid names: {}, {}", method,
-          methodToName(GlobalOptions::Method::kGrayWolf),
-          methodToName(GlobalOptions::Method::kEvolution));
-      std::exit(1);
-    }
-
-    options.wolfOpt.wolfNum = getValue<int>(vm, "wolf.num");
-    options.wolfOpt.numBest = getValue<int>(vm, "wolf.best");
-
-    options.evolutionOpt.populationSize =
-        getValue<int>(vm, "evolution.population");
-    options.evolutionOpt.mutationRate =
-        getValue<double>(vm, "evolution.mutation");
-    options.evolutionOpt.crossoverRate =
-        getValue<double>(vm, "evolution.crossover");
-
-    options.iter = getValue<int>(vm, "iter");
-
-    // Populate other options
-    options.controlSaveFile = getValue<std::string>(vm, "file");
-    options.clearSaveBeforeStart = getValue<bool>(vm, "clear");
-
-    options.seed = getValue<unsigned int>(vm, "seed");
-    options.printStep = getValue<int>(vm, "printStep");
-
-    if (options.clearSaveBeforeStart) {
-      std::ofstream ofs(options.controlSaveFile,
-                        std::ofstream::out | std::ofstream::trunc);
-    }
-
-    return options;
-  } catch (const boost::bad_any_cast& e) {
-    std::cout << e.what() << "\n";
+  // Populate optimization method options
+  const auto& method{getValue<std::string>(vm, "method")};
+  if (method == methodToName(GlobalOptions::Method::kGrayWolf)) {
+    options.method = GlobalOptions::Method::kGrayWolf;
+  } else if (method == methodToName(GlobalOptions::Method::kEvolution)) {
+    options.method = GlobalOptions::Method::kEvolution;
+  } else {
+    std::cout << std::format(
+        "Invalid method name '{}' was provided.\nValid names: {}, {}", method,
+        methodToName(GlobalOptions::Method::kGrayWolf),
+        methodToName(GlobalOptions::Method::kEvolution));
     std::exit(1);
   }
+
+  options.wolfOpt.wolfNum = getValue<int>(vm, "wolf.num");
+  options.wolfOpt.numBest = getValue<int>(vm, "wolf.best");
+
+  options.evolutionOpt.populationSize =
+      getValue<int>(vm, "evolution.population");
+  options.evolutionOpt.mutationRate =
+      getValue<double>(vm, "evolution.mutation");
+  options.evolutionOpt.crossoverRate =
+      getValue<double>(vm, "evolution.crossover");
+
+  options.iter = getValue<int>(vm, "iter");
+
+  // Populate other options
+  options.controlSaveFile = getValue<std::string>(vm, "file");
+  options.clearSaveBeforeStart = getValue<bool>(vm, "clear");
+
+  options.seed = getValue<unsigned int>(vm, "seed");
+  options.printStep = getValue<int>(vm, "printStep");
+
+  if (options.clearSaveBeforeStart) {
+    std::ofstream ofs(options.controlSaveFile,
+                      std::ofstream::out | std::ofstream::trunc);
+  }
+
+  return options;
+} catch (const boost::program_options::error& e) {
+  std::cout << std::format("Failed to parse config file: {}\n", e.what());
+  std::exit(1);
 }
 
 void writeConfig(const GlobalOptions& options,
