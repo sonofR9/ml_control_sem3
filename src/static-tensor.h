@@ -10,8 +10,6 @@
 #include <sstream>
 
 namespace optimization {
-constexpr double kEps = 1e-10;
-
 /**
  * @brief class to represent state of system using T variables
  *
@@ -96,7 +94,7 @@ class StaticTensor<N, T>::ConstIterator {
     return ptr_;
   }
 
-  constexpr ConstIterator operator++() noexcept {
+  constexpr ConstIterator& operator++() noexcept {
     ++ptr_;
     return *this;
   }
@@ -107,7 +105,7 @@ class StaticTensor<N, T>::ConstIterator {
     return tmp;
   }
 
-  constexpr ConstIterator operator--() noexcept {
+  constexpr ConstIterator& operator--() noexcept {
     --ptr_;
     return *this;
   }
@@ -145,12 +143,12 @@ class StaticTensor<N, T>::ConstIterator {
     return ptr_ - other.ptr_;
   }
 
-  constexpr ConstIterator operator+=(difference_type n) noexcept {
+  constexpr ConstIterator& operator+=(difference_type n) noexcept {
     ptr_ += n;
     return *this;
   }
 
-  constexpr ConstIterator operator-=(difference_type n) noexcept {
+  constexpr ConstIterator& operator-=(difference_type n) noexcept {
     ptr_ -= n;
     return *this;
   }
@@ -414,6 +412,21 @@ std::stringstream& operator<<(std::stringstream& stream,
   }
   return stream;
 }
+
+// constexpr void fun() {
+//   constexpr optimization::StaticTensor<3, int> a{};
+//   constexpr std::array<int, 3> v{};
+//   static_assert(std::ranges::begin(v) == v.begin());
+
+//   constexpr std::ranges::range<optimization::StaticTensor<3, int>> r{a};
+
+//   static_assert(std::begin(a) == a.begin());
+//   static_assert(std::ranges::begin(a) == a.begin());
+// }
+
+template <class _Rng>
+concept range_test_v2 = requires(_Rng& __r) { ::std::ranges::begin(__r); };
+static_assert(range_test_v2<optimization::StaticTensor<3, int>>);
 
 static_assert(
     std::ranges::random_access_range<optimization::StaticTensor<100, int>>);

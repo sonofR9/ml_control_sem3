@@ -8,6 +8,7 @@
 #include "options.h"
 #include "particle-sworm.h"
 #include "pontryagin-method.h"
+#include "tensor.h"
 
 #include <chrono>
 #include <cmath>
