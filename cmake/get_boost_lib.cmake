@@ -1,4 +1,5 @@
-function(find_boost_libs LIBRARIES)
+function(find_boost_libs)
+  set(LIBRARIES ${ARGN})
 #   # Find Boost using find_package
 #   find_package(Boost 1.84 CONFIG COMPONENTS ${LIBRARIES} QUIET)
 

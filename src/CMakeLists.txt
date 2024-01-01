@@ -4,13 +4,15 @@ add_executable(${TARGET_NAME})
 set_target_properties(${TARGET_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 
 target_sources(${TARGET_NAME} PRIVATE
+    options.cpp
     main.cpp
 )
 
-find_boost_libs(program_options)
+find_boost_libs(property_tree program_options)
 
 target_link_libraries(${TARGET_NAME} PRIVATE
     Boost::program_options
+    Boost::property_tree
 )
 
 find_package(Qt6 COMPONENTS Widgets)
@@ -35,15 +37,10 @@ if(Qt6_FOUND)
 
     set(PRIVATE_PCH
         ${PRIVATE_PCH}
-        <vector>
-        <string>
-        <iostream>
     )
-
-    message(PRIVATE_PCH: ${PRIVATE_PCH})
 endif()
 
-if (ENABLE_PCH)
+if (ENABLE_PCH AND NOT ENABLE_CLANG_TIDY)
     target_precompile_headers(${TARGET_NAME} PRIVATE
         ${PRIVATE_PCH}
     )

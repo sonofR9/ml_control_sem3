@@ -11,7 +11,7 @@ namespace optimization {
  *
  * @tparam N number of parameters
  * @tparam Fit fitness function
- * @tparam P number of in population
+ * @tparam P number of wolfs in population
  * @tparam B number of best wolfs
  */
 template <int N, Regular1OutFunction<StaticTensor<N, double>> Fit, int P = 100,
@@ -106,16 +106,13 @@ class GrayWolfAlgorithm {
   Population generatePopulation() {
     // generate random population (P chromosomes of size N each)
     std::array<StaticTensor<N, double>, P> population;
-    std::generate(population.begin(), population.end(),
-                  [this]() -> StaticTensor<N, double> {
-                    StaticTensor<N, double> chromosome;
-                    std::generate(chromosome.begin(), chromosome.end(),
-                                  [this]() {
-                                    return DoubleGenerator::get() /
-                                           DoubleGenerator::absLimit() * limit_;
-                                  });
-                    return chromosome;
-                  });
+    std::ranges::generate(population, [this]() -> StaticTensor<N, double> {
+      StaticTensor<N, double> chromosome;
+      std::ranges::generate(chromosome, [this]() {
+        return DoubleGenerator::get() / DoubleGenerator::absLimit() * limit_;
+      });
+      return chromosome;
+    });
     return population;
   }
 
