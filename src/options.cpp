@@ -20,10 +20,19 @@ constexpr std::string methodToName(optimization::GlobalOptions::Method method) {
     return "evolution";
   }
 }
+
+template <typename T>
+constexpr T getValue(const boost::program_options::variables_map& vm,
+                     const std::string& name) {
+  if (vm.contains(name)) {
+    return vm[name].as<T>();
+  }
+  return {};
+}
 }  // namespace
 
 namespace optimization {
-GlobalOptions parseOptions(int argc, const char* argv[]) noexcept {
+GlobalOptions parseOptions(int argc, const char** argv) noexcept {
   namespace po = boost::program_options;
 
   // clang-format off
@@ -31,46 +40,45 @@ GlobalOptions parseOptions(int argc, const char* argv[]) noexcept {
   desc.add_options()
       ("help,h", "display help")
       // General options
-      ("tmax,t", po::value<double>()->default_value(10.0),
-       "Maximum simulation time (default: 10.0)")
-      ("dt", po::value<double>()->default_value(0.01),
-          "Integration time step (default: 0.01)")
+      ("tmax,t", po::value<double>()->default_value(10.0), "Maximum simulation time")
+      ("dt", po::value<double>()->default_value(0.01), "Integration time step")
       // Control options
       ("control.number", po::value<std::size_t>()->default_value(30),
-          "Number of control parameters (default: 30)")
+          "Number of control parameters")
       ("control.min", po::value<double>()->default_value(-10.0),
-          "Minimum control value (default: -10.0)")
+          "Minimum control value")
       ("control.max", po::value<double>()->default_value(10.0),
-          "Maximum control value (default: 10.0)")
+          "Maximum control value")
       ("control.initial",
           po::value<std::vector<double>>()->multitoken()->default_value({10,10,0}),
-          "Initial state values (comma-separated list, default: 10,10,0)")
+          "Initial state values (comma-separated list)")
       ("control.target",
           po::value<std::vector<double>>()->multitoken()->default_value({0, 0, 0}),
-          "Target state values (comma-separated list, default: 0,0,0)")
+          "Target state values (comma-separated list)")
       // Optimization method options
       ("method", po::value<std::string>()->default_value("wolf"),
-          "Optimization method (wolf or evolution, default: wolf)")
+          "Optimization method (wolf or evolution)")
       ("wolf.num", po::value<int>()->default_value(1000),
-          "Number of wolves for Gray Wolf method (default: 1000)")
+          "Number of wolves for Gray Wolf method")
       ("wolf.best", po::value<int>()->default_value(3),
-          "Number of best wolves for Gray Wolf method (default: 3)")
+          "Number of best wolves for Gray Wolf method")
       ("evolution.population", po::value<int>()->default_value(500),
-          "Population size for Evolution method (default: 500)")
+          "Population size for Evolution method")
       ("evolution.mutation", po::value<double>()->default_value(0.1),
-          "Mutation rate for Evolution method (default: 0.1)")
+          "Mutation rate for Evolution method")
       ("evolution.crossover", po::value<double>()->default_value(0.8),
-          "Crossover rate for Evolution method (default: 0.8)")
+          "Crossover rate for Evolution method")
+      ("iter,i", po::value<int>()->default_value(100), "Number of iterations")
       // Other options
       ("file,f", po::value<std::string>(),
           "Control save file (optimization will start with control saved here and "
           "optimized control will be saved here)")
       ("clear,c", po::bool_switch()->default_value(false),
-          "Clear control save file before start (default: false)")
+          "Clear control save file before start")
       ("seed,s", po::value<unsigned int>()->default_value(std::random_device{}()),
           "Random seed (type: unsigned int) (default: random)")
       ("printStep", po::value<int>()->default_value(5),
-          "Print results every N steps (default: 5)")
+          "Print results every N steps")
       ("configFile,c", po::value<std::string>(), "Configuration file")
   ;
   // clang-format on
@@ -99,20 +107,21 @@ GlobalOptions parseOptions(int argc, const char* argv[]) noexcept {
     GlobalOptions options;
 
     // Populate general options
-    options.tMax = vm["tMax"].as<double>();
-    options.integrationDt = vm["dt"].as<double>();
+    options.tMax = getValue<double>(vm, "tMax");
+    options.integrationDt = getValue<double>(vm, "dt");
 
     // Populate control options
-    options.controlOptions.numOfParams = vm["control.number"].as<std::size_t>();
-    options.controlOptions.uMin = vm["control.min"].as<double>();
-    options.controlOptions.uMax = vm["control.max"].as<double>();
+    options.controlOptions.numOfParams =
+        getValue<std::size_t>(vm, "control.number");
+    options.controlOptions.uMin = getValue<double>(vm, "control.min");
+    options.controlOptions.uMax = getValue<double>(vm, "control.max");
     options.controlOptions.initialState =
-        vm["control.initial"].as<std::vector<double>>();
+        getValue<std::vector<double>>(vm, "control.initial");
     options.controlOptions.targetState =
-        vm["control.target"].as<std::vector<double>>();
+        getValue<std::vector<double>>(vm, "control.target");
 
     // Populate optimization method options
-    const auto& method{vm["method"].as<std::string>()};
+    const auto& method{getValue<std::string>(vm, "method")};
     if (method == methodToName(GlobalOptions::Method::kGrayWolf)) {
       options.method = GlobalOptions::Method::kGrayWolf;
     } else if (method == methodToName(GlobalOptions::Method::kEvolution)) {
@@ -125,19 +134,24 @@ GlobalOptions parseOptions(int argc, const char* argv[]) noexcept {
       std::exit(1);
     }
 
-    options.wolfOpt.wolfNum = vm["wolf.num"].as<int>();
-    options.wolfOpt.numBest = vm["wolf.best"].as<int>();
+    options.wolfOpt.wolfNum = getValue<int>(vm, "wolf.num");
+    options.wolfOpt.numBest = getValue<int>(vm, "wolf.best");
 
-    options.evolutionOpt.populationSize = vm["evolution.population"].as<int>();
-    options.evolutionOpt.mutationRate = vm["evolution.mutation"].as<double>();
-    options.evolutionOpt.crossoverRate = vm["evolution.crossover"].as<double>();
+    options.evolutionOpt.populationSize =
+        getValue<int>(vm, "evolution.population");
+    options.evolutionOpt.mutationRate =
+        getValue<double>(vm, "evolution.mutation");
+    options.evolutionOpt.crossoverRate =
+        getValue<double>(vm, "evolution.crossover");
+
+    options.iter = getValue<int>(vm, "iter");
 
     // Populate other options
-    options.controlSaveFile = vm["file"].as<std::string>();
-    options.clearSaveBeforeStart = vm["clear"].as<bool>();
+    options.controlSaveFile = getValue<std::string>(vm, "file");
+    options.clearSaveBeforeStart = getValue<bool>(vm, "clear");
 
-    options.seed = vm["seed"].as<int>();
-    options.printStep = vm["printStep"].as<int>();
+    options.seed = getValue<unsigned int>(vm, "seed");
+    options.printStep = getValue<int>(vm, "printStep");
 
     if (options.clearSaveBeforeStart) {
       std::ofstream ofs(options.controlSaveFile,
@@ -191,6 +205,8 @@ void writeConfig(const GlobalOptions& options,
     evolutionsOptionsPt.put("mutation", options.evolutionOpt.mutationRate);
     evolutionsOptionsPt.put("crossover", options.evolutionOpt.crossoverRate);
     pt.add_child("evolution", evolutionsOptionsPt);
+
+    pt.put("iter", options.iter);
 
     // Other options
     pt.put("seed", options.seed);

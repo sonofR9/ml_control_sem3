@@ -44,13 +44,14 @@ struct GlobalOptions {
   } method;
   GrayWolfOptions wolfOpt;
   EvolutionOptions evolutionOpt;
+  int iter;
 
-  int seed;
+  unsigned int seed;
 
   int printStep;
 };
 
-GlobalOptions parseOptions(int argc, const char* argv[]) noexcept;
+GlobalOptions parseOptions(int argc, const char** argv) noexcept;
 void writeConfig(const GlobalOptions& options,
                  const std::filesystem::path& file = {"config.ini"});
 }  // namespace optimization

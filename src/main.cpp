@@ -5,6 +5,7 @@
 #include "evolution-optimization.h"
 #include "global.h"
 #include "model.h"
+#include "options.h"
 #include "particle-sworm.h"
 #include "pontryagin-method.h"
 
@@ -18,7 +19,7 @@ namespace plt = matplotlibcpp;
 #endif
 
 namespace optimization {
-int seed = 50;
+unsigned int seed = 50;
 }
 
 void writeTrajectoryToFiles(
@@ -149,17 +150,12 @@ void modelTestEvolution(int iters, double tMax, double dt) {
                      dt](const StaticTensor<2 * N, double>& solverResult) {
     return functional<N>(solverResult, tMax, dt);
   };
-  Evolution<2 * N, 1000, 1000, decltype(adap), 500> solver(adap, -10, 10);
+  Evolution<2 * N, 1000, 1000, decltype(adap), 1000> solver(adap, -10, 10);
   const auto best{solver.solve(iters)};
   std::cout << "model: [" << best
             << "] functional: " << functional<N>(best, tMax, dt) << "\n";
 
   const auto trajectory{getTrajectoryFromControl<N>(best, tMax)};
-  // std::cout << "--------------------\n\n\n";
-  // for (std::size_t i{0}; i < trajectory[0].size(); ++i) {
-  //   std::cout << "x: " << trajectory[0][i] << " y: " << trajectory[1][i]
-  //             << "\n";
-  // }
   writeTrajectoryToFiles(trajectory);
 
   auto end = std::chrono::high_resolution_clock::now();
@@ -188,11 +184,6 @@ void modelTestGrey(int iters, double tMax, double dt) {
             << "] functional: " << functional<N>(best, tMax, dt) << "\n";
 
   const auto trajectory{getTrajectoryFromControl<N>(best, tMax)};
-  // std::cout << "--------------------\n\n\n";
-  // for (std::size_t i{0}; i < trajectory[0].size(); ++i) {
-  //   std::cout << "x: " << trajectory[0][i] << " y: " << trajectory[1][i]
-  //             << "\n";
-  // }
   writeTrajectoryToFiles(trajectory);
 
   auto end = std::chrono::high_resolution_clock::now();
@@ -206,83 +197,23 @@ void modelTestGrey(int iters, double tMax, double dt) {
             << " s\n";
 }
 
-int main(int argc, char** argv) {
+int main(int argc, const char** argv) {
   int iter{500};
   double tMax{100};
   double dt{0.1};
-  for (int i = 1; i < argc; ++i) {
-    const std::string arg{argv[i]};
-    if (arg == "--seed") {
-      if (i + 1 < argc) {
-        try {
-          seed = std::stoi(argv[i + 1]);
-          std::cout << "seed provided: " << seed << "\n";
-        } catch (std::invalid_argument& e) {
-          std::cerr << "Error: Invalid seed value provided.\n";
-          return 1;
-        }
-      } else {
-        std::cerr << "Error: Missing seed value after --seed flag.\n";
-        return 1;
-      }
-    } else if (arg == "--iter") {
-      if (i + 1 < argc) {
-        try {
-          iter = std::stoi(argv[i + 1]);
-        } catch (std::invalid_argument& e) {
-          std::cerr << "Error: Invalid iter value provided.\n";
-          return 1;
-        }
-      } else {
-        std::cerr << "Error: Missing iter value after --iter flag.\n";
-        return 1;
-      }
-    } else if (arg == "--tmax") {
-      if (i + 1 < argc) {
-        try {
-          tMax = std::stod(argv[i + 1]);
-        } catch (std::invalid_argument& e) {
-          std::cerr << "Error: Invalid tMax value provided.\n";
-          return 1;
-        }
-      } else {
-        std::cerr << "Error: Missing tMax value after --tMax flag.\n";
-        return 1;
-      }
-    } else if (arg == "--dt") {
-      if (i + 1 < argc) {
-        try {
-          dt = std::stod(argv[i + 1]);
-        } catch (std::invalid_argument& e) {
-          std::cerr << "Error: Invalid dt value provided.\n";
-          return 1;
-        }
-      } else {
-        std::cerr << "Error: Missing dt value after --dt flag.\n";
-        return 1;
-      }
-    } else if (arg == "--help" || arg == "-h") {
-      std::cout << "Usage: program --seed <seed_value> --iter <iter_value>\n"
-                   "Options:\n"
-                   "     --seed <seed_value>: Specify a seed value for the "
-                   "random number generator.\n"
-                   "     --iter <iter_value>: Specify number of iterations for "
-                   "model optimization algorithm.\n"
-                   "     --tmax <tmax_value>: Specify the maximum time value "
-                   "for the model.\n"
-                   "     --dt <dt_value>: Specify the time step value for the "
-                   "model.\n"
-                   "     --help|-h: Display this help message.\n";
-      return 0;
-    }
-  }
+
+  const auto& options{optimization::parseOptions(argc, argv)};
+  tMax = options.tMax;
+  dt = options.integrationDt;
+  iter = options.iter;
+  seed = options.seed;
 
   // testPontryagin();
   // testGradientDescent();
   // testEvolution();
   // testParticle();
-  // modelTestEvolution<100>(iter, tMax, dt);
-  modelTestGrey<20>(iter, tMax, dt);
+  modelTestEvolution<1000>(iter, tMax, dt);
+  // modelTestGrey<20>(iter, tMax, dt);
 
   return 0;
 }

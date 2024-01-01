@@ -31,7 +31,7 @@ double norm(StaticTensor<100, double> self) {
                                          [](double val) { return val * val; }));
 }
 
-extern int seed;
+extern unsigned int seed;
 
 template <typename F, int N>
 concept StateSpaceFunction =
