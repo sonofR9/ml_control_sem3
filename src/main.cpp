@@ -150,7 +150,7 @@ void modelTestEvolution(int iters, double tMax, double dt) {
                      dt](const StaticTensor<2 * N, double>& solverResult) {
     return functional<N>(solverResult, tMax, dt);
   };
-  Evolution<2 * N, 1000, 1000, decltype(adap), 1000> solver(adap, -10, 10);
+  Evolution<2 * N, 1000, 1000, decltype(adap), 500> solver(adap, -10, 10);
   const auto best{solver.solve(iters)};
   std::cout << "model: [" << best
             << "] functional: " << functional<N>(best, tMax, dt) << "\n";
@@ -207,12 +207,13 @@ int main(int argc, const char** argv) {
   dt = options.integrationDt;
   iter = options.iter;
   seed = options.seed;
+  std::cout << tMax << std::endl;
 
   // testPontryagin();
   // testGradientDescent();
   // testEvolution();
   // testParticle();
-  modelTestEvolution<1000>(iter, tMax, dt);
+  modelTestEvolution<30>(iter, tMax, dt);
   // modelTestGrey<20>(iter, tMax, dt);
 
   return 0;

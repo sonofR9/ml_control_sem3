@@ -107,7 +107,7 @@ GlobalOptions parseOptions(int argc, const char** argv) noexcept {
     GlobalOptions options;
 
     // Populate general options
-    options.tMax = getValue<double>(vm, "tMax");
+    options.tMax = getValue<double>(vm, "tmax");
     options.integrationDt = getValue<double>(vm, "dt");
 
     // Populate control options

@@ -45,7 +45,7 @@ class Model {
    * @param r radius of wheels
    * @param a distance between wheels
    */
-  Model(C control, double r = 1, double a = 1);
+  explicit Model(C control, double r = 1, double a = 1);
 
   /**
    * @brief models equations system of robot
@@ -62,7 +62,7 @@ class Model {
 template <ControlFunctionTimeOnly C>
 class Model<C> {
  public:
-  Model(C control, double r = 1, double a = 1)
+  explicit Model(C control, double r = 1, double a = 1)
       : u_{control}, rdiv2_{r / 2}, rdiva_{r / a} {
   }
 
@@ -92,7 +92,7 @@ class Model<C> {
 template <ControlFunctionFullLvalue C>
 class Model<C> {
  public:
-  Model(C control, double r = 2, double a = 1)
+  explicit Model(C control, double r = 2, double a = 1)
       : u_{control}, rdiv2_{r / 2}, rdiva_{r / a} {
   }
 
@@ -108,7 +108,7 @@ class Model<C> {
       const optimization::StaticTensor<3>& state, double time) {
     auto res{u_(state, time)};
     const auto xyCommon{rdiv2_ * (res[0] + res[1])};
-    return {time * std::cos(state[2]), time * std::sin(state[2]),
+    return {xyCommon * std::cos(state[2]), xyCommon * std::sin(state[2]),
             (res[0] - res[1]) * rdiva_};
   }
 
