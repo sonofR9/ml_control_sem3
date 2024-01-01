@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <execution>
 #include <memory>
 #include <ranges>
 #include <vector>
@@ -165,16 +166,24 @@ class Evolution {
     population = newPop;
   }
   std::pair<std::array<double, P>, int> evaluatePopulation(
-      std::array<Chromosome, P>& population) {
+      const std::array<Chromosome, P>& population) {
     double min = std::numeric_limits<double>::max();
     std::pair<std::array<double, P>, int> fitness{{}, -1};
+
+    std::transform(
+        std::execution::par_unseq, population.begin(), population.end(),
+        fitness.first.begin(),
+        [this](const StaticTensor<N, DoubleGrayCode<D>>& q) -> double {
+          return fitAdapter(q);
+        });
     for (int i{0}; i < P; ++i) {
-      fitness.first[i] = fitAdapter(population[i]);
+      // fitness.first[i] = fitAdapter(population[i]);
       if (fitness.first[i] < min) {
         fitness.second = i;
         min = fitness.first[i];
       }
     }
+
     return fitness;
   }
 

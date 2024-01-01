@@ -1,13 +1,10 @@
 #pragma once
 
-#pragma once
-
 #include "utils.h"
 
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <execution>
 #include <ostream>
 #include <ranges>
 #include <sstream>
@@ -40,7 +37,7 @@ struct StaticTensor {
     }
   }
 
-  constexpr /*implicit*/ StaticTensor(ConvertibleInputRangeTo<T> auto&& range) {
+  /*implicit*/ constexpr StaticTensor(ConvertibleInputRangeTo<T> auto&& range) {
     if (range.size() != N) {
       throw std::length_error("Range size differs from data size");
     }
