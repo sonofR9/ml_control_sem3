@@ -177,7 +177,6 @@ class Evolution {
           return fitAdapter(q);
         });
     for (int i{0}; i < P; ++i) {
-      // fitness.first[i] = fitAdapter(population[i]);
       if (fitness.first[i] < min) {
         fitness.second = i;
         min = fitness.first[i];

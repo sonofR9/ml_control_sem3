@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <execution>
 #include <iostream>
 
 namespace optimization {
@@ -78,9 +79,14 @@ class GrayWolfAlgorithm {
   std::array<Specimen, B> getBest(Population& population) {
     using CalcSpecimen = std::pair<int, double>;
     std::array<CalcSpecimen, P> calcPop{};
+
+    std::transform(std::execution::par_unseq, population.begin(),
+                   population.end(), calcPop.begin(),
+                   [this](const Specimen& q) -> CalcSpecimen {
+                     return {0, fit_(q)};
+                   });
     for (int i{0}; i < P; ++i) {
       calcPop[i].first = i;
-      calcPop[i].second = fit_(population[i]);
     }
 
     std::array<CalcSpecimen, B> best;
