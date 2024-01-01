@@ -8,9 +8,7 @@ constexpr double kEpsTrajectory{1e-1};
 
 template <int N>
 using ControlParams = StaticTensor<N, StaticTensor<2, double>>;
-template <int N>
-using ControlApproximation =
-    PiecewiseLinearApproximation<N, StaticTensor<2, double>>;
+using ControlApproximation = PiecewiseLinearApproximation<2, double>;
 
 template <int N>
 ControlParams<N> approximationFrom1D(const StaticTensor<2 * N>& solverResult) {
@@ -23,7 +21,7 @@ ControlParams<N> approximationFrom1D(const StaticTensor<2 * N>& solverResult) {
 }
 
 template <int N>
-StaticTensor<N, double> stdStaticTensorToStaticTensor(
+StaticTensor<N, double> stdVectorToStaticTensor(
     const std::vector<double>& vec) {
   StaticTensor<N, double> result{};
   for (int i = 0; i < N; ++i) {
@@ -56,8 +54,7 @@ std::array<std::vector<double>, 3 + 1> getTrajectoryFromControl(
     double dt = 0.01) {
   auto approx{approximationFrom1D<N>(solverResult)};
 
-  const PiecewiseLinearApproximation<2, double>& func{tMax / N, approx.begin(),
-                                                      approx.end()};
+  const ControlApproximation& func{tMax / N, approx.begin(), approx.end()};
 
   const auto control = [&func](const StaticTensor<3>&,
                                double time) -> StaticTensor<2> {

@@ -68,8 +68,8 @@ class GrayWolfAlgorithm {
   }
 
  private:
-  static std::array<double, 2ZU * B> generateKsi() {
-    std::array<double, 2ZU * B> result{};
+  static std::array<double, std::size_t(2) * B> generateKsi() {
+    std::array<double, std::size_t(2) * B> result{};
     std::generate(result.begin(), result.end(),
                   []() -> double { return 2.0 * (Probability::get() - 0.5); });
     return result;

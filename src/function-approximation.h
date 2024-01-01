@@ -2,6 +2,7 @@
 
 #include "global.h"
 
+#include <iostream>
 #include <map>
 
 namespace optimization {
@@ -29,15 +30,6 @@ class PiecewiseLinearApproximation {
     }
   }
 
-  // template <TimeAndStaticTensorIterator<N, U> It>
-  // PiecewiseLinearApproximation(const It& begin, const It& end) {
-  //   It curr{begin};
-  //   while (curr != end) {
-  //     points_.insert(*curr);
-  //     ++curr;
-  //   }
-  // }
-
   StaticTensor<N, U> operator()(double time) const {
     auto lb{points_.lower_bound(time)};
     auto next{lb};
@@ -53,8 +45,8 @@ class PiecewiseLinearApproximation {
                               (next->first - lb->first) * (time - lb->first);
     }
 
-    return lb->second + (next->second - lb->second) /
-                            (next->first - lb->first) * (time - lb->first);
+    const double partOfdt{1.0 / (next->first - lb->first) * (time - lb->first)};
+    return lb->second + (next->second - lb->second) * partOfdt;
   }
 
   void insert(double time, const StaticTensor<N, U>& point) {

@@ -62,7 +62,8 @@ class Model {
 template <ControlFunctionTimeOnly C>
 class Model<C> {
  public:
-  Model(C control, double r = 1, double a = 1) : u_{control}, r_{r}, a_{a} {
+  Model(C control, double r = 1, double a = 1)
+      : u_{control}, rdiv2_{r / 2}, rdiva_{r / a} {
   }
 
   /**
@@ -75,23 +76,24 @@ class Model<C> {
    */
   optimization::StateDerivativesPoint<3> operator()(
       const optimization::StaticTensor<3>& state, double time) {
-    auto res{u_(time)};
-    return {r_ / 2 * (res[0] + res[1]) * std::cos(state[2]),
-            r_ / 2 * (res[0] + res[1]) * std::sin(state[2]),
-            (res[0] - res[1]) * r_ / a_};
+    const auto res{u_(time)};
+    const auto xyCommon{rdiv2_ * (res[0] + res[1])};
+    return {xyCommon * std::cos(state[2]), xyCommon * std::sin(state[2]),
+            (res[0] - res[1]) * rdiva_};
   }
 
  private:
   C u_;
 
-  double r_;
-  double a_;
+  double rdiv2_;
+  double rdiva_;
 };
 
 template <ControlFunctionFullLvalue C>
 class Model<C> {
  public:
-  Model(C control, double r = 2, double a = 1) : u_{control}, r_{r}, a_{a} {
+  Model(C control, double r = 2, double a = 1)
+      : u_{control}, rdiv2_{r / 2}, rdiva_{r / a} {
   }
 
   /**
@@ -105,16 +107,16 @@ class Model<C> {
   optimization::StateDerivativesPoint<3> operator()(
       const optimization::StaticTensor<3>& state, double time) {
     auto res{u_(state, time)};
-    return {r_ / 2 * (res[0] + res[1]) * std::cos(state[2]),
-            r_ / 2 * (res[0] + res[1]) * std::sin(state[2]),
-            (res[0] - res[1]) * r_ / a_};
+    const auto xyCommon{rdiv2_ * (res[0] + res[1])};
+    return {time * std::cos(state[2]), time * std::sin(state[2]),
+            (res[0] - res[1]) * rdiva_};
   }
 
  private:
   C u_;
 
-  double r_;
-  double a_;
+  double rdiv2_;
+  double rdiva_;
 };
 
 // template <ControlFunctionFullRvalue C>
