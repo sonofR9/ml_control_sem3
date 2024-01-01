@@ -2,9 +2,12 @@
 
 #pragma once
 
+#include "utils.h"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <execution>
 #include <ostream>
 #include <ranges>
 #include <sstream>
@@ -19,11 +22,7 @@ constexpr double kEps = 1e-10;
  */
 template <int N, typename T = double>
 struct StaticTensor {
-  constexpr StaticTensor() noexcept {
-    if constexpr (std::is_convertible_v<int, T>) {
-      for (int i{0}; i < N; ++i) data_[i] = 0;
-    }
-  }
+  constexpr StaticTensor() noexcept = default;
   constexpr ~StaticTensor() noexcept = default;
   constexpr StaticTensor(const StaticTensor&) = default;
   constexpr StaticTensor(StaticTensor&&) noexcept = default;
@@ -39,6 +38,14 @@ struct StaticTensor {
     for (int i{0}; i < N; ++i) {
       data_[i] = *(el++);
     }
+  }
+
+  constexpr /*implicit*/ StaticTensor(ConvertibleInputRangeTo<T> auto&& range) {
+    if (range.size() != N) {
+      throw std::length_error("Range size differs from data size");
+    }
+    std::copy(std::ranges::begin(range), std::ranges::end(range),
+              data_.begin());
   }
 
   constexpr T& operator[](int i) noexcept {
@@ -392,9 +399,6 @@ constexpr bool operator!=(const StaticTensor<N, T>& lhs,
                           const StaticTensor<N, T>& rhs) noexcept {
   return !(lhs == rhs);
 }
-
-static_assert(std::ranges::range<StaticTensor<100, int>>);
-static_assert(std::ranges::random_access_range<StaticTensor<100, int>>);
 }  // namespace optimization
 
 template <int N, typename T>
@@ -414,3 +418,6 @@ std::stringstream& operator<<(std::stringstream& stream,
   }
   return stream;
 }
+
+static_assert(
+    std::ranges::random_access_range<optimization::StaticTensor<100, int>>);
