@@ -136,8 +136,10 @@ class Evolution {
   }
 
   void crossoverPopulation(std::array<Chromosome, P>& population,
-                           std::array<double, P> fitness, double probModifier) {
-    std::array<Chromosome, P> newPop;
+                           const std::array<double, P>& fitness,
+                           double probModifier) {
+    auto newPopPointer{std::make_unique<std::array<Chromosome, P>>()};
+    auto& newPop{*newPopPointer};
     for (int i = 0; i < P; i += 2) {
       const auto lhsIndex{IntGenerator<P>::get()};
       auto rhsIndex{IntGenerator<P>::get()};
