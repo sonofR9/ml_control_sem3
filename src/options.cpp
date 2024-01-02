@@ -131,7 +131,7 @@ GlobalOptions parseOptions(int argc, const char** argv) noexcept try {
         "Invalid method name '{}' was provided.\nValid names: {}, {}", method,
         methodToName(GlobalOptions::Method::kGrayWolf),
         methodToName(GlobalOptions::Method::kEvolution));
-    std::exit(1);
+    std::exit(2);
   }
 
   options.wolfOpt.wolfNum = getValue<int>(vm, "wolf.num");

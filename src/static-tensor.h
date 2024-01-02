@@ -61,7 +61,7 @@ struct StaticTensor {
   [[nodiscard]] constexpr ConstIterator cbegin() const noexcept;
   [[nodiscard]] constexpr ConstIterator cend() const noexcept;
 
-  [[nodiscard]] static constexpr int size() noexcept {
+  [[nodiscard]] static constexpr int size() const noexcept {
     return N;
   }
 

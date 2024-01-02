@@ -1,30 +1,29 @@
 #pragma once
 
 #include "runge-kutte.h"
+#include "tensor.h"
 
 #include <cmath>
 #include <concepts>
-// import optimization;
 
 namespace two_wheeled_robot {
-
 template <typename T>
 concept ControlFunctionFullLvalue =
-    requires(T fun, const optimization::StaticTensor<3>& state, double time) {
-      { fun(state, time) } -> std::same_as<optimization::StaticTensor<2>>;
+    requires(T fun, const optimization::Tensor<double>& state, double time) {
+      { fun(state, time) } -> std::same_as<optimization::Tensor<double>>;
     };
 
 template <typename T>
 concept ControlFunctionTimeOnly = requires(T fun, double time) {
-  { fun(time) } -> std::same_as<optimization::StaticTensor<2>>;
+  { fun(time) } -> std::same_as<optimization::Tensor<double>>;
 };
 
 template <typename T>
 concept ControlFunctionFullRvalue =
-    requires(T fun, optimization::StaticTensor<3>&& state, double time) {
+    requires(T fun, optimization::Tensor<double>&& state, double time) {
       {
         fun(std::move(state), time)
-      } -> std::same_as<optimization::StaticTensor<2>>;
+      } -> std::same_as<optimization::Tensor<double>>;
     };
 
 template <typename T>
@@ -55,8 +54,8 @@ class Model {
    * @return optimization::StateDerivativesPoint<3> left-hand side of equations
    * system (derivatives of state variables)
    */
-  optimization::StateDerivativesPoint<3> operator()(
-      optimization::StaticTensor<3> state, double time);
+  optimization::StateDerivativesPoint<double> operator()(
+      optimization::Tensor<double> state, double time);
 };
 
 template <ControlFunctionTimeOnly C>
@@ -64,6 +63,8 @@ class Model<C> {
  public:
   explicit Model(C control, double r = 1, double a = 1)
       : u_{control}, rdiv2_{r / 2}, rdiva_{r / a} {
+    assert((u_(0).size() == 2));
+    assert((u_(0).size() == 2));
   }
 
   /**
@@ -71,11 +72,11 @@ class Model<C> {
    *
    * @param state current state
    * @param time current time
-   * @return optimization::StateDerivativesPoint<3> left-hand side of equations
+   * @return optimization::StateDerivativesPoint left-hand side of equations
    * system (derivatives of state variables)
    */
-  optimization::StateDerivativesPoint<3> operator()(
-      const optimization::StaticTensor<3>& state, double time) {
+  optimization::StateDerivativesPoint<double> operator()(
+      const optimization::Tensor<double>& state, double time) {
     const auto res{u_(time)};
     const auto xyCommon{rdiv2_ * (res[0] + res[1])};
     return {xyCommon * std::cos(state[2]), xyCommon * std::sin(state[2]),
@@ -94,6 +95,8 @@ class Model<C> {
  public:
   explicit Model(C control, double r = 2, double a = 1)
       : u_{control}, rdiv2_{r / 2}, rdiva_{r / a} {
+    assert((u_({0, 0, 0}, 0).size() == 2));
+    assert((u_({0, 0, 0}, 0).size() == 2));
   }
 
   /**
@@ -104,8 +107,8 @@ class Model<C> {
    * @return optimization::StateDerivativesPoint<3> left-hand side of equations
    * system (derivatives of state variables)
    */
-  optimization::StateDerivativesPoint<3> operator()(
-      const optimization::StaticTensor<3>& state, double time) {
+  optimization::StateDerivativesPoint<double> operator()(
+      const optimization::Tensor<double>& state, double time) {
     auto res{u_(state, time)};
     const auto xyCommon{rdiv2_ * (res[0] + res[1])};
     return {xyCommon * std::cos(state[2]), xyCommon * std::sin(state[2]),
@@ -118,35 +121,4 @@ class Model<C> {
   double rdiv2_;
   double rdiva_;
 };
-
-// template <ControlFunctionFullRvalue C>
-// class Model<C> {
-//  public:
-//   Model(C control, double r = 2, double a = 1) : u_{control}, r_{r}, a_{a} {
-//   }
-
-//   /**
-//    * @brief models equations system of robot (preferred version)
-//    *
-//    * @param state current state
-//    * @param time current time
-//    * @return optimization::StateDerivativesPoint<3> left-hand side of
-//    equations
-//    * system (derivatives of state variables)
-//    */
-//   optimization::StaticTensor<3> operator()(optimization::StaticTensor<3>&&
-//   state,
-//                                      double time) {
-//     auto res{u_(state, time)};
-//     return {r_ / 2 * (res[0] + res[1]) * std::cos(state[2]),
-//             r_ / 2 * (res[0] + res[1]) * std::sin(state[2]),
-//             (res[0] - res[1]) * r_ / a_};
-//   }
-//
-//  private:
-//   C u_;
-
-//   double r_;
-//   double a_;
-// };
 }  // namespace two_wheeled_robot

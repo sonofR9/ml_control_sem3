@@ -1,25 +1,21 @@
 #pragma once
 
-#include "global.h"
+#include "tensor.h"
 
-#include <iostream>
 #include <map>
 
 namespace optimization {
-template <typename T, int N, typename U>
-concept StaticTensorIterator = requires(const T& it) {
-  { *it } -> std::same_as<StaticTensor<N, U>&>;
-};
+template <typename T, typename U>
+concept TensorIterator = std::is_same_v<typename T::value_type, Tensor<U>>;
 
-template <typename T, int N, typename U>
-concept TimeAndStaticTensorIterator = requires(const T& it) {
-  { *it } -> std::same_as<std::pair<double, StaticTensor<N>>&>;
-};
+template <typename T, typename U>
+concept TimeAndTensorIterator =
+    std::is_same_v<typename T::value_type, std::pair<double, Tensor<U>>>;
 
-template <int N, typename U = double>
+template <typename U = double>
 class PiecewiseLinearApproximation {
  public:
-  template <StaticTensorIterator<N, U> It>
+  template <TensorIterator<U> It>
   PiecewiseLinearApproximation(double dt, const It& begin, const It& end) {
     double t{0};
     It curr{begin};
@@ -30,7 +26,7 @@ class PiecewiseLinearApproximation {
     }
   }
 
-  StaticTensor<N, U> operator()(double time) const {
+  Tensor<U> operator()(double time) const {
     auto lb{points_.lower_bound(time)};
     auto next{lb};
     if (next != points_.end()) {
@@ -49,11 +45,11 @@ class PiecewiseLinearApproximation {
     return lb->second + (next->second - lb->second) * partOfdt;
   }
 
-  void insert(double time, const StaticTensor<N, U>& point) {
+  void insert(double time, const Tensor<U>& point) {
     points_.insert({time, point});
   }
 
  private:
-  std::map<double, StaticTensor<N, U>> points_;
+  std::map<double, Tensor<U>> points_;
 };
 }  // namespace optimization

@@ -1,22 +1,15 @@
 #pragma once
-// module;
 
 #include "global.h"
+#include "tensor.h"
 
-#include <array>
-#include <cmath>
-#include <iostream>
-
-// export module runge_kutte;
-
-// export import <array>;
-
+#include <vector>
 namespace optimization {
-template <int T, StateSpaceFunction<T> F>
-StaticTensor<T> RungeKutteStep(double startT, const StaticTensor<T>& startX,
-                               F fun, double interestT, double delta = 0.001) {
+template <typename T, StateSpaceFunction<T> F>
+Tensor<T> rungeKutteStep(double startT, const Tensor<T>& startX, F fun,
+                         double interestT, double delta = 0.001) {
   double curT{startT};
-  StaticTensor<T> curX{startX};
+  Tensor<T> curX{startX};
 
   while (curT < interestT) {
     auto k1 = fun(curX, curT);
@@ -24,39 +17,48 @@ StaticTensor<T> RungeKutteStep(double startT, const StaticTensor<T>& startX,
     auto k3 = fun(curX + delta / 2 * k2, curT + delta / 2);
     auto k4 = fun(curX + delta * k3, curT + delta);
 
-    curX += delta / 6 * (k1 + 2 * k2 + 2 * k3 + k4);
+    curX += delta / 6 * (k1 + 2 * (k2 + k3) + k4);
     curT += delta;
   }
   return curX;
 }
 
 /**
- * @tparam T number of state coordinates
- * @return std::array<std::vector<double>, T + 1> array of vectors with values
- * of each state coordinate and time
+ * @tparam T type
+ * @return std::vector<std::vector<T>> array of vectors with values of each
+ * state coordinate and time. Given input =Tensor with shape (N...), output will
+ * have shape (N+1, M) where M is the number of steps
  */
-template <int T, StateSpaceFunction<T> F>
-std::array<std::vector<double>, T + 1> SolveDiffEqRungeKutte(
-    double startT, const StaticTensor<T>& startX, F fun, double lastT,
-    double delta = 0.001) {
-  std::array<std::vector<double>, T + 1> result;
+template <typename T, StateSpaceFunction<T> F>
+std::vector<std::vector<T>> solveDiffEqRungeKutte(double startT,
+                                                  const Tensor<T>& startX,
+                                                  F fun, double lastT,
+                                                  double delta = 0.001) {
+  // TODO(novak) preallocate?
+  auto result = std::vector<std::vector<T>>(startX.size() + 1);
   double curT{startT};
-  StaticTensor<T> curX{startX};
+  Tensor<T> curX{startX};
 
-  for (int i{0}; i < T; ++i) result[i].push_back(curX[i]);
-  result[T].push_back(curT);
+  auto addPointToResult = [&result](const Tensor<T>& point,
+                                    double curT) -> void {
+    for (std::size_t i{0}; i < result.size() - 1; ++i) {
+      result[i].push_back(point[i]);
+    }
+    result[result.size() - 1].push_back(curT);
+  };
+
+  addPointToResult(curX, curT);
 
   while (curT < lastT - kEps) {
-    curX = RungeKutteStep(
-        curT, curX,
-        std::function<StaticTensor<3>(StaticTensor<3>, double)>(fun),
-        curT + delta, delta);
+    curX =
+        rungeKutteStep(curT, curX,
+                       std::function<Tensor<T>(Tensor<T>, double)>(
+                           fun),  // std::function<Tensor<3>(Tensor<3>, double)
+                       curT + delta, delta);
     curT += delta;
-    for (int i{0}; i < T; ++i) result[i].push_back(curX[i]);
-    result[T].push_back(curT);
+    addPointToResult(curX, curT);
   }
 
   return result;
 }
-// }
 }  // namespace optimization
