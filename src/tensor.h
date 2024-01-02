@@ -17,30 +17,63 @@ namespace optimization {
  */
 template <typename T = double>
 struct Tensor {
-  constexpr Tensor() noexcept = default;
-  constexpr ~Tensor() noexcept = default;
-  constexpr Tensor(const Tensor&) = default;
-  constexpr Tensor(Tensor&&) noexcept = default;
-  constexpr Tensor& operator=(const Tensor&) = default;
-  constexpr Tensor& operator=(Tensor&&) noexcept = default;
+  constexpr Tensor() noexcept = delete;
 
-  constexpr explicit Tensor(const std::size_t size) : data_(size) {
+  constexpr ~Tensor() noexcept {
+    delete[] data_;
+    data_ = nullptr;
   }
 
-  constexpr Tensor(const std::size_t size, T value) : data_(size, value) {
+  constexpr Tensor(const Tensor& arr) : size_{arr.size_}, data_{new T[size_]} {
+    std::copy(arr.begin(), arr.end(), begin());
   }
 
-  constexpr Tensor(std::initializer_list<T>&& list) : data_{std::move(list)} {
+  constexpr Tensor(Tensor&& arr) noexcept : size_{arr.size_}, data_{arr.data_} {
+    arr.data_ = nullptr;
   }
 
-  /*implicit*/ constexpr Tensor(ConvertibleInputRangeTo<T> auto&& range)
-      : data_{range.begin(), range.end()} {
+  constexpr Tensor& operator=(const Tensor& arr) {
+    if (this != &arr) {
+      delete[] data_;
+      size_ = arr.size_;
+      data_ = new T[size_];
+      std::copy(arr.begin(), arr.end(), begin());
+    }
+    return *this;
+  }
+  constexpr Tensor& operator=(Tensor&& arr) noexcept {
+    delete[] data_;
+    data_ = arr.data_;
+    size_ = arr.size_;
+    arr.data_ = nullptr;
+    return *this;
+  }
+
+  constexpr explicit Tensor(const std::size_t size)
+      : size_{size}, data_{new T[size_]} {
+  }
+
+  constexpr Tensor(const std::size_t size, T value)
+      : size_{size}, data_{new T[size_]} {
+    std::fill(begin(), end(), value);
+  }
+
+  constexpr Tensor(std::initializer_list<T>&& list)
+      : size_{list.size()}, data_{new T[size_]} {
+    std::move(list.begin(), list.end(), begin());
+  }
+
+  /*implicit*/ constexpr Tensor(ConvertibleSizedInputRangeTo<T> auto&& range)
+      : size_{range.size()}, data_{new T[size_]} {
+    std::move(range.begin(), range.end(), begin());
   }
 
   constexpr T& operator[](std::size_t i) noexcept {
+    assert((i < size_));
     return data_[i];
   }
   constexpr T operator[](std::size_t i) const noexcept {
+    assert((i < size_));
     return data_[i];
   }
 
@@ -56,11 +89,12 @@ struct Tensor {
   [[nodiscard]] constexpr ConstIterator cend() const noexcept;
 
   [[nodiscard]] constexpr std::size_t size() const noexcept {
-    return data_.size();
+    return size_;
   }
 
  private:
-  std::vector<T> data_;
+  std::size_t size_{0};
+  T* data_{nullptr};
 };
 
 // ------------------------------ iterators -----------------------------------
@@ -77,6 +111,10 @@ class Tensor<T>::ConstIterator {
   constexpr ConstIterator() noexcept = default;
 
   constexpr explicit ConstIterator(pointer ptr) noexcept : ptr_{ptr} {
+  }
+
+  constexpr ConstIterator(pointer ptr, const std::size_t offset) noexcept
+      : ptr_{ptr + offset} {
   }
 
   [[nodiscard]] constexpr reference operator*() const noexcept {
@@ -154,17 +192,12 @@ class Tensor<T>::ConstIterator {
                           const ConstIterator&) noexcept = default;
 
  private:
-  constexpr explicit ConstIterator(std::vector<T>::const_iterator iter) noexcept
-      : ptr_{iter} {
-  }
-
-  friend Tensor<T>;
-  std::vector<T>::const_iterator ptr_{};
+  T* ptr_{};
 };
 
 template <typename T>
 class Tensor<T>::Iterator : public Tensor<T>::ConstIterator {
-  //   using Base = Tensor<T>::ConstIterator;
+  using Base = Tensor<T>::ConstIterator;
 
  public:
   using iterator_category = std::random_access_iterator_tag;
@@ -175,45 +208,47 @@ class Tensor<T>::Iterator : public Tensor<T>::ConstIterator {
 
   constexpr Iterator() noexcept = default;
 
-  constexpr explicit Iterator(pointer ptr) noexcept : ptr_{ptr} {
+  constexpr explicit Iterator(pointer ptr) noexcept : Base{ptr} {
   }
 
-  constexpr explicit Iterator(std::vector<T>::iterator iter) noexcept
-      : ptr_{std::move(iter)} {
+  constexpr Iterator(pointer ptr, const std::size_t offset) noexcept
+      : Base{ptr, offset} {
   }
 
   [[nodiscard]] constexpr reference operator*() const noexcept {
-    return *ptr_;
+    return const_cast<reference>(Base::operator*());
   }
   [[nodiscard]] constexpr pointer operator->() const noexcept {
-    return ptr_;
+    return const_cast<pointer>(Base::operator->());
   }
 
   constexpr Iterator& operator++() noexcept {
-    ++ptr_;
+    Base::operator++();
     return *this;
   }
 
   constexpr Iterator operator++(int) noexcept {
     Iterator tmp = *this;
-    ++ptr_;
+    Base::operator++();
     return tmp;
   }
 
   constexpr Iterator& operator--() noexcept {
-    --ptr_;
+    Base::operator--();
     return *this;
   }
 
   constexpr Iterator operator--(int) noexcept {
     Iterator tmp = *this;
-    --ptr_;
+    Base::operator--();
     return tmp;
   }
 
   [[nodiscard]] constexpr Iterator operator+(
       const difference_type n) const noexcept {
-    return {ptr_ + n};
+    Iterator tmp = *this;
+    tmp += n;
+    return tmp;
   }
 
   [[nodiscard]] friend constexpr Iterator operator+(const difference_type n,
@@ -224,7 +259,9 @@ class Tensor<T>::Iterator : public Tensor<T>::ConstIterator {
 
   [[nodiscard]] constexpr Iterator operator-(
       const difference_type n) const noexcept {
-    return {ptr_, -n};
+    Iterator tmp = *this;
+    tmp -= n;
+    return tmp;
   }
 
   [[nodiscard]] friend constexpr Iterator operator-(const difference_type n,
@@ -235,59 +272,55 @@ class Tensor<T>::Iterator : public Tensor<T>::ConstIterator {
 
   [[nodiscard]] constexpr difference_type operator-(
       const Iterator& other) const noexcept {
-    return ptr_ - other.ptr_;
+    return Base::operator-(other);
   }
 
   constexpr Iterator& operator+=(difference_type n) noexcept {
-    ptr_ += n;
+    Base::operator+=(n);
     return *this;
   }
 
   constexpr Iterator& operator-=(difference_type n) noexcept {
-    ptr_ -= n;
+    Base::operator-=(n);
     return *this;
   }
 
   [[nodiscard]] constexpr reference operator[](
       const ptrdiff_t offset) const noexcept {
-    return ptr_[offset];
+    return const_cast<reference>(Base::operator[](offset));
   }
 
   friend auto operator<=>(const Iterator&, const Iterator&) noexcept = default;
-
- private:
-  friend Tensor<T>;
-  typename std::vector<T>::iterator ptr_{};
 };
 
 template <typename T>
 constexpr typename Tensor<T>::Iterator Tensor<T>::begin() noexcept {
-  return Iterator{data_.begin()};
+  return Iterator{data_};
 }
 
 template <typename T>
 constexpr typename Tensor<T>::Iterator Tensor<T>::end() noexcept {
-  return Iterator{data_.end()};
+  return Iterator{data_ + size_};
 }
 
 template <typename T>
 constexpr typename Tensor<T>::ConstIterator Tensor<T>::begin() const noexcept {
-  return ConstIterator{data_.begin()};
+  return ConstIterator{data_};
 }
 
 template <typename T>
 constexpr typename Tensor<T>::ConstIterator Tensor<T>::end() const noexcept {
-  return ConstIterator{data_.end()};
+  return ConstIterator{data_ + size_};
 }
 
 template <typename T>
 constexpr typename Tensor<T>::ConstIterator Tensor<T>::cbegin() const noexcept {
-  return ConstIterator{data_.cbegin()};
+  return begin();
 }
 
 template <typename T>
 constexpr typename Tensor<T>::ConstIterator Tensor<T>::cend() const noexcept {
-  return ConstIterator{data_.cend()};
+  return end();
 }
 
 template <typename T>

@@ -35,7 +35,8 @@ struct StaticTensor {
     }
   }
 
-  /*implicit*/ constexpr StaticTensor(ConvertibleInputRangeTo<T> auto&& range) {
+  /*implicit*/ constexpr StaticTensor(
+      ConvertibleSizedInputRangeTo<T> auto&& range) {
     if (range.size() != N) {
       throw std::length_error("Range size differs from data size");
     }
@@ -61,7 +62,7 @@ struct StaticTensor {
   [[nodiscard]] constexpr ConstIterator cbegin() const noexcept;
   [[nodiscard]] constexpr ConstIterator cend() const noexcept;
 
-  [[nodiscard]] static constexpr int size() const noexcept {
+  [[nodiscard]] static constexpr int size() noexcept {
     return N;
   }
 
