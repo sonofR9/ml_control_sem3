@@ -3,7 +3,7 @@
 #include "utils.h"
 
 #include <algorithm>
-#include <array>
+#include <cassert>
 #include <cmath>
 #include <ostream>
 #include <sstream>
@@ -24,20 +24,23 @@ struct Tensor {
   constexpr Tensor& operator=(const Tensor&) = default;
   constexpr Tensor& operator=(Tensor&&) noexcept = default;
 
-  constexpr explicit Tensor(std::size_t size) : data_{size} {
+  constexpr explicit Tensor(const std::size_t size) : data_(size) {
   }
 
-  constexpr Tensor(const std::initializer_list<T>& list) : data_{list} {
+  constexpr Tensor(const std::size_t size, T value) : data_(size, value) {
+  }
+
+  constexpr Tensor(std::initializer_list<T>&& list) : data_{std::move(list)} {
   }
 
   /*implicit*/ constexpr Tensor(ConvertibleInputRangeTo<T> auto&& range)
-      : data_{range} {
+      : data_{range.begin(), range.end()} {
   }
 
-  constexpr T& operator[](int i) noexcept {
+  constexpr T& operator[](std::size_t i) noexcept {
     return data_[i];
   }
-  constexpr T operator[](int i) const noexcept {
+  constexpr T operator[](std::size_t i) const noexcept {
     return data_[i];
   }
 
@@ -52,7 +55,7 @@ struct Tensor {
   [[nodiscard]] constexpr ConstIterator cbegin() const noexcept;
   [[nodiscard]] constexpr ConstIterator cend() const noexcept;
 
-  [[nodiscard]] constexpr std::size_t size() noexcept {
+  [[nodiscard]] constexpr std::size_t size() const noexcept {
     return data_.size();
   }
 
@@ -289,9 +292,9 @@ constexpr typename Tensor<T>::ConstIterator Tensor<T>::cend() const noexcept {
 
 template <typename T>
 constexpr Tensor<T> operator+(const Tensor<T>& self, const Tensor<T>& other) {
-  static_assert(self.size() == other.size());
-  Tensor<T> result{self.size()};
-  for (int i{0}; i < self.size(); ++i) {
+  assert((self.size() == other.size()));
+  auto result = Tensor<T>(self.size());
+  for (std::size_t i{0}; i < self.size(); ++i) {
     result[i] = other[i] + self[i];
   }
   return result;
@@ -300,8 +303,8 @@ constexpr Tensor<T> operator+(const Tensor<T>& self, const Tensor<T>& other) {
 template <typename T>
 constexpr Tensor<T>& operator+=(Tensor<T>& self,
                                 const Tensor<T>& other) noexcept {
-  static_assert(self.size() == other.size());
-  for (int i{0}; i < self.size(); ++i) {
+  assert((self.size() == other.size()));
+  for (std::size_t i{0}; i < self.size(); ++i) {
     self[i] += other[i];
   }
   return self;
@@ -309,9 +312,9 @@ constexpr Tensor<T>& operator+=(Tensor<T>& self,
 
 template <typename T>
 constexpr Tensor<T> operator-(const Tensor<T>& self, const Tensor<T>& other) {
-  static_assert(self.size() == other.size());
-  Tensor<T> result{self.size()};
-  for (int i{0}; i < self.size(); ++i) {
+  assert((self.size() == other.size()));
+  auto result = Tensor<T>(self.size());
+  for (std::size_t i{0}; i < self.size(); ++i) {
     result[i] = self[i] - other[i];
   }
   return result;
@@ -319,8 +322,8 @@ constexpr Tensor<T> operator-(const Tensor<T>& self, const Tensor<T>& other) {
 
 template <typename T>
 constexpr Tensor<T> operator-(const Tensor<T>& self) {
-  Tensor<T> result{self.size()};
-  for (int i{0}; i < self.size(); ++i) {
+  auto result = Tensor<T>(self.size());
+  for (std::size_t i{0}; i < self.size(); ++i) {
     result[i] = -self[i];
   }
   return result;
@@ -329,8 +332,8 @@ constexpr Tensor<T> operator-(const Tensor<T>& self) {
 template <typename T>
 constexpr Tensor<T>& operator-=(Tensor<T>& self,
                                 const Tensor<T>& other) noexcept {
-  static_assert(self.size() == other.size());
-  for (int i{0}; i < self.size(); ++i) {
+  assert((self.size() == other.size()));
+  for (std::size_t i{0}; i < self.size(); ++i) {
     self[i] -= other[i];
   }
   return self;
@@ -338,8 +341,8 @@ constexpr Tensor<T>& operator-=(Tensor<T>& self,
 
 template <typename T, typename M>
 constexpr Tensor<T> operator*(const Tensor<T>& self, M multiplier) {
-  Tensor<T> result{self.size()};
-  for (int i{0}; i < self.size(); ++i) {
+  auto result = Tensor<T>(self.size());
+  for (std::size_t i{0}; i < self.size(); ++i) {
     result[i] = multiplier * self[i];
   }
   return result;
@@ -353,8 +356,8 @@ constexpr Tensor<T> operator*(M multiplier, const Tensor<T>& self) {
 template <typename T>
 constexpr Tensor<T>& operator*=(Tensor<T>& self,
                                 const Tensor<T>& other) noexcept {
-  static_assert(self.size() == other.size());
-  for (int i{0}; i < self.size(); ++i) {
+  assert((self.size() == other.size()));
+  for (std::size_t i{0}; i < self.size(); ++i) {
     self[i] *= other[i];
   }
   return self;
@@ -362,8 +365,8 @@ constexpr Tensor<T>& operator*=(Tensor<T>& self,
 
 template <typename T, typename M>
 constexpr Tensor<T> operator/(const Tensor<T>& self, M divider) {
-  Tensor<T> result{self.size()};
-  for (int i{0}; i < self.size(); ++i) {
+  auto result = Tensor<T>(self.size());
+  for (std::size_t i{0}; i < self.size(); ++i) {
     result[i] = self[i] / divider;
   }
   return result;
@@ -371,7 +374,7 @@ constexpr Tensor<T> operator/(const Tensor<T>& self, M divider) {
 
 template <typename T>
 constexpr bool operator==(const Tensor<T>& lhs, const Tensor<T>& rhs) {
-  static_assert(lhs.size() == rhs.size());
+  assert((lhs.size() == rhs.size()));
   constexpr double kEps{1e-3};
   auto diff{lhs - rhs};
   return !std::ranges::any_of(
@@ -387,7 +390,7 @@ constexpr bool operator!=(const Tensor<T>& lhs, const Tensor<T>& rhs) {
 template <typename T>
 std::ostream& operator<<(std::ostream& stream,
                          const optimization::Tensor<T>& state) {
-  for (int i{0}; i < state.size(); ++i) {
+  for (std::size_t i{0}; i < state.size(); ++i) {
     stream << state[i] << " ";
   }
   return stream;
@@ -396,7 +399,7 @@ std::ostream& operator<<(std::ostream& stream,
 template <typename T>
 std::stringstream& operator<<(std::stringstream& stream,
                               const optimization::Tensor<T>& state) {
-  for (int i{0}; i < state.size(); ++i) {
+  for (std::size_t i{0}; i < state.size(); ++i) {
     stream << state[i] << " ";
   }
   return stream;

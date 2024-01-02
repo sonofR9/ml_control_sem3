@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <execution>
 #include <memory>
 #include <ranges>
@@ -42,29 +43,41 @@ std::pair<DoubleGrayCode<D>, DoubleGrayCode<D>> crossover(
   return {lhs, rhs};
 }
 
+//  @tparam N number of parameters of function being optimized (number of steps
+//  in piecewise function)
 /**
  * @brief
- *
- * @tparam N number of parameters of function being optimized (number of steps
- * in piecewise function)
  * @tparam D multiplier for gray code
  * @tparam Z zero for gray code
  * @tparam Fit function which calculates fitness. Should return [1, infinity)
- * (where 1 is best)
+ * (where 1 is best) accepts Tensor<double> (StaticTensor<N, double>)
  * @tparam P number of individuals in population
  */
-template <int N, uint64_t D, uint64_t Z,
-          Regular1OutFunction<StaticTensor<N, double>> Fit, int P = 100>
+template <uint64_t D, uint64_t Z, Regular1OutFunction<Tensor<double>> Fit,
+          int P = 100>
 class Evolution {
   using Gray = DoubleGrayCode<D>;
-  using Chromosome = StaticTensor<N, Gray>;
+  /// @brief StaticTensor<N, Gray>
+  using Chromosome = Tensor<Gray>;
 
  public:
-  Evolution(Fit fit, double uMin, double uMax)
-      : fit_{fit}, uMin_{uMin}, uMax_{uMax} {
+  /**
+   * @brief Construct a new Evolution object
+   *
+   * @param fit
+   * @param paramsCount number of parameters of function being optimized (number
+   * of steps in piecewise function)
+   * @param uMin
+   * @param uMax
+   */
+  Evolution(Fit fit, std::size_t paramsCount, double uMin, double uMax)
+      : fit_{fit}, paramsCount_{paramsCount}, uMin_{uMin}, uMax_{uMax} {
   }
 
-  StaticTensor<N, double> solve(int NumIterations) {
+  /**
+   * @return Tensor (StaticTensor<N, double>)
+   */
+  [[nodiscard]] Tensor<double> solve(int NumIterations) const {
     std::pair<Chromosome, double> best{{}, std::numeric_limits<double>::max()};
     auto population{generatePopulation()};
 
@@ -117,9 +130,12 @@ class Evolution {
   }
 
  private:
-  static StaticTensor<N, double> chromosomeToDoubles(
-      const Chromosome& chromosome) {
-    StaticTensor<N, double> doubles;
+  /**
+   * @param chromosome
+   * @return StaticTensor<N, double>
+   */
+  static Tensor<double> chromosomeToDoubles(const Chromosome& chromosome) {
+    auto doubles = Tensor<double>(chromosome.size());
     std::transform(chromosome.cbegin(), chromosome.cend(), doubles.begin(),
                    [](const Gray& code) { return code.getDouble(); });
     return doubles;
@@ -137,8 +153,8 @@ class Evolution {
 
   void crossoverPopulation(std::array<Chromosome, P>& population,
                            const std::array<double, P>& fitness,
-                           double probModifier) {
-    auto newPopPointer{std::make_unique<std::array<Chromosome, P>>()};
+                           double probModifier) const {
+    auto newPopPointer{generateEmptyPopulation()};
     auto& newPop{*newPopPointer};
     for (int i = 0; i < P; i += 2) {
       const auto lhsIndex{IntGenerator<P>::get()};
@@ -154,7 +170,7 @@ class Evolution {
       const auto rhsFit{fitness[rhsIndex]};
       const auto prob{std::max(1 / lhsFit, 1 / rhsFit)};
       if (prob > Probability::get() * probModifier) {
-        for (int j{0}; j < N; ++j) {
+        for (std::size_t j{0}; j < paramsCount_; ++j) {
           auto [childLhs, childRhs] = crossover<Z * 2, D>(
               population[lhsIndex][j], population[rhsIndex][j]);
           newPop[i][j] = childLhs;
@@ -165,19 +181,19 @@ class Evolution {
         newPop[i + 1] = population[rhsIndex];
       }
     }
-    population = newPop;
+    population = std::move(newPop);
   }
+
   std::pair<std::array<double, P>, int> evaluatePopulation(
-      const std::array<Chromosome, P>& population) {
+      const std::array<Chromosome, P>& population) const {
     double min = std::numeric_limits<double>::max();
     std::pair<std::array<double, P>, int> fitness{{}, -1};
 
-    std::transform(
-        std::execution::par_unseq, population.begin(), population.end(),
-        fitness.first.begin(),
-        [this](const StaticTensor<N, DoubleGrayCode<D>>& q) -> double {
-          return fitAdapter(q);
-        });
+    std::transform(std::execution::par_unseq, population.begin(),
+                   population.end(), fitness.first.begin(),
+                   [this](const Tensor<DoubleGrayCode<D>>& q) -> double {
+                     return fitAdapter(q);
+                   });
     for (int i{0}; i < P; ++i) {
       if (fitness.first[i] < min) {
         fitness.second = i;
@@ -188,12 +204,12 @@ class Evolution {
     return fitness;
   }
 
-  std::unique_ptr<std::array<Chromosome, P>> generatePopulation() {
+  std::unique_ptr<std::array<Chromosome, P>> generatePopulation() const {
     // generate random population (P chromosomes of size N each)
     auto population{std::make_unique<std::array<Chromosome, P>>()};
     std::generate(
         population->begin(), population->end(), [this]() -> Chromosome {
-          Chromosome chromosome;
+          auto chromosome = Chromosome(paramsCount_);
           std::generate(chromosome.begin(), chromosome.end(), [this]() {
             return DoubleGrayCode<D>{(uMax_ + uMin_) / 2 +
                                      DoubleGenerator::get() /
@@ -205,15 +221,29 @@ class Evolution {
     return population;
   }
 
-  double fitAdapter(const StaticTensor<N, DoubleGrayCode<D>>& q) {
-    StaticTensor<N, double> qDouble;
-    for (int i{0}; i < N; ++i) {
+  std::unique_ptr<std::array<Chromosome, P>> generateEmptyPopulation() const {
+    // generate random population (P chromosomes of size N each)
+    auto population{std::make_unique<std::array<Chromosome, P>>()};
+    std::generate(population->begin(), population->end(),
+                  [this]() -> Chromosome {
+                    auto chromosome = Chromosome(paramsCount_);
+                    return chromosome;
+                  });
+    return population;
+  }
+
+  double fitAdapter(const Tensor<DoubleGrayCode<D>>& q) const {
+    assert((q.size() == paramsCount_));
+    auto qDouble = Tensor<double>(q.size());
+    for (std::size_t i{0}; i < paramsCount_; ++i) {
       qDouble[i] = q[i].getDouble();
     }
     return fit_(qDouble);
   }
 
   Fit fit_;
+  std::size_t paramsCount_;
+
   double uMin_;
   double uMax_;
 };

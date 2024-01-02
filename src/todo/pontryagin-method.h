@@ -52,8 +52,8 @@ ControlFunction SolveUsingPontryagin(const StaticTensor<N>& x0,
   auto psi{psi0};
   while (x != xf) {
     u = findMaximum(x, psi, t);
-    psi = RungeKutteStep(t, psi, std::bind_front(conjugate, x, u), t + dt, dt);
-    x = RungeKutteStep(t, x, main, t + dt, dt);
+    psi = rungeKutteStep(t, psi, std::bind_front(conjugate, x, u), t + dt, dt);
+    x = rungeKutteStep(t, x, main, t + dt, dt);
     result.Insert(t, u);
   }
   return result;

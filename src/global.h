@@ -1,6 +1,6 @@
 #pragma once
 
-#include "static-tensor.h"
+#include "tensor.h"
 
 #include <functional>
 #include <numeric>
@@ -9,34 +9,21 @@
 namespace optimization {
 // constexpr double kEps = 1e-10;
 
-template <int N>
-using StatePoint = StaticTensor<N>;
+template <typename T>
+using StatePoint = Tensor<T>;
 
 /**
  * @brief represents current derivatives (left-hand side of equations system)
  */
-template <int N>
-using StateDerivativesPoint = StaticTensor<N>;
-
-template <int N, typename T>
-double norm(StaticTensor<N, T> self) {
-  return std::sqrt(
-      std::transform_reduce(self.begin(), self.end(), 0.0, std::plus<>(),
-                            [](const T& val) { return val * val; }));
-}
-
-double norm(StaticTensor<100, double> self) {
-  return std::sqrt(std::transform_reduce(self.begin(), self.end(), 0.0,
-                                         std::plus{},
-                                         [](double val) { return val * val; }));
-}
+template <typename T>
+using StateDerivativesPoint = Tensor<T>;
 
 extern unsigned int seed;
 
-template <typename F, int N>
+template <typename F, typename T>
 concept StateSpaceFunction =
-    requires(F func, StaticTensor<N> point, double time) {
-      { func(point, time) } -> std::same_as<StateDerivativesPoint<N>>;
+    requires(F func, StatePoint<T> point, double time) {
+      { func(point, time) } -> std::same_as<StateDerivativesPoint<T>>;
     };
 
 template <typename F, typename T>
@@ -49,6 +36,19 @@ concept Regular1OutFunction = requires(F func, const T& inp) {
   { func(inp) } -> std::same_as<double>;
 };
 
+template <typename T>
+concept Iterable = requires(const T& self) {
+  { self.begin() } -> std::convertible_to<typename T::iterator>;
+  { self.end() } -> std::convertible_to<typename T::iterator>;
+};
+
+double norm(const Iterable auto&& self) {
+  return std::sqrt(std::transform_reduce(
+      self.begin(), self.end(), 0.0, std::plus<>(),
+      [](const auto& val) -> double { return val * val; }));
+}
+
+// --------------------------random numbers----------------------------------
 struct DoubleGenerator {
   static double get() {
     static std::mt19937 gen(seed);

@@ -1,4 +1,5 @@
 #include "global.h"
+#include "tensor.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -9,24 +10,38 @@ namespace optimization {
 /**
  * @brief
  *
- * @tparam N number of parameters
- * @tparam Fit fitness function
+ * @tparam Fit fitness function. Accepts Tensor like StaticTensor<N, double>
  * @tparam P number of wolfs in population
  * @tparam B number of best wolfs
  */
-template <int N, Regular1OutFunction<StaticTensor<N, double>> Fit, int P = 100,
-          int B = 3>
+template <Regular1OutFunction<Tensor<double>> Fit, int P = 100, int B = 3>
 class GrayWolfAlgorithm {
-  using Specimen = StaticTensor<N, double>;
+  /// @brief StaticTensor<N, double>
+  using Specimen = Tensor<double>;
   using Population = std::array<Specimen, P>;
 
  public:
-  GrayWolfAlgorithm(Fit fit, double limit)
-      : fit_{fit}, limit_{std::abs(limit)} {
+  /**
+   * @brief Construct a new Gray Wolf Algorithm object
+   *
+   * @param fit
+   * @param paramsCount number of parameters of function being optimized (number
+   * of steps in piecewise function)
+   * @param limit
+   */
+  GrayWolfAlgorithm(Fit fit, std::size_t paramsCount, double limit)
+      : fit_{fit}, paramsCount_{paramsCount}, limit_{std::abs(limit)} {
   }
 
-  StaticTensor<N, double> solve(int numIterations) {
-    auto population{GrayWolfAlgorithm::generatePopulation()};
+  /**
+   * @brief
+   *
+   * @param numIterations
+   * @return returns Tensor with shape (N)
+   */
+  Tensor<double> solve(int numIterations) {
+    auto generated{GrayWolfAlgorithm::generatePopulation()};
+    auto& population{*generated};
 
     for (int i{0}; i < numIterations; ++i) {
       const auto& best{getBest(population)};
@@ -36,7 +51,7 @@ class GrayWolfAlgorithm {
 
       for (auto& spec : population) {
         const auto& ksi{GrayWolfAlgorithm::generateKsi()};
-        for (int j{0}; j < N; ++j) {
+        for (std::size_t j{0}; j < paramsCount_; ++j) {
           double qj{spec[j]};
           double res{0};
           for (int k{0}; k < B; ++k) {
@@ -69,8 +84,8 @@ class GrayWolfAlgorithm {
   }
 
  private:
-  static std::array<double, std::size_t(2) * B> generateKsi() {
-    std::array<double, std::size_t(2) * B> result{};
+  static std::array<double, static_cast<std::size_t>(2) * B> generateKsi() {
+    std::array<double, static_cast<std::size_t>(2) * B> result{};
     std::generate(result.begin(), result.end(),
                   []() -> double { return 2.0 * (Probability::get() - 0.5); });
     return result;
@@ -103,20 +118,24 @@ class GrayWolfAlgorithm {
     return result;
   }
 
-  Population generatePopulation() {
+  std::unique_ptr<Population> generatePopulation() {
     // generate random population (P chromosomes of size N each)
-    std::array<StaticTensor<N, double>, P> population;
-    std::ranges::generate(population, [this]() -> StaticTensor<N, double> {
-      StaticTensor<N, double> chromosome;
+    auto result{std::make_unique<std::array<Tensor<double>, P>>()};
+    std::array<Tensor<double>, P>& population{*result};
+
+    std::ranges::generate(population, [this]() -> Tensor<double> {
+      auto chromosome = Tensor<double>(paramsCount_);
       std::ranges::generate(chromosome, [this]() {
         return DoubleGenerator::get() / DoubleGenerator::absLimit() * limit_;
       });
       return chromosome;
     });
-    return population;
+    return result;
   }
 
   Fit fit_;
+  std::size_t paramsCount_;
+
   double limit_;
 };
 }  // namespace optimization
