@@ -9,7 +9,6 @@
 #include <execution>
 #include <memory>
 #include <ranges>
-#include <vector>
 
 namespace optimization {
 template <uint64_t N, uint64_t D>
@@ -53,12 +52,13 @@ std::pair<DoubleGrayCode<D>, DoubleGrayCode<D>> crossover(
  * (where 1 is best) accepts Tensor<double> (StaticTensor<N, double>)
  * @tparam P number of individuals in population
  */
-template <uint64_t D, uint64_t Z, Regular1OutFunction<Tensor<double>> Fit,
-          int P = 100>
+template <uint64_t D, uint64_t Z, class Alloc,
+          Regular1OutFunction<Tensor<double, Alloc>> Fit, int P = 100,
+          class CodeAlloc = std::allocator<DoubleGrayCode<D>>>
 class Evolution {
   using Gray = DoubleGrayCode<D>;
   /// @brief StaticTensor<N, Gray>
-  using Chromosome = Tensor<Gray>;
+  using Chromosome = Tensor<Gray, CodeAlloc>;
 
  public:
   /**
@@ -77,7 +77,7 @@ class Evolution {
   /**
    * @return Tensor (StaticTensor<N, double>)
    */
-  [[nodiscard]] Tensor<double> solve(int NumIterations) const {
+  [[nodiscard]] Tensor<double, Alloc> solve(int NumIterations) const {
     std::pair<Chromosome, double> best{{}, std::numeric_limits<double>::max()};
     auto population{generatePopulation()};
 
@@ -134,8 +134,9 @@ class Evolution {
    * @param chromosome
    * @return StaticTensor<N, double>
    */
-  static Tensor<double> chromosomeToDoubles(const Chromosome& chromosome) {
-    auto doubles = Tensor<double>(chromosome.size());
+  static Tensor<double, Alloc> chromosomeToDoubles(
+      const Chromosome& chromosome) {
+    auto doubles = Tensor<double, Alloc>(chromosome.size());
     std::transform(chromosome.cbegin(), chromosome.cend(), doubles.begin(),
                    [](const Gray& code) { return code.getDouble(); });
     return doubles;
@@ -189,11 +190,10 @@ class Evolution {
     double min = std::numeric_limits<double>::max();
     std::pair<std::array<double, P>, int> fitness{{}, -1};
 
-    std::transform(std::execution::par_unseq, population.begin(),
-                   population.end(), fitness.first.begin(),
-                   [this](const Tensor<DoubleGrayCode<D>>& q) -> double {
-                     return fitAdapter(q);
-                   });
+    std::transform(
+        std::execution::par_unseq, population.begin(), population.end(),
+        fitness.first.begin(),
+        [this](const Chromosome& q) -> double { return fitAdapter(q); });
     for (int i{0}; i < P; ++i) {
       if (fitness.first[i] < min) {
         fitness.second = i;
@@ -232,9 +232,9 @@ class Evolution {
     return population;
   }
 
-  double fitAdapter(const Tensor<DoubleGrayCode<D>>& q) const {
+  double fitAdapter(const Chromosome& q) const {
     assert((q.size() == paramsCount_));
-    auto qDouble = Tensor<double>(q.size());
+    auto qDouble = Tensor<double, Alloc>(q.size());
     for (std::size_t i{0}; i < paramsCount_; ++i) {
       qDouble[i] = q[i].getDouble();
     }

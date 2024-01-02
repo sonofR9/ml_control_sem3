@@ -1,7 +1,7 @@
 // #include "gradient-descent.h"
-#include "runge-kutte.h"
-#include "two-wheel-robot.h"
-// import runge_kutte1;
+// #include "runge-kutte.h"
+// #include "two-wheel-robot.h"
+
 #include "evolution-optimization.h"
 #include "global.h"
 #include "model.h"
@@ -10,17 +10,19 @@
 // #include "pontryagin-method.h"
 #include "tensor.h"
 
+#include <boost/pool/pool_alloc.hpp>
+
 #include <cassert>
 #include <chrono>
-#include <cmath>
 #include <fstream>
 
 namespace optimization {
 unsigned int seed = 50;
 }
 
+template <class Alloc, class VectorAlloc>
 void writeTrajectoryToFiles(
-    const std::vector<std::vector<double>>& trajectory) {
+    const std::vector<std::vector<double, Alloc>, VectorAlloc>& trajectory) {
   assert((trajectory.size() == 4));
 
   std::ofstream fileX("trajectory_x.txt");
@@ -41,23 +43,25 @@ void writeTrajectoryToFiles(
 
 using namespace optimization;
 
+template <class Alloc>
 void modelTestEvolution(std::size_t paramsCount, int iters, double tMax,
                         double dt) {
   auto start = std::chrono::high_resolution_clock::now();
 
   using namespace two_wheeled_robot;
   const auto adap = [paramsCount, tMax,
-                     dt](const Tensor<double>& solverResult) {
+                     dt](const Tensor<double, Alloc>& solverResult) {
     assert((solverResult.size() == 2 * paramsCount));
-    return functional<double>(solverResult, tMax, dt);
+    return functional<double, Alloc>(solverResult, tMax, dt);
   };
-  Evolution<1000, 1000, decltype(adap), 500> solver(adap, 2 * paramsCount, -10,
-                                                    10);
+  Evolution<1000, 1000, Alloc, decltype(adap), 500> solver(
+      adap, 2 * paramsCount, -10, 10);
   const auto best{solver.solve(iters)};
   std::cout << "model: [" << best
-            << "] functional: " << functional<double>(best, tMax, dt) << "\n";
+            << "] functional: " << functional<double, Alloc>(best, tMax, dt)
+            << "\n";
 
-  const auto trajectory{getTrajectoryFromControl<double>(best, tMax)};
+  const auto trajectory{getTrajectoryFromControl<double, Alloc>(best, tMax)};
   writeTrajectoryToFiles(trajectory);
 
   auto end = std::chrono::high_resolution_clock::now();
@@ -71,21 +75,24 @@ void modelTestEvolution(std::size_t paramsCount, int iters, double tMax,
             << " s\n";
 }
 
+template <class Alloc>
 void modelTestGrey(std::size_t paramsCount, int iters, double tMax, double dt) {
   auto start = std::chrono::high_resolution_clock::now();
 
   using namespace two_wheeled_robot;
   const auto adap = [paramsCount, tMax,
-                     dt](const Tensor<double>& solverResult) {
+                     dt](const Tensor<double, Alloc>& solverResult) {
     assert((solverResult.size() == 2 * paramsCount));
-    return functional<double>(solverResult, tMax, dt);
+    return functional<double, Alloc>(solverResult, tMax, dt);
   };
-  GrayWolfAlgorithm<decltype(adap), 512, 3> solver(adap, 2 * paramsCount, 10);
+  GrayWolfAlgorithm<Alloc, decltype(adap), 512, 3> solver(adap, 2 * paramsCount,
+                                                          10);
   const auto best{solver.solve(iters)};
   std::cout << "model: [" << best
-            << "] functional: " << functional<double>(best, tMax, dt) << "\n";
+            << "] functional: " << functional<double, Alloc>(best, tMax, dt)
+            << "\n";
 
-  const auto trajectory{getTrajectoryFromControl<double>(best, tMax)};
+  const auto trajectory{getTrajectoryFromControl<double, Alloc>(best, tMax)};
   writeTrajectoryToFiles(trajectory);
 
   auto end = std::chrono::high_resolution_clock::now();
@@ -109,9 +116,9 @@ int main(int argc, const char** argv) try {
 
   switch (options.method) {
   case optimization::GlobalOptions::Method::kEvolution:
-    modelTestEvolution(paramsCount, iter, tMax, dt);
+    modelTestEvolution<std::allocator<double>>(paramsCount, iter, tMax, dt);
   case optimization::GlobalOptions::Method::kGrayWolf:
-    modelTestGrey(paramsCount, iter, tMax, dt);
+    modelTestGrey<std::allocator<double>>(paramsCount, iter, tMax, dt);
   }
   return 0;
 } catch (const std::exception& e) {

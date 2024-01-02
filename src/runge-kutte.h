@@ -5,11 +5,11 @@
 
 #include <vector>
 namespace optimization {
-template <typename T, StateSpaceFunction<T> F>
-Tensor<T> rungeKutteStep(double startT, const Tensor<T>& startX, F fun,
-                         double interestT, double delta = 0.001) {
+template <typename T, class Alloc, StateSpaceFunction<T, Alloc> F>
+Tensor<T, Alloc> rungeKutteStep(double startT, const Tensor<T, Alloc>& startX,
+                                F fun, double interestT, double delta = 0.001) {
   double curT{startT};
-  Tensor<T> curX{startX};
+  Tensor<T, Alloc> curX{startX};
 
   while (curT < interestT) {
     auto k1 = fun(curX, curT);
@@ -29,17 +29,17 @@ Tensor<T> rungeKutteStep(double startT, const Tensor<T>& startX, F fun,
  * state coordinate and time. Given input =Tensor with shape (N...), output will
  * have shape (N+1, M) where M is the number of steps
  */
-template <typename T, StateSpaceFunction<T> F>
-std::vector<std::vector<T>> solveDiffEqRungeKutte(double startT,
-                                                  const Tensor<T>& startX,
-                                                  F fun, double lastT,
-                                                  double delta = 0.001) {
-  // TODO(novak) preallocate?
-  auto result = std::vector<std::vector<T>>(startX.size() + 1);
+template <typename T, class Alloc, StateSpaceFunction<T, Alloc> F,
+          class VectorAlloc = std::allocator<std::vector<T, Alloc>>>
+std::vector<std::vector<T, Alloc>, VectorAlloc> solveDiffEqRungeKutte(
+    double startT, const Tensor<T, Alloc>& startX, F fun, double lastT,
+    double delta = 0.001) {
+  auto result =
+      std::vector<std::vector<T, Alloc>, VectorAlloc>(startX.size() + 1);
   double curT{startT};
-  Tensor<T> curX{startX};
+  Tensor<T, Alloc> curX{startX};
 
-  auto addPointToResult = [&result](const Tensor<T>& point,
+  auto addPointToResult = [&result](const Tensor<T, Alloc>& point,
                                     double curT) -> void {
     for (std::size_t i{0}; i < result.size() - 1; ++i) {
       result[i].push_back(point[i]);
@@ -50,11 +50,11 @@ std::vector<std::vector<T>> solveDiffEqRungeKutte(double startT,
   addPointToResult(curX, curT);
 
   while (curT < lastT - kEps) {
-    curX =
-        rungeKutteStep(curT, curX,
-                       std::function<Tensor<T>(Tensor<T>, double)>(
-                           fun),  // std::function<Tensor<3>(Tensor<3>, double)
-                       curT + delta, delta);
+    curX = rungeKutteStep(
+        curT, curX,
+        std::function<Tensor<T, Alloc>(Tensor<T, Alloc>, double)>(
+            fun),  // std::function<Tensor<3>(Tensor<3>, double)
+        curT + delta, delta);
     curT += delta;
     addPointToResult(curX, curT);
   }
