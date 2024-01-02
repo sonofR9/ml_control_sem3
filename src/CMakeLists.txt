@@ -8,11 +8,12 @@ target_sources(${TARGET_NAME} PRIVATE
     main.cpp
 )
 
-find_boost_libs(property_tree program_options)
+find_boost_libs(property_tree program_options pool)
 
 target_link_libraries(${TARGET_NAME} PRIVATE
     Boost::program_options
     Boost::property_tree
+    Boost::pool
 )
 
 find_package(Qt6 COMPONENTS Widgets)

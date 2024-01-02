@@ -15,7 +15,7 @@ namespace optimization {
  *
  * @tparam T number of state variables
  */
-template <typename T = double>
+template <typename T = double, class Alloc = std::allocator<T>>
 struct Tensor {
   constexpr Tensor() noexcept = default;
   constexpr ~Tensor() noexcept = default;
@@ -60,13 +60,13 @@ struct Tensor {
   }
 
  private:
-  std::vector<T> data_;
+  std::vector<T, Alloc> data_;
 };
 
 // ------------------------------ iterators -----------------------------------
 
-template <typename T>
-class Tensor<T>::ConstIterator {
+template <typename T, class Alloc>
+class Tensor<T, Alloc>::ConstIterator {
  public:
   using iterator_category = std::random_access_iterator_tag;
   using value_type = T;
@@ -154,17 +154,18 @@ class Tensor<T>::ConstIterator {
                           const ConstIterator&) noexcept = default;
 
  private:
-  constexpr explicit ConstIterator(std::vector<T>::const_iterator iter) noexcept
+  constexpr explicit ConstIterator(
+      std::vector<T, Alloc>::const_iterator iter) noexcept
       : ptr_{iter} {
   }
 
-  friend Tensor<T>;
-  std::vector<T>::const_iterator ptr_{};
+  friend Tensor<T, Alloc>;
+  std::vector<T, Alloc>::const_iterator ptr_{};
 };
 
-template <typename T>
-class Tensor<T>::Iterator : public Tensor<T>::ConstIterator {
-  //   using Base = Tensor<T>::ConstIterator;
+template <typename T, class Alloc>
+class Tensor<T, Alloc>::Iterator : public Tensor<T, Alloc>::ConstIterator {
+  //   using Base = Tensor<T, Alloc>::ConstIterator;
 
  public:
   using iterator_category = std::random_access_iterator_tag;
@@ -178,7 +179,7 @@ class Tensor<T>::Iterator : public Tensor<T>::ConstIterator {
   constexpr explicit Iterator(pointer ptr) noexcept : ptr_{ptr} {
   }
 
-  constexpr explicit Iterator(std::vector<T>::iterator iter) noexcept
+  constexpr explicit Iterator(std::vector<T, Alloc>::iterator iter) noexcept
       : ptr_{std::move(iter)} {
   }
 
@@ -256,53 +257,58 @@ class Tensor<T>::Iterator : public Tensor<T>::ConstIterator {
   friend auto operator<=>(const Iterator&, const Iterator&) noexcept = default;
 
  private:
-  friend Tensor<T>;
-  typename std::vector<T>::iterator ptr_{};
+  friend Tensor<T, Alloc>;
+  typename std::vector<T, Alloc>::iterator ptr_{};
 };
 
-template <typename T>
-constexpr typename Tensor<T>::Iterator Tensor<T>::begin() noexcept {
+template <typename T, class Alloc>
+constexpr Tensor<T, Alloc>::Iterator Tensor<T, Alloc>::begin() noexcept {
   return Iterator{data_.begin()};
 }
 
-template <typename T>
-constexpr typename Tensor<T>::Iterator Tensor<T>::end() noexcept {
+template <typename T, class Alloc>
+constexpr Tensor<T, Alloc>::Iterator Tensor<T, Alloc>::end() noexcept {
   return Iterator{data_.end()};
 }
 
-template <typename T>
-constexpr typename Tensor<T>::ConstIterator Tensor<T>::begin() const noexcept {
+template <typename T, class Alloc>
+constexpr Tensor<T, Alloc>::ConstIterator Tensor<T, Alloc>::begin()
+    const noexcept {
   return ConstIterator{data_.begin()};
 }
 
-template <typename T>
-constexpr typename Tensor<T>::ConstIterator Tensor<T>::end() const noexcept {
+template <typename T, class Alloc>
+constexpr Tensor<T, Alloc>::ConstIterator Tensor<T, Alloc>::end()
+    const noexcept {
   return ConstIterator{data_.end()};
 }
 
-template <typename T>
-constexpr typename Tensor<T>::ConstIterator Tensor<T>::cbegin() const noexcept {
+template <typename T, class Alloc>
+constexpr Tensor<T, Alloc>::ConstIterator Tensor<T, Alloc>::cbegin()
+    const noexcept {
   return ConstIterator{data_.cbegin()};
 }
 
-template <typename T>
-constexpr typename Tensor<T>::ConstIterator Tensor<T>::cend() const noexcept {
+template <typename T, class Alloc>
+constexpr Tensor<T, Alloc>::ConstIterator Tensor<T, Alloc>::cend()
+    const noexcept {
   return ConstIterator{data_.cend()};
 }
 
-template <typename T>
-constexpr Tensor<T> operator+(const Tensor<T>& self, const Tensor<T>& other) {
+template <typename T, class Alloc, class Alloc2>
+constexpr Tensor<T, Alloc> operator+(const Tensor<T, Alloc>& self,
+                                     const Tensor<T, Alloc2>& other) {
   assert((self.size() == other.size()));
-  auto result = Tensor<T>(self.size());
+  auto result = Tensor<T, Alloc>(self.size());
   for (std::size_t i{0}; i < self.size(); ++i) {
     result[i] = other[i] + self[i];
   }
   return result;
 }
 
-template <typename T>
-constexpr Tensor<T>& operator+=(Tensor<T>& self,
-                                const Tensor<T>& other) noexcept {
+template <typename T, class Alloc, class Alloc2>
+constexpr Tensor<T, Alloc>& operator+=(
+    Tensor<T, Alloc>& self, const Tensor<T, Alloc2>& other) noexcept {
   assert((self.size() == other.size()));
   for (std::size_t i{0}; i < self.size(); ++i) {
     self[i] += other[i];
@@ -310,28 +316,29 @@ constexpr Tensor<T>& operator+=(Tensor<T>& self,
   return self;
 }
 
-template <typename T>
-constexpr Tensor<T> operator-(const Tensor<T>& self, const Tensor<T>& other) {
+template <typename T, class Alloc, class Alloc2>
+constexpr Tensor<T, Alloc> operator-(const Tensor<T, Alloc>& self,
+                                     const Tensor<T, Alloc2>& other) {
   assert((self.size() == other.size()));
-  auto result = Tensor<T>(self.size());
+  auto result = Tensor<T, Alloc>(self.size());
   for (std::size_t i{0}; i < self.size(); ++i) {
     result[i] = self[i] - other[i];
   }
   return result;
 }
 
-template <typename T>
-constexpr Tensor<T> operator-(const Tensor<T>& self) {
-  auto result = Tensor<T>(self.size());
+template <typename T, class Alloc>
+constexpr Tensor<T, Alloc> operator-(const Tensor<T, Alloc>& self) {
+  auto result = Tensor<T, Alloc>(self.size());
   for (std::size_t i{0}; i < self.size(); ++i) {
     result[i] = -self[i];
   }
   return result;
 }
 
-template <typename T>
-constexpr Tensor<T>& operator-=(Tensor<T>& self,
-                                const Tensor<T>& other) noexcept {
+template <typename T, class Alloc, class Alloc2>
+constexpr Tensor<T, Alloc>& operator-=(
+    Tensor<T, Alloc>& self, const Tensor<T, Alloc2>& other) noexcept {
   assert((self.size() == other.size()));
   for (std::size_t i{0}; i < self.size(); ++i) {
     self[i] -= other[i];
@@ -339,23 +346,25 @@ constexpr Tensor<T>& operator-=(Tensor<T>& self,
   return self;
 }
 
-template <typename T, typename M>
-constexpr Tensor<T> operator*(const Tensor<T>& self, M multiplier) {
-  auto result = Tensor<T>(self.size());
+template <typename T, class Alloc, typename M>
+constexpr Tensor<T, Alloc> operator*(const Tensor<T, Alloc>& self,
+                                     M multiplier) {
+  auto result = Tensor<T, Alloc>(self.size());
   for (std::size_t i{0}; i < self.size(); ++i) {
     result[i] = multiplier * self[i];
   }
   return result;
 }
 
-template <typename T, typename M>
-constexpr Tensor<T> operator*(M multiplier, const Tensor<T>& self) {
+template <typename T, class Alloc, typename M>
+constexpr Tensor<T, Alloc> operator*(M multiplier,
+                                     const Tensor<T, Alloc>& self) {
   return self * multiplier;
 }
 
-template <typename T>
-constexpr Tensor<T>& operator*=(Tensor<T>& self,
-                                const Tensor<T>& other) noexcept {
+template <typename T, class Alloc, class Alloc2>
+constexpr Tensor<T, Alloc>& operator*=(
+    Tensor<T, Alloc>& self, const Tensor<T, Alloc2>& other) noexcept {
   assert((self.size() == other.size()));
   for (std::size_t i{0}; i < self.size(); ++i) {
     self[i] *= other[i];
@@ -363,17 +372,18 @@ constexpr Tensor<T>& operator*=(Tensor<T>& self,
   return self;
 }
 
-template <typename T, typename M>
-constexpr Tensor<T> operator/(const Tensor<T>& self, M divider) {
-  auto result = Tensor<T>(self.size());
+template <typename T, class Alloc, typename M>
+constexpr Tensor<T, Alloc> operator/(const Tensor<T, Alloc>& self, M divider) {
+  auto result = Tensor<T, Alloc>(self.size());
   for (std::size_t i{0}; i < self.size(); ++i) {
     result[i] = self[i] / divider;
   }
   return result;
 }
 
-template <typename T>
-constexpr bool operator==(const Tensor<T>& lhs, const Tensor<T>& rhs) {
+template <typename T, class Alloc, class Alloc2>
+constexpr bool operator==(const Tensor<T, Alloc>& lhs,
+                          const Tensor<T, Alloc2>& rhs) {
   assert((lhs.size() == rhs.size()));
   constexpr double kEps{1e-3};
   auto diff{lhs - rhs};
@@ -381,24 +391,25 @@ constexpr bool operator==(const Tensor<T>& lhs, const Tensor<T>& rhs) {
       diff, [kEps](const T& value) { return fabs(value) > kEps; });
 }
 
-template <typename T>
-constexpr bool operator!=(const Tensor<T>& lhs, const Tensor<T>& rhs) {
+template <typename T, class Alloc, class Alloc2>
+constexpr bool operator!=(const Tensor<T, Alloc>& lhs,
+                          const Tensor<T, Alloc2>& rhs) {
   return !(lhs == rhs);
 }
 }  // namespace optimization
 
-template <typename T>
+template <typename T, class Alloc>
 std::ostream& operator<<(std::ostream& stream,
-                         const optimization::Tensor<T>& state) {
+                         const optimization::Tensor<T, Alloc>& state) {
   for (std::size_t i{0}; i < state.size(); ++i) {
     stream << state[i] << " ";
   }
   return stream;
 }
 
-template <typename T>
+template <typename T, class Alloc>
 std::stringstream& operator<<(std::stringstream& stream,
-                              const optimization::Tensor<T>& state) {
+                              const optimization::Tensor<T, Alloc>& state) {
   for (std::size_t i{0}; i < state.size(); ++i) {
     stream << state[i] << " ";
   }
