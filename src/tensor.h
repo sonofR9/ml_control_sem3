@@ -102,11 +102,15 @@ class Tensor<T, Alloc>::ConstIterator {
   constexpr explicit ConstIterator(pointer ptr) noexcept : ptr_{ptr} {
   }
 
+  constexpr ConstIterator(pointer ptr, const difference_type offset) noexcept
+      : ptr_{ptr + offset} {
+  }
+
   [[nodiscard]] constexpr reference operator*() const noexcept {
     return *ptr_;
   }
   [[nodiscard]] constexpr pointer operator->() const noexcept {
-    return ptr_;
+    return ptr_.operator->();
   }
 
   constexpr ConstIterator& operator++() noexcept {
@@ -133,7 +137,7 @@ class Tensor<T, Alloc>::ConstIterator {
 
   [[nodiscard]] constexpr ConstIterator operator+(
       const difference_type n) const noexcept {
-    return {ptr_ + n};
+    return ConstIterator{ptr_ + n};
   }
 
   [[nodiscard]] friend constexpr ConstIterator operator+(
@@ -144,7 +148,7 @@ class Tensor<T, Alloc>::ConstIterator {
 
   [[nodiscard]] constexpr ConstIterator operator-(
       const difference_type n) const noexcept {
-    return {ptr_, -n};
+    return ConstIterator{ptr_ - n};
   }
 
   [[nodiscard]] friend constexpr ConstIterator operator-(
@@ -202,6 +206,11 @@ class Tensor<T, Alloc>::Iterator : public Tensor<T, Alloc>::ConstIterator {
   constexpr explicit Iterator(pointer ptr) noexcept : ptr_{ptr} {
   }
 
+  constexpr explicit Iterator(pointer ptr,
+                              const difference_type offset) noexcept
+      : ptr_{ptr + offset} {
+  }
+
   constexpr explicit Iterator(std::vector<T, Alloc>::iterator iter) noexcept
       : ptr_{std::move(iter)} {
   }
@@ -210,7 +219,7 @@ class Tensor<T, Alloc>::Iterator : public Tensor<T, Alloc>::ConstIterator {
     return *ptr_;
   }
   [[nodiscard]] constexpr pointer operator->() const noexcept {
-    return ptr_;
+    return ptr_.operator->();
   }
 
   constexpr Iterator& operator++() noexcept {
@@ -237,7 +246,7 @@ class Tensor<T, Alloc>::Iterator : public Tensor<T, Alloc>::ConstIterator {
 
   [[nodiscard]] constexpr Iterator operator+(
       const difference_type n) const noexcept {
-    return {ptr_ + n};
+    return Iterator{ptr_ + n};
   }
 
   [[nodiscard]] friend constexpr Iterator operator+(const difference_type n,
@@ -248,7 +257,7 @@ class Tensor<T, Alloc>::Iterator : public Tensor<T, Alloc>::ConstIterator {
 
   [[nodiscard]] constexpr Iterator operator-(
       const difference_type n) const noexcept {
-    return {ptr_, -n};
+    return Iterator{ptr_ - n};
   }
 
   [[nodiscard]] friend constexpr Iterator operator-(const difference_type n,
