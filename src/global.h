@@ -9,21 +9,21 @@
 namespace optimization {
 // constexpr double kEps = 1e-10;
 
-template <typename T>
-using StatePoint = Tensor<T>;
+template <typename T, class Alloc>
+using StatePoint = Tensor<T, Alloc>;
 
 /**
  * @brief represents current derivatives (left-hand side of equations system)
  */
-template <typename T>
-using StateDerivativesPoint = Tensor<T>;
+template <typename T, class Alloc>
+using StateDerivativesPoint = Tensor<T, Alloc>;
 
 extern unsigned int seed;
 
-template <typename F, typename T>
+template <typename F, typename T, class Alloc>
 concept StateSpaceFunction =
-    requires(F func, StatePoint<T> point, double time) {
-      { func(point, time) } -> std::same_as<StateDerivativesPoint<T>>;
+    requires(F func, StatePoint<T, Alloc> point, double time) {
+      { func(point, time) } -> std::same_as<StateDerivativesPoint<T, Alloc>>;
     };
 
 template <typename F, typename T>

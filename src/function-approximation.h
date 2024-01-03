@@ -5,17 +5,19 @@
 #include <map>
 
 namespace optimization {
-template <typename T, typename U>
-concept TensorIterator = std::is_same_v<typename T::value_type, Tensor<U>>;
+template <typename T, typename U, class Alloc>
+concept TensorIterator =
+    std::is_same_v<typename T::value_type, Tensor<U, Alloc>>;
 
-template <typename T, typename U>
+template <typename T, typename U, class Alloc>
 concept TimeAndTensorIterator =
-    std::is_same_v<typename T::value_type, std::pair<double, Tensor<U>>>;
+    std::is_same_v<typename T::value_type, std::pair<double, Tensor<U, Alloc>>>;
 
-template <typename U = double>
+template <typename U = double, class Alloc = std::allocator<U>>
 class PiecewiseLinearApproximation {
  public:
-  template <TensorIterator<U> It>
+  // TODO(novak) Ignored: can't infer Alloc2 for concept
+  template <typename Alloc2, TensorIterator<U, Alloc2> It>
   PiecewiseLinearApproximation(double dt, const It& begin, const It& end) {
     double t{0};
     It curr{begin};
@@ -26,7 +28,19 @@ class PiecewiseLinearApproximation {
     }
   }
 
-  Tensor<U> operator()(double time) const {
+  template <TensorIterator<U, Alloc> It>
+  PiecewiseLinearApproximation(double dt, const It& begin, const It& end) {
+    // PiecewiseLinearApproximation<Alloc, It>(dt, begin, end);
+    double t{0};
+    It curr{begin};
+    while (curr != end) {
+      points_.insert({t, *curr});
+      t += dt;
+      ++curr;
+    }
+  }
+
+  Tensor<U, Alloc> operator()(double time) const {
     auto lb{points_.lower_bound(time)};
     auto next{lb};
     if (next != points_.end()) {
@@ -37,19 +51,20 @@ class PiecewiseLinearApproximation {
       auto tmp = points_.end();
       lb = --tmp;
       next = lb--;
-      return lb->second + (next->second - lb->second) /
-                              (next->first - lb->first) * (time - lb->first);
+      const double partOfdt{1.0 / (next->first - lb->first) *
+                            (time - lb->first)};
+      return lb->second + (next->second - lb->second) * partOfdt;
     }
 
     const double partOfdt{1.0 / (next->first - lb->first) * (time - lb->first)};
     return lb->second + (next->second - lb->second) * partOfdt;
   }
 
-  void insert(double time, const Tensor<U>& point) {
+  void insert(double time, const Tensor<U, Alloc>& point) {
     points_.insert({time, point});
   }
 
  private:
-  std::map<double, Tensor<U>> points_;
+  std::map<double, Tensor<U, Alloc>> points_;
 };
 }  // namespace optimization

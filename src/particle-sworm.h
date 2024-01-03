@@ -14,10 +14,11 @@ namespace optimization {
  * @tparam P number of wolfs in population
  * @tparam B number of best wolfs
  */
-template <Regular1OutFunction<Tensor<double>> Fit, int P = 100, int B = 3>
+template <class Alloc, Regular1OutFunction<Tensor<double, Alloc>> Fit,
+          int P = 100, int B = 3>
 class GrayWolfAlgorithm {
   /// @brief StaticTensor<N, double>
-  using Specimen = Tensor<double>;
+  using Specimen = Tensor<double, Alloc>;
   using Population = std::array<Specimen, P>;
 
  public:
@@ -39,7 +40,7 @@ class GrayWolfAlgorithm {
    * @param numIterations
    * @return returns Tensor with shape (N)
    */
-  Tensor<double> solve(int numIterations) {
+  Tensor<double, Alloc> solve(int numIterations) {
     auto generated{GrayWolfAlgorithm::generatePopulation()};
     auto& population{*generated};
 
@@ -120,11 +121,11 @@ class GrayWolfAlgorithm {
 
   std::unique_ptr<Population> generatePopulation() {
     // generate random population (P chromosomes of size N each)
-    auto result{std::make_unique<std::array<Tensor<double>, P>>()};
-    std::array<Tensor<double>, P>& population{*result};
+    auto result{std::make_unique<std::array<Specimen, P>>()};
+    std::array<Specimen, P>& population{*result};
 
-    std::ranges::generate(population, [this]() -> Tensor<double> {
-      auto chromosome = Tensor<double>(paramsCount_);
+    std::ranges::generate(population, [this]() -> Specimen {
+      auto chromosome = Specimen(paramsCount_);
       std::ranges::generate(chromosome, [this]() {
         return DoubleGenerator::get() / DoubleGenerator::absLimit() * limit_;
       });

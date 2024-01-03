@@ -1,26 +1,27 @@
 // #include "gradient-descent.h"
-#include "runge-kutte.h"
-#include "two-wheel-robot.h"
-// import runge_kutte1;
+// #include "runge-kutte.h"
+// #include "two-wheel-robot.h"
+// #include "pontryagin-method.h"
+
+#include "allocator.h"
 #include "evolution-optimization.h"
 #include "global.h"
 #include "model.h"
 #include "options.h"
 #include "particle-sworm.h"
-// #include "pontryagin-method.h"
 #include "tensor.h"
 
 #include <cassert>
 #include <chrono>
-#include <cmath>
 #include <fstream>
 
 namespace optimization {
 unsigned int seed = 50;
 }
 
+template <class Alloc, class VectorAlloc>
 void writeTrajectoryToFiles(
-    const std::vector<std::vector<double>>& trajectory) {
+    const std::vector<std::vector<double, Alloc>, VectorAlloc>& trajectory) {
   assert((trajectory.size() == 4));
 
   std::ofstream fileX("trajectory_x.txt");
@@ -41,23 +42,25 @@ void writeTrajectoryToFiles(
 
 using namespace optimization;
 
+template <class Alloc>
 void modelTestEvolution(std::size_t paramsCount, int iters, double tMax,
                         double dt) {
   auto start = std::chrono::high_resolution_clock::now();
 
   using namespace two_wheeled_robot;
   const auto adap = [paramsCount, tMax,
-                     dt](const Tensor<double>& solverResult) {
+                     dt](const Tensor<double, Alloc>& solverResult) {
     assert((solverResult.size() == 2 * paramsCount));
-    return functional<double>(solverResult, tMax, dt);
+    return functional<double, Alloc>(solverResult, tMax, dt);
   };
-  Evolution<1000, 1000, decltype(adap), 500> solver(adap, 2 * paramsCount, -10,
-                                                    10);
+  Evolution<1000, 1000, Alloc, decltype(adap), 500> solver(
+      adap, 2 * paramsCount, -10, 10);
   const auto best{solver.solve(iters)};
-  std::cout << "model: [" << best
-            << "] functional: " << functional<double>(best, tMax, dt) << "\n";
+  std::cout << "\nmodel: [" << best
+            << "] functional: " << functional<double, Alloc>(best, tMax, dt)
+            << "\n";
 
-  const auto trajectory{getTrajectoryFromControl<double>(best, tMax)};
+  const auto trajectory{getTrajectoryFromControl<double, Alloc>(best, tMax)};
   writeTrajectoryToFiles(trajectory);
 
   auto end = std::chrono::high_resolution_clock::now();
@@ -71,21 +74,24 @@ void modelTestEvolution(std::size_t paramsCount, int iters, double tMax,
             << " s\n";
 }
 
+template <class Alloc>
 void modelTestGrey(std::size_t paramsCount, int iters, double tMax, double dt) {
   auto start = std::chrono::high_resolution_clock::now();
 
   using namespace two_wheeled_robot;
   const auto adap = [paramsCount, tMax,
-                     dt](const Tensor<double>& solverResult) {
+                     dt](const Tensor<double, Alloc>& solverResult) {
     assert((solverResult.size() == 2 * paramsCount));
-    return functional<double>(solverResult, tMax, dt);
+    return functional<double, Alloc>(solverResult, tMax, dt);
   };
-  GrayWolfAlgorithm<decltype(adap), 512, 3> solver(adap, 2 * paramsCount, 10);
+  GrayWolfAlgorithm<Alloc, decltype(adap), 512, 3> solver(adap, 2 * paramsCount,
+                                                          10);
   const auto best{solver.solve(iters)};
-  std::cout << "model: [" << best
-            << "] functional: " << functional<double>(best, tMax, dt) << "\n";
+  std::cout << "\nmodel: [" << best
+            << "] functional: " << functional<double, Alloc>(best, tMax, dt)
+            << "\n";
 
-  const auto trajectory{getTrajectoryFromControl<double>(best, tMax)};
+  const auto trajectory{getTrajectoryFromControl<double, Alloc>(best, tMax)};
   writeTrajectoryToFiles(trajectory);
 
   auto end = std::chrono::high_resolution_clock::now();
@@ -100,7 +106,8 @@ void modelTestGrey(std::size_t paramsCount, int iters, double tMax, double dt) {
 }
 
 int main(int argc, const char** argv) try {
-  const auto& options{optimization::parseOptions(argc, argv)};
+  using namespace optimization;
+  const auto& options{parseOptions(argc, argv)};
   const double tMax{options.tMax};
   const double dt{options.integrationDt};
   const int iter{options.iter};
@@ -108,10 +115,14 @@ int main(int argc, const char** argv) try {
   std::size_t paramsCount{options.controlOptions.numOfParams};
 
   switch (options.method) {
-  case optimization::GlobalOptions::Method::kEvolution:
-    modelTestEvolution(paramsCount, iter, tMax, dt);
-  case optimization::GlobalOptions::Method::kGrayWolf:
-    modelTestGrey(paramsCount, iter, tMax, dt);
+  case GlobalOptions::Method::kEvolution:
+
+    modelTestEvolution<RepetitiveAllocator<double>>(paramsCount, iter, tMax,
+                                                    dt);
+    break;
+  case GlobalOptions::Method::kGrayWolf:
+    modelTestGrey<RepetitiveAllocator<double>>(paramsCount, iter, tMax, dt);
+    break;
   }
   return 0;
 } catch (const std::exception& e) {
