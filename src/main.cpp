@@ -56,7 +56,7 @@ void modelTestEvolution(std::size_t paramsCount, int iters, double tMax,
   Evolution<1000, 1000, Alloc, decltype(adap), 500> solver(
       adap, 2 * paramsCount, -10, 10);
   const auto best{solver.solve(iters)};
-  std::cout << "model: [" << best
+  std::cout << "\nmodel: [" << best
             << "] functional: " << functional<double, Alloc>(best, tMax, dt)
             << "\n";
 
@@ -87,7 +87,7 @@ void modelTestGrey(std::size_t paramsCount, int iters, double tMax, double dt) {
   GrayWolfAlgorithm<Alloc, decltype(adap), 512, 3> solver(adap, 2 * paramsCount,
                                                           10);
   const auto best{solver.solve(iters)};
-  std::cout << "model: [" << best
+  std::cout << "\nmodel: [" << best
             << "] functional: " << functional<double, Alloc>(best, tMax, dt)
             << "\n";
 

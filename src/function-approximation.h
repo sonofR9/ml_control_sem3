@@ -51,8 +51,9 @@ class PiecewiseLinearApproximation {
       auto tmp = points_.end();
       lb = --tmp;
       next = lb--;
-      return lb->second + (next->second - lb->second) /
-                              (next->first - lb->first) * (time - lb->first);
+      const double partOfdt{1.0 / (next->first - lb->first) *
+                            (time - lb->first)};
+      return lb->second + (next->second - lb->second) * partOfdt;
     }
 
     const double partOfdt{1.0 / (next->first - lb->first) * (time - lb->first)};

@@ -112,10 +112,11 @@ double functional(const Tensor<T, Alloc>& solverResult, double tMax = 10,
   std::size_t iFinal{i == solvedX[0].size() ? i - 1 : i};
 
   const auto subIntegrative = [dt](const Tensor<T, Alloc>& point) -> double {
-    const double h1{std::sqrt(2.5) - std::sqrt(std::pow(point[0] - 2.5, 2) +
-                                               std::pow(point[1] - 2.5, 2))};
-    const double h2{std::sqrt(2.5) - std::sqrt(std::pow(point[0] - 7.5, 2) +
-                                               std::pow(point[1] - 7.5, 2))};
+    auto mySqr = [](auto x) { return x * x; };
+    const double h1{std::sqrt(2.5) -
+                    std::sqrt(mySqr(point[0] - 2.5) + mySqr(point[1] - 2.5))};
+    const double h2{std::sqrt(2.5) -
+                    std::sqrt(mySqr(point[0] - 7.5) + mySqr(point[1] - 7.5))};
     if (h1 > 0 || h2 > 0) {
       const double kBigNumber = 1e5;
       return kBigNumber * dt;
