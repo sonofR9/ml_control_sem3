@@ -71,7 +71,7 @@ struct Tensor {
     for (std::size_t i{size()}; i < newSize; ++i) {
       data_.emplace_back(T{});
     }
-    for (std::size_t i{newSize}; i > size(); --i) {
+    while (size() > newSize) {
       data_.pop_back();
     }
   }

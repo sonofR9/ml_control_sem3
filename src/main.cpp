@@ -146,10 +146,10 @@ void modelTestGray(const optimization::GlobalOptions& options) {
   using namespace two_wheeled_robot;
   const auto adap = [paramsCount, tMax,
                      dt](const Tensor<double, Alloc>& solverResult) {
-    assert((solverResult.size() == 2 * paramsCount));
+    assert((solverResult.size() == paramsCount));
     return functional<double, Alloc>(solverResult, tMax, dt);
   };
-  GrayWolfAlgorithm<Alloc, decltype(adap), 512, 3> solver(adap, 2 * paramsCount,
+  GrayWolfAlgorithm<Alloc, decltype(adap), 512, 3> solver(adap, paramsCount,
                                                           10);
   if (!init.empty()) {
     solver.setBaseline(init, kMaxDiff);
