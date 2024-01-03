@@ -30,6 +30,10 @@ if(Qt6_FOUND)
     #     WIN32_EXECUTABLE ON
     # )
 
+    target_sources(${TARGET_NAME} PRIVATE
+        main-window.cpp
+    )
+
     target_compile_definitions(${TARGET_NAME} PRIVATE BUILD_WITH_QT)
 
     target_link_libraries(${TARGET_NAME} PRIVATE
