@@ -54,8 +54,7 @@ class PiecewiseLinearApproximation {
 
     // points_[std::min(time / dt, points.size()-1)]
     const auto index{
-        std::min(static_cast<std::size_t>(std::llround(time / dt_)),
-                 points_.size() - 1)};
+        std::min(static_cast<std::size_t>(time / dt_), points_.size() - 1)};
     auto lb{points_.begin() + index};
 
     auto next{lb};
@@ -96,8 +95,7 @@ class PiecewiseConstantApproximation {
 
   const Tensor<U, Alloc>& operator()(double time) const {
     const auto index{
-        std::min(static_cast<std::size_t>(std::llround(time / dt_)),
-                 points_.size() - 1)};
+        std::min(static_cast<std::size_t>(time / dt_), points_.size() - 1)};
     auto lb{points_.begin() + index};
     return *lb;
   }
