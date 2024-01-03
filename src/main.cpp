@@ -10,8 +10,6 @@
 // #include "pontryagin-method.h"
 #include "tensor.h"
 
-#include <boost/pool/pool_alloc.hpp>
-
 #include <cassert>
 #include <chrono>
 #include <fstream>
