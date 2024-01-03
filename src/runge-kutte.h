@@ -60,6 +60,9 @@ std::vector<std::vector<T, Alloc>, VectorAlloc> solveDiffEqRungeKutte(
     double delta = 0.001) {
   auto result =
       std::vector<std::vector<T, Alloc>, VectorAlloc>(startX.size() + 1);
+  for (auto& vec : result) {
+    vec.reserve(static_cast<std::size_t>((lastT - startT) / delta));
+  }
   double curT{startT};
   Tensor<T, Alloc> curX{startX};
 
