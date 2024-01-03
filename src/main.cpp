@@ -11,6 +11,10 @@
 #include "particle-sworm.h"
 #include "tensor.h"
 
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/serialization/vector.hpp>
+
 #include <cassert>
 #include <chrono>
 #include <fstream>
@@ -86,6 +90,10 @@ void modelTestGrey(const optimization::GlobalOptions& options) {
   std::size_t paramsCount{options.controlOptions.numOfParams};
 
   auto start = std::chrono::high_resolution_clock::now();
+
+  //   std::string controlSaveFile;
+  // bool clearSaveBeforeStart;
+  // read control params from save file
 
   using namespace two_wheeled_robot;
   const auto adap = [paramsCount, tMax,

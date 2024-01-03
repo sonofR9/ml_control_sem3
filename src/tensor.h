@@ -2,6 +2,9 @@
 
 #include "utils.h"
 
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -40,6 +43,7 @@ struct Tensor {
   constexpr T& operator[](std::size_t i) noexcept {
     return data_[i];
   }
+
   constexpr T operator[](std::size_t i) const noexcept {
     return data_[i];
   }
@@ -60,6 +64,12 @@ struct Tensor {
   }
 
  private:
+  friend class boost::serialization::access;
+  template <class Archive>
+  void serialize(Archive& ar, const unsigned int version) {
+    ar & data_;
+  }
+
   std::vector<T, Alloc> data_;
 };
 
