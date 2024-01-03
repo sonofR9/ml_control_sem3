@@ -14,7 +14,8 @@ constexpr double kEpsTrajectory{1e-1};
 template <typename T, class Alloc, class TensorAlloc>
 using ControlParams = Tensor<Tensor<T, Alloc>, TensorAlloc>;
 template <typename T, class Alloc>
-using ControlApproximation = PiecewiseLinearApproximation<T, Alloc>;
+// using ControlApproximation = PiecewiseLinearApproximation<T, Alloc>;
+using ControlApproximation = PiecewiseConstantApproximation<T, Alloc>;
 
 /**
  * @arg solverResult shape (2 * N)
@@ -68,8 +69,7 @@ std::vector<std::vector<T, Alloc>, VectorAlloc> getTrajectoryFromControl(
   auto approx{approximationFrom1D<T>(solverResult)};
   assert((approx.size() * 2 == solverResult.size()));
 
-  const ControlApproximation<T, Alloc> func{tMax / approx.size(),
-                                            approx.begin(), approx.end()};
+  const ControlApproximation<T, Alloc> func{tMax / approx.size(), approx};
   assert((func(0).size() == 2));
 
   const auto control = [&func](const Tensor<T, Alloc>&,
