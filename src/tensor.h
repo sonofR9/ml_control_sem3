@@ -7,6 +7,7 @@
 #include <cmath>
 #include <ostream>
 #include <sstream>
+#include <type_traits>
 #include <vector>
 
 namespace optimization {
@@ -17,54 +18,63 @@ namespace optimization {
  */
 template <typename T = double, class Alloc = std::allocator<T>>
 struct Tensor {
-  constexpr Tensor() noexcept = delete;
+  constexpr Tensor() noexcept = default;
 
   constexpr ~Tensor() noexcept {
-    delete[] data_;
+    // delete[] data_;
+    allocator_.deallocate(data_, size_);
     data_ = nullptr;
   }
 
-  constexpr Tensor(const Tensor& arr) : size_{arr.size_}, data_{new T[size_]} {
+  constexpr Tensor(const Tensor& arr)
+      : allocator_{}, size_{arr.size_}, data_{allocator_.allocate(size_)} {
     std::copy(arr.begin(), arr.end(), begin());
   }
 
-  constexpr Tensor(Tensor&& arr) noexcept : size_{arr.size_}, data_{arr.data_} {
+  constexpr Tensor(Tensor&& arr) noexcept
+      : allocator_{std::move(arr.allocator_)}, size_{arr.size_},
+        data_{arr.data_} {
     arr.data_ = nullptr;
+    arr.size_ = 0;
   }
 
   constexpr Tensor& operator=(const Tensor& arr) {
     if (this != &arr) {
-      delete[] data_;
+      allocator_.deallocate(data_, size_);
       size_ = arr.size_;
-      data_ = new T[size_];
+      data_ = allocator_.allocate(size_);
       std::copy(arr.begin(), arr.end(), begin());
     }
     return *this;
   }
   constexpr Tensor& operator=(Tensor&& arr) noexcept {
-    delete[] data_;
+    allocator_.deallocate(data_, size_);
     data_ = arr.data_;
     size_ = arr.size_;
     arr.data_ = nullptr;
+    arr.size_ = 0;
     return *this;
   }
 
   constexpr explicit Tensor(const std::size_t size)
-      : size_{size}, data_{new T[size_]} {
+      : allocator_{}, size_{size}, data_{allocator_.allocate(size_)} {
+    // if constexpr (!std::is_trivial_v<T>) {
+    //   std::fill(begin(), end(), T{});
+    // }
   }
 
   constexpr Tensor(const std::size_t size, T value)
-      : size_{size}, data_{new T[size_]} {
+      : allocator_{}, size_{size}, data_{allocator_.allocate(size_)} {
     std::fill(begin(), end(), value);
   }
 
   constexpr Tensor(std::initializer_list<T>&& list)
-      : size_{list.size()}, data_{new T[size_]} {
+      : allocator_{}, size_{list.size()}, data_{allocator_.allocate(size_)} {
     std::move(list.begin(), list.end(), begin());
   }
 
   /*implicit*/ constexpr Tensor(ConvertibleSizedInputRangeTo<T> auto&& range)
-      : size_{range.size()}, data_{new T[size_]} {
+      : allocator_{}, size_{range.size()}, data_{allocator_.allocate(size_)} {
     std::move(range.begin(), range.end(), begin());
   }
 
@@ -93,6 +103,8 @@ struct Tensor {
   }
 
  private:
+  Alloc allocator_;
+
   std::size_t size_{0};
   T* data_{nullptr};
 };
@@ -192,12 +204,12 @@ class Tensor<T, Alloc>::ConstIterator {
                           const ConstIterator&) noexcept = default;
 
  private:
-  T* ptr_{};
+  pointer ptr_{};
 };
 
-template <typename T>
-class Tensor<T>::Iterator : public Tensor<T>::ConstIterator {
-  using Base = Tensor<T>::ConstIterator;
+template <typename T, class Alloc>
+class Tensor<T, Alloc>::Iterator : public Tensor<T, Alloc>::ConstIterator {
+  using Base = Tensor<T, Alloc>::ConstIterator;
 
  public:
   using iterator_category = std::random_access_iterator_tag;
@@ -293,33 +305,38 @@ class Tensor<T>::Iterator : public Tensor<T>::ConstIterator {
   friend auto operator<=>(const Iterator&, const Iterator&) noexcept = default;
 };
 
-template <typename T>
-constexpr typename Tensor<T>::Iterator Tensor<T>::begin() noexcept {
+template <typename T, class Alloc>
+constexpr typename Tensor<T, Alloc>::Iterator
+Tensor<T, Alloc>::begin() noexcept {
   return Iterator{data_};
 }
 
-template <typename T>
-constexpr typename Tensor<T>::Iterator Tensor<T>::end() noexcept {
+template <typename T, class Alloc>
+constexpr typename Tensor<T, Alloc>::Iterator Tensor<T, Alloc>::end() noexcept {
   return Iterator{data_ + size_};
 }
 
-template <typename T>
-constexpr typename Tensor<T>::ConstIterator Tensor<T>::begin() const noexcept {
+template <typename T, class Alloc>
+constexpr typename Tensor<T, Alloc>::ConstIterator Tensor<T, Alloc>::begin()
+    const noexcept {
   return ConstIterator{data_};
 }
 
-template <typename T>
-constexpr typename Tensor<T>::ConstIterator Tensor<T>::end() const noexcept {
+template <typename T, class Alloc>
+constexpr typename Tensor<T, Alloc>::ConstIterator Tensor<T, Alloc>::end()
+    const noexcept {
   return ConstIterator{data_ + size_};
 }
 
-template <typename T>
-constexpr typename Tensor<T>::ConstIterator Tensor<T>::cbegin() const noexcept {
+template <typename T, class Alloc>
+constexpr typename Tensor<T, Alloc>::ConstIterator Tensor<T, Alloc>::cbegin()
+    const noexcept {
   return begin();
 }
 
-template <typename T>
-constexpr typename Tensor<T>::ConstIterator Tensor<T>::cend() const noexcept {
+template <typename T, class Alloc>
+constexpr typename Tensor<T, Alloc>::ConstIterator Tensor<T, Alloc>::cend()
+    const noexcept {
   return end();
 }
 
