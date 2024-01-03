@@ -1,13 +1,14 @@
 // #include "gradient-descent.h"
 // #include "runge-kutte.h"
 // #include "two-wheel-robot.h"
+// #include "pontryagin-method.h"
 
+#include "allocator.h"
 #include "evolution-optimization.h"
 #include "global.h"
 #include "model.h"
 #include "options.h"
 #include "particle-sworm.h"
-// #include "pontryagin-method.h"
 #include "tensor.h"
 
 #include <cassert>
@@ -105,7 +106,8 @@ void modelTestGrey(std::size_t paramsCount, int iters, double tMax, double dt) {
 }
 
 int main(int argc, const char** argv) try {
-  const auto& options{optimization::parseOptions(argc, argv)};
+  using namespace optimization;
+  const auto& options{parseOptions(argc, argv)};
   const double tMax{options.tMax};
   const double dt{options.integrationDt};
   const int iter{options.iter};
@@ -113,10 +115,14 @@ int main(int argc, const char** argv) try {
   std::size_t paramsCount{options.controlOptions.numOfParams};
 
   switch (options.method) {
-  case optimization::GlobalOptions::Method::kEvolution:
-    modelTestEvolution<std::allocator<double>>(paramsCount, iter, tMax, dt);
-  case optimization::GlobalOptions::Method::kGrayWolf:
-    modelTestGrey<std::allocator<double>>(paramsCount, iter, tMax, dt);
+  case GlobalOptions::Method::kEvolution:
+
+    modelTestEvolution<RepetitiveAllocator<double>>(paramsCount, iter, tMax,
+                                                    dt);
+    break;
+  case GlobalOptions::Method::kGrayWolf:
+    modelTestGrey<RepetitiveAllocator<double>>(paramsCount, iter, tMax, dt);
+    break;
   }
   return 0;
 } catch (const std::exception& e) {
