@@ -93,7 +93,7 @@ class PiecewiseConstantApproximation {
       : dt_{dt}, points_{points} {
   }
 
-  const Tensor<U, Alloc>& operator()(double time) const {
+  Tensor<U, Alloc> operator()(double time) const {
     const auto index{
         std::min(static_cast<std::size_t>(time / dt_), points_.size() - 1)};
     auto lb{points_.begin() + index};
