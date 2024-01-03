@@ -7,31 +7,31 @@
 #include <concepts>
 
 namespace two_wheeled_robot {
-template <typename T>
-concept ControlFunctionFullLvalue =
-    requires(T fun, const optimization::Tensor<double>& state, double time) {
-      { fun(state, time) } -> std::same_as<optimization::Tensor<double>>;
-    };
-
-template <typename T>
-concept ControlFunctionTimeOnly = requires(T fun, double time) {
-  { fun(time) } -> std::same_as<optimization::Tensor<double>>;
+template <typename T, class Alloc>
+concept ControlFunctionFullLvalue = requires(
+    T fun, const optimization::Tensor<double, Alloc>& state, double time) {
+  { fun(state, time) } -> std::same_as<optimization::Tensor<double, Alloc>>;
 };
 
-template <typename T>
+template <typename T, class Alloc>
+concept ControlFunctionTimeOnly = requires(T fun, double time) {
+  { fun(time) } -> std::same_as<optimization::Tensor<double, Alloc>>;
+};
+
+template <typename T, class Alloc>
 concept ControlFunctionFullRvalue =
-    requires(T fun, optimization::Tensor<double>&& state, double time) {
+    requires(T fun, optimization::Tensor<double, Alloc>&& state, double time) {
       {
         fun(std::move(state), time)
-      } -> std::same_as<optimization::Tensor<double>>;
+      } -> std::same_as<optimization::Tensor<double, Alloc>>;
     };
 
-template <typename T>
+template <typename T, class Alloc>
 concept ControlFunction =
-    ControlFunctionFullLvalue<T> || ControlFunctionTimeOnly<T> ||
-    ControlFunctionFullRvalue<T>;
+    ControlFunctionFullLvalue<T, Alloc> || ControlFunctionTimeOnly<T, Alloc> ||
+    ControlFunctionFullRvalue<T, Alloc>;
 
-template <ControlFunction C>
+template <class Alloc, ControlFunction<Alloc> C>
 class Model {
  public:
   /**
@@ -54,12 +54,12 @@ class Model {
    * @return optimization::StateDerivativesPoint<3> left-hand side of equations
    * system (derivatives of state variables)
    */
-  optimization::StateDerivativesPoint<double> operator()(
-      optimization::Tensor<double> state, double time);
+  optimization::StateDerivativesPoint<double, Alloc> operator()(
+      optimization::Tensor<double, Alloc> state, double time);
 };
 
-template <ControlFunctionTimeOnly C>
-class Model<C> {
+template <class Alloc, ControlFunctionTimeOnly<Alloc> C>
+class Model<Alloc, C> {
  public:
   explicit Model(C control, double r = 1, double a = 1)
       : u_{control}, rdiv2_{r / 2}, rdiva_{r / a} {
@@ -75,8 +75,8 @@ class Model<C> {
    * @return optimization::StateDerivativesPoint left-hand side of equations
    * system (derivatives of state variables)
    */
-  optimization::StateDerivativesPoint<double> operator()(
-      const optimization::Tensor<double>& state, double time) {
+  optimization::StateDerivativesPoint<double, Alloc> operator()(
+      const optimization::Tensor<double, Alloc>& state, double time) {
     const auto res{u_(time)};
     const auto xyCommon{rdiv2_ * (res[0] + res[1])};
     return {xyCommon * std::cos(state[2]), xyCommon * std::sin(state[2]),
@@ -90,8 +90,8 @@ class Model<C> {
   double rdiva_;
 };
 
-template <ControlFunctionFullLvalue C>
-class Model<C> {
+template <class Alloc, ControlFunctionFullLvalue<Alloc> C>
+class Model<Alloc, C> {
  public:
   explicit Model(C control, double r = 2, double a = 1)
       : u_{control}, rdiv2_{r / 2}, rdiva_{r / a} {
@@ -107,8 +107,8 @@ class Model<C> {
    * @return optimization::StateDerivativesPoint<3> left-hand side of equations
    * system (derivatives of state variables)
    */
-  optimization::StateDerivativesPoint<double> operator()(
-      const optimization::Tensor<double>& state, double time) {
+  optimization::StateDerivativesPoint<double, Alloc> operator()(
+      const optimization::Tensor<double, Alloc>& state, double time) {
     auto res{u_(state, time)};
     const auto xyCommon{rdiv2_ * (res[0] + res[1])};
     return {xyCommon * std::cos(state[2]), xyCommon * std::sin(state[2]),

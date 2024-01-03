@@ -11,19 +11,21 @@ constexpr double kEpsTrajectory{1e-1};
 /**
  * @brief StaticTensor<N, StaticTensor<2, double>>
  */
-template <typename T>
-using ControlParams = Tensor<Tensor<T>>;
-template <typename T>
-using ControlApproximation = PiecewiseLinearApproximation<T>;
+template <typename T, class Alloc, class TensorAlloc>
+using ControlParams = Tensor<Tensor<T, Alloc>, TensorAlloc>;
+template <typename T, class Alloc>
+using ControlApproximation = PiecewiseLinearApproximation<T, Alloc>;
 
 /**
  * @arg solverResult shape (2 * N)
  * @result shape (N, 2)
  */
-template <typename T = double>
-ControlParams<T> approximationFrom1D(const Tensor<T>& solverResult) {
-  // TODO(novak) is it an error?
-  ControlParams<T> result{solverResult.size() / 2, Tensor<double>(2)};
+template <typename T = double, class Alloc = std::allocator<T>,
+          class TensorAlloc = std::allocator<Tensor<T, Alloc>>>
+ControlParams<T, Alloc, TensorAlloc> approximationFrom1D(
+    const Tensor<T, Alloc>& solverResult) {
+  ControlParams<T, Alloc, TensorAlloc> result{solverResult.size() / 2,
+                                              Tensor<T, Alloc>(2)};
   for (std::size_t i = 0; i < solverResult.size() / 2; ++i) {
     result[i][0] = solverResult[2 * i];
     result[i][1] = solverResult[2 * i + 1];
@@ -31,21 +33,21 @@ ControlParams<T> approximationFrom1D(const Tensor<T>& solverResult) {
   return result;
 }
 
-template <typename T>
-Tensor<double> stdVectorToStaticTensor(const std::vector<T>& vec) {
-  Tensor<double> result{};
+template <typename T, class Alloc>
+Tensor<T, Alloc> stdVectorToStaticTensor(const std::vector<T, Alloc>& vec) {
+  Tensor<T, Alloc> result{};
   for (std::size_t i = 0; i < vec.size(); ++i) {
     result[i] = vec[i];
   }
   return result;
 }
 
-template <typename T, StateSpaceFunction<T> F>
-double integrate(double startT, const Tensor<T>& startX, F fun,
+template <typename T, class Alloc, StateSpaceFunction<T, Alloc> F>
+double integrate(double startT, const Tensor<T, Alloc>& startX, F fun,
                  double interestT, double delta = 0.001) {
   assert((startX.size() == fun(startX, startT).size()));
   double curT{startT};
-  Tensor<T> curX{startX};
+  Tensor<T, Alloc> curX{startX};
 
   while (curT < interestT) {
     auto k1 = fun(curX, curT);
@@ -59,22 +61,24 @@ double integrate(double startT, const Tensor<T>& startX, F fun,
   return curX;
 }
 
-template <typename T>
-std::vector<std::vector<T>> getTrajectoryFromControl(
-    const Tensor<T>& solverResult, double tMax, double dt = 0.01) {
+template <typename T, class Alloc,
+          class VectorAlloc = std::allocator<std::vector<T, Alloc>>>
+std::vector<std::vector<T, Alloc>, VectorAlloc> getTrajectoryFromControl(
+    const Tensor<T, Alloc>& solverResult, double tMax, double dt = 0.01) {
   auto approx{approximationFrom1D<T>(solverResult)};
   assert((approx.size() * 2 == solverResult.size()));
 
-  const ControlApproximation<T>& func{tMax / approx.size(), approx.begin(),
-                                      approx.end()};
+  const ControlApproximation<T, Alloc> func{tMax / approx.size(),
+                                            approx.begin(), approx.end()};
   assert((func(0).size() == 2));
 
-  const auto control = [&func](const Tensor<T>&, double time) -> Tensor<T> {
+  const auto control = [&func](const Tensor<T, Alloc>&,
+                               double time) -> Tensor<T, Alloc> {
     return func(time);
   };
-  Model robot{control, 1};
+  Model<Alloc, decltype(control)> robot{control, 1};
 
-  Tensor<T> x0{10, 10, 0};
+  Tensor<T, Alloc> x0{10, 10, 0};
   double curT{0};
   double endT{tMax};
   const auto result = solveDiffEqRungeKutte(curT, x0, robot, endT, dt);
@@ -86,12 +90,14 @@ std::vector<std::vector<T>> getTrajectoryFromControl(
  * @param solverResult .shape (2 * N)
  * @param dt for integration
  */
-template <typename T = double>
-double functional(const Tensor<T>& solverResult, double tMax = 10,
+template <typename T = double, class Alloc = std::allocator<T>,
+          class VectorAlloc = std::allocator<std::vector<T, Alloc>>>
+double functional(const Tensor<T, Alloc>& solverResult, double tMax = 10,
                   double dt = 0.01) {
-  const auto solvedX = getTrajectoryFromControl<T>(solverResult, tMax, dt);
+  const auto solvedX =
+      getTrajectoryFromControl<T, Alloc, VectorAlloc>(solverResult, tMax, dt);
 
-  Tensor<T> xf{0, 0, 0};
+  Tensor<T, Alloc> xf{0, 0, 0};
   std::size_t i{0};
   double tEnd{0};
   for (; tEnd < tMax - kEps; tEnd += dt) {
@@ -105,11 +111,12 @@ double functional(const Tensor<T>& solverResult, double tMax = 10,
 
   std::size_t iFinal{i == solvedX[0].size() ? i - 1 : i};
 
-  const auto subIntegrative = [dt](const Tensor<T>& point) -> double {
-    const double h1{std::sqrt(2.5) - std::sqrt(std::pow(point[0] - 2.5, 2) +
-                                               std::pow(point[1] - 2.5, 2))};
-    const double h2{std::sqrt(2.5) - std::sqrt(std::pow(point[0] - 7.5, 2) +
-                                               std::pow(point[1] - 7.5, 2))};
+  const auto subIntegrative = [dt](const Tensor<T, Alloc>& point) -> double {
+    auto mySqr = [](auto x) { return x * x; };
+    const double h1{std::sqrt(2.5) -
+                    std::sqrt(mySqr(point[0] - 2.5) + mySqr(point[1] - 2.5))};
+    const double h2{std::sqrt(2.5) -
+                    std::sqrt(mySqr(point[0] - 7.5) + mySqr(point[1] - 7.5))};
     if (h1 > 0 || h2 > 0) {
       const double kBigNumber = 1e5;
       return kBigNumber * dt;
