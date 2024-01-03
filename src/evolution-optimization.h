@@ -123,9 +123,10 @@ class Evolution {
       }
 
       std::stringstream ss{};
-      ss << "\33[2K\riter " << i << " functional " << best.second;
+      ss << "\33[2K\riter " << i+1 << " functional " << best.second;
       std::cout << ss.rdbuf() << std::flush;
     }
+    std::cout << "\n";
     return chromosomeToDoubles(best.first);
   }
 

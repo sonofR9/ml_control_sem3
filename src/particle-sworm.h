@@ -74,9 +74,10 @@ class GrayWolfAlgorithm {
       }
 
       std::stringstream ss{};
-      ss << "\33[2K\riter " << i << " functional " << fit_(best[0]);
+      ss << "\33[2K\riter " << i + 1 << " functional " << fit_(best[0]);
       std::cout << ss.rdbuf() << std::flush;
     }
+    std::cout << "\n";
 
     return *std::min_element(population.begin(), population.end(),
                              [this](const auto& lhs, const auto& rhs) {

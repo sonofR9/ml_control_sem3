@@ -44,6 +44,26 @@ void writeTrajectoryToFiles(
   fileY.close();
 }
 
+class TimeMeasurer {
+ public:
+  explicit TimeMeasurer(std::string name)
+      : start_{std::chrono::high_resolution_clock::now()},
+        name_{std::move(name)} {
+  }
+
+  ~TimeMeasurer() {
+    std::cout << "Execution time of " << name_ << ": "
+              << 1e-3 * std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::high_resolution_clock::now() - start_)
+                            .count()
+              << " s\n";
+  }
+
+ private:
+  std::chrono::time_point<std::chrono::high_resolution_clock> start_;
+  std::string name_;
+};
+
 using namespace optimization;
 
 template <class Alloc>
@@ -51,49 +71,69 @@ void modelTestEvolution(const optimization::GlobalOptions& options) {
   const double tMax{options.tMax};
   const double dt{options.integrationDt};
   const int iters{options.iter};
-  std::size_t paramsCount{options.controlOptions.numOfParams};
+  std::size_t controlStepsCount{options.controlOptions.numOfParams};
+  std::size_t paramsCount{controlStepsCount * 2};
 
-  auto start = std::chrono::high_resolution_clock::now();
+  Tensor<double, Alloc> init{};
+  if (!options.controlSaveFile.empty() && !options.clearSaveBeforeStart) {
+    // create file if it does not exist
+    { std::ofstream file(options.controlSaveFile, std::ofstream::app); }
+    std::ifstream file(options.controlSaveFile);
+    try {
+      boost::archive::text_iarchive ia(file);
+      ia >> init;
+    } catch (const boost::archive::archive_exception& e) {
+      std::cout << e.what() << "\n";
+    }
+    init.resize(paramsCount);
+  }
+
+  TimeMeasurer tm("Evolution");
 
   using namespace two_wheeled_robot;
   const auto adap = [paramsCount, tMax,
                      dt](const Tensor<double, Alloc>& solverResult) {
-    assert((solverResult.size() == 2 * paramsCount));
+    assert((solverResult.size() == paramsCount));
     return functional<double, Alloc>(solverResult, tMax, dt);
   };
-  Evolution<1000, 1000, Alloc, decltype(adap), 500> solver(
-      adap, 2 * paramsCount, -10, 10);
+  Evolution<1000, 1000, Alloc, decltype(adap), 500> solver(adap, paramsCount,
+                                                           -10, 10);
   const auto best{solver.solve(iters)};
-  std::cout << "\nmodel: [" << best
-            << "] functional: " << functional<double, Alloc>(best, tMax, dt)
-            << "\n";
+
+  if (!options.controlSaveFile.empty()) {
+    std::ofstream file(options.controlSaveFile,
+                       std::ofstream::out | std::ofstream::trunc);
+    boost::archive::text_oarchive oa(file);
+    oa << best;
+  }
 
   const auto trajectory{getTrajectoryFromControl<double, Alloc>(best, tMax)};
   writeTrajectoryToFiles(trajectory);
-
-  auto end = std::chrono::high_resolution_clock::now();
-
-#ifdef NDEBUG
-  std::cout << "Release build\n";
-#else
-  std::cout << "Debug build\n";
-#endif
-  std::cout << "Time of excecution Evolution: " << (end - start).count() / 1e9
-            << " s\n";
 }
 
 template <class Alloc>
-void modelTestGrey(const optimization::GlobalOptions& options) {
+void modelTestGray(const optimization::GlobalOptions& options) {
   const double tMax{options.tMax};
   const double dt{options.integrationDt};
   const int iters{options.iter};
-  std::size_t paramsCount{options.controlOptions.numOfParams};
+  std::size_t controlStepsCount{options.controlOptions.numOfParams};
+  std::size_t paramsCount{controlStepsCount * 2};
 
-  auto start = std::chrono::high_resolution_clock::now();
+  Tensor<double, Alloc> init{};
+  if (!options.controlSaveFile.empty() && !options.clearSaveBeforeStart) {
+    // create file if it does not exist
+    { std::ofstream file(options.controlSaveFile); }
+    std::ifstream file(options.controlSaveFile);
+    try {
+      boost::archive::text_iarchive ia(file);
+      ia >> init;
+    } catch (const boost::archive::archive_exception& e) {
+      std::cout << e.what() << "\n";
+    }
+    init.resize(paramsCount);
+  }
 
-  //   std::string controlSaveFile;
-  // bool clearSaveBeforeStart;
-  // read control params from save file
+  TimeMeasurer tm("gray wolf");
 
   using namespace two_wheeled_robot;
   const auto adap = [paramsCount, tMax,
@@ -104,22 +144,16 @@ void modelTestGrey(const optimization::GlobalOptions& options) {
   GrayWolfAlgorithm<Alloc, decltype(adap), 512, 3> solver(adap, 2 * paramsCount,
                                                           10);
   const auto best{solver.solve(iters)};
-  std::cout << "\nmodel: [" << best
-            << "] functional: " << functional<double, Alloc>(best, tMax, dt)
-            << "\n";
+
+  if (!options.controlSaveFile.empty()) {
+    std::ofstream file(options.controlSaveFile,
+                       std::ofstream::out | std::ofstream::trunc);
+    boost::archive::text_oarchive oa(file);
+    oa << best;
+  }
 
   const auto trajectory{getTrajectoryFromControl<double, Alloc>(best, tMax)};
   writeTrajectoryToFiles(trajectory);
-
-  auto end = std::chrono::high_resolution_clock::now();
-
-#ifdef NDEBUG
-  std::cout << "Release build\n";
-#else
-  std::cout << "Debug build\n";
-#endif
-  std::cout << "Time of excecution gray wolf: " << (end - start).count() / 1e9
-            << " s\n";
 }
 
 int main(int argc, const char** argv) try {
@@ -133,7 +167,7 @@ int main(int argc, const char** argv) try {
     modelTestEvolution<RepetitiveAllocator<double>>(options);
     break;
   case GlobalOptions::Method::kGrayWolf:
-    modelTestGrey<RepetitiveAllocator<double>>(options);
+    modelTestGray<RepetitiveAllocator<double>>(options);
     break;
   }
   return 0;

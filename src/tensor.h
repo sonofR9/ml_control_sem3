@@ -63,6 +63,15 @@ struct Tensor {
     return data_.size();
   }
 
+  constexpr void resize(const std::size_t newSize) {
+    for (std::size_t i{size()}; i < newSize; ++i) {
+      data_.emplace_back(T{});
+    }
+    for (std::size_t i{newSize}; i > size(); --i) {
+      data_.pop_back();
+    }
+  }
+
  private:
   friend class boost::serialization::access;
   template <class Archive>
