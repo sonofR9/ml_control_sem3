@@ -394,12 +394,11 @@ constexpr Tensor<T, Alloc> operator*(M multiplier,
   return self * multiplier;
 }
 
-template <typename T, class Alloc, class Alloc2>
-constexpr Tensor<T, Alloc>& operator*=(
-    Tensor<T, Alloc>& self, const Tensor<T, Alloc2>& other) noexcept {
-  assert((self.size() == other.size()));
+template <typename T, class Alloc, typename M>
+constexpr Tensor<T, Alloc>& operator*=(Tensor<T, Alloc>& self,
+                                       M multiplier) noexcept {
   for (std::size_t i{0}; i < self.size(); ++i) {
-    self[i] *= other[i];
+    self[i] *= multiplier;
   }
   return self;
 }
@@ -411,6 +410,15 @@ constexpr Tensor<T, Alloc> operator/(const Tensor<T, Alloc>& self, M divider) {
     result[i] = self[i] / divider;
   }
   return result;
+}
+
+template <typename T, class Alloc, typename M>
+constexpr Tensor<T, Alloc>& operator/=(Tensor<T, Alloc>& self,
+                                       M divider) noexcept {
+  for (std::size_t i{0}; i < self.size(); ++i) {
+    self[i] /= divider;
+  }
+  return self;
 }
 
 template <typename T, class Alloc, class Alloc2>

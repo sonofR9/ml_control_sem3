@@ -11,13 +11,25 @@ Tensor<T, Alloc> rungeKutteStep(double startT, const Tensor<T, Alloc>& startX,
   double curT{startT};
   Tensor<T, Alloc> curX{startX};
 
-  while (curT < interestT) {
-    auto k1 = fun(curX, curT);
-    auto k2 = fun(curX + delta / 2 * k1, curT + delta / 2);
-    auto k3 = fun(curX + delta / 2 * k2, curT + delta / 2);
-    auto k4 = fun(curX + delta * k3, curT + delta);
+  const auto delta2{delta / 2};
+  const auto delta6{delta / 6};
 
-    curX += delta / 6 * (k1 + 2 * (k2 + k3) + k4);
+  while (curT < interestT) {
+    // auto k1 = fun(curX, curT);
+    // auto k2 = fun(curX + delta / 2 * k1, curT + delta / 2);
+    // auto k3 = fun(curX + delta / 2 * k2, curT + delta / 2);
+    // auto k4 = fun(curX + delta * k3, curT + delta);
+    // curX += delta / 6 * (k1 + 2 * (k2 + k3) + k4);
+    auto k = fun(curX, curT);
+    auto tmp{k};
+    tmp += k;
+    k = fun(curX + delta2 * k, curT + delta2);
+    tmp += 2 * k;
+    k = fun(curX + delta2 * k, curT + delta2);
+    tmp += 2 * k;
+    k = fun(curX + delta * k, curT + delta);
+    tmp += k;
+    curX += delta6 * tmp;
     curT += delta;
   }
   return curX;
