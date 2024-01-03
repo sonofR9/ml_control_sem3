@@ -63,6 +63,10 @@ struct Tensor {
     return data_.size();
   }
 
+  [[nodiscard]] constexpr bool empty() const noexcept {
+    return data_.empty();
+  }
+
   constexpr void resize(const std::size_t newSize) {
     for (std::size_t i{size()}; i < newSize; ++i) {
       data_.emplace_back(T{});

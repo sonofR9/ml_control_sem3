@@ -34,6 +34,12 @@ class GrayWolfAlgorithm {
       : fit_{fit}, paramsCount_{paramsCount}, limit_{std::abs(limit)} {
   }
 
+  void setBaseline(Specimen baseline, double maxDifference) noexcept {
+    assert((baseline.size() == paramsCount_));
+    baseline_ = std::move(baseline);
+    maxDifference_ = maxDifference;
+  }
+
   /**
    * @brief
    *
@@ -46,7 +52,6 @@ class GrayWolfAlgorithm {
 
     for (int i{0}; i < numIterations; ++i) {
       const auto& best{getBest(population)};
-      // std::cout << best[0] << " fit " << fit_(best[0]) << std::endl;
 
       const double alpha{2.0 * (1 - 1.0 * i / numIterations)};
 
@@ -56,13 +61,14 @@ class GrayWolfAlgorithm {
           double qj{spec[j]};
           double res{0};
           for (int k{0}; k < B; ++k) {
-            res += best[k][j] -
-                   (2.0 * ksi[2 * k + 1]) *
-                       std::abs((2 * ksi[2 * k] - 1) * alpha * best[k][j] - qj);
-
             // res += best[k][j] -
-            //  (2.0 * ksi[2 * k + 1] - 1) *alpha *
-            //  std::abs((2 * ksi[2 * k]) * best[k][j] - qj);
+            //        (2.0 * ksi[2 * k + 1]) *
+            //            std::abs((2 * ksi[2 * k] - 1) * alpha * best[k][j] -
+            //            qj);
+
+            res +=
+                best[k][j] - (2.0 * ksi[2 * k + 1] - 1) * alpha *
+                                 std::abs((2 * ksi[2 * k]) * best[k][j] - qj);
           }
           spec[j] = res / B;
           if (spec[j] > limit_) {
@@ -72,6 +78,7 @@ class GrayWolfAlgorithm {
           }
         }
       }
+      population[0] = best[0];
 
       std::stringstream ss{};
       ss << "\33[2K\riter " << i + 1 << " functional " << fit_(best[0]);
@@ -124,14 +131,26 @@ class GrayWolfAlgorithm {
     // generate random population (P chromosomes of size N each)
     auto result{std::make_unique<std::array<Specimen, P>>()};
     std::array<Specimen, P>& population{*result};
-
     std::ranges::generate(population, [this]() -> Specimen {
       auto chromosome = Specimen(paramsCount_);
-      std::ranges::generate(chromosome, [this]() {
-        return DoubleGenerator::get() / DoubleGenerator::absLimit() * limit_;
-      });
+      if (!baseline_.empty()) {
+        std::transform(baseline_.begin(), baseline_.end(), chromosome.begin(),
+                       [this](double v) {
+                         return v + DoubleGenerator::get() /
+                                        DoubleGenerator::absLimit() *
+                                        maxDifference_;
+                       });
+      } else {
+        std::ranges::generate(chromosome, [this]() {
+          return DoubleGenerator::get() / DoubleGenerator::absLimit() * limit_;
+        });
+      }
       return chromosome;
     });
+
+    if (!baseline_.empty()) {
+      population[0] = baseline_;
+    }
     return result;
   }
 
@@ -139,5 +158,8 @@ class GrayWolfAlgorithm {
   std::size_t paramsCount_;
 
   double limit_;
+
+  Specimen baseline_{};
+  double maxDifference_;
 };
 }  // namespace optimization

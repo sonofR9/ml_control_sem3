@@ -11,23 +11,23 @@
 #include <ranges>
 
 namespace optimization {
-template <uint64_t N, uint64_t D>
-void mutateGen(DoubleGrayCode<D>& code, double threshold) {
+template <uint64_t N, uint64_t D, uint64_t Z>
+void mutateGen(DoubleGrayCode<D, Z>& code, double threshold) {
   if (Probability::get() > threshold) {
     code.changeBit(IntGenerator<N>::get());
   }
 }
 
-template <uint64_t D>
-void mutateGenSimple(DoubleGrayCode<D>& code, double threshold) {
+template <uint64_t D, uint64_t Z>
+void mutateGenSimple(DoubleGrayCode<D, Z>& code, double threshold) {
   if (Probability::get() > threshold) {
     code += DoubleGenerator::get() / 100;
   }
 }
 
-template <uint64_t N, uint64_t D>
-std::pair<DoubleGrayCode<D>, DoubleGrayCode<D>> crossover(
-    DoubleGrayCode<D> lhs, DoubleGrayCode<D> rhs) {
+template <uint64_t N, uint64_t D, uint64_t Z>
+std::pair<DoubleGrayCode<D, Z>, DoubleGrayCode<D, Z>> crossover(
+    DoubleGrayCode<D, Z> lhs, DoubleGrayCode<D, Z> rhs) {
   uint64_t mask = (1ULL << IntGenerator<N>::get()) - 1;
 
   uint64_t bitsFromNum1 = lhs.getGray() & mask;
@@ -54,13 +54,23 @@ std::pair<DoubleGrayCode<D>, DoubleGrayCode<D>> crossover(
  */
 template <uint64_t D, uint64_t Z, class Alloc,
           Regular1OutFunction<Tensor<double, Alloc>> Fit, int P = 100,
-          class CodeAlloc = std::allocator<DoubleGrayCode<D>>>
+          class CodeAlloc = std::allocator<DoubleGrayCode<D, Z>>>
 class Evolution {
-  using Gray = DoubleGrayCode<D>;
+  using Gray = DoubleGrayCode<D, Z>;
   /// @brief StaticTensor<N, Gray>
   using Chromosome = Tensor<Gray, CodeAlloc>;
 
  public:
+  struct Limits {
+    double min;
+    double max;
+  };
+
+  struct Rates {
+    double mutation;
+    double crossover;
+  };
+
   /**
    * @brief Construct a new Evolution object
    *
@@ -70,8 +80,20 @@ class Evolution {
    * @param uMin
    * @param uMax
    */
-  Evolution(Fit fit, std::size_t paramsCount, double uMin, double uMax)
-      : fit_{fit}, paramsCount_{paramsCount}, uMin_{uMin}, uMax_{uMax} {
+  Evolution(Fit fit, std::size_t paramsCount, Limits limits, Rates rates)
+      : fit_{fit}, paramsCount_{paramsCount}, uMin_{limits.min},
+        uMax_{limits.max}, mutationRate_{rates.mutation},
+        crossoverRate_{rates.crossover} {
+  }
+
+  void setBaseline(const Tensor<double, Alloc>& baseline,
+                   double maxDifference) noexcept {
+    assert((baseline.size() == paramsCount_));
+    baseline_ = Chromosome(baseline.size());
+    std::transform(baseline.begin(), baseline.end(), baseline_.begin(),
+                   [this](double v) { return Gray(v); });
+
+    maxDifference_ = maxDifference;
   }
 
   /**
@@ -106,10 +128,15 @@ class Evolution {
         newFitness[i] = fitness[j];
       }
 
-      crossoverPopulation(*newPopulation, newFitness, 1 / best.second);
+      // *best.second is necessary:
+      // crossover happens when (1/ min(fit1, fit2)) * probModifier > random
+      // At the start 1/fit->0 => crossover will not happen. With modification
+      // equation above closer to 1 * trueProbModifier > random
+      crossoverPopulation(*newPopulation, newFitness,
+                          crossoverRate_ * best.second);
       (*newPopulation)[0] = best.first;
 
-      Evolution::mutatePopulation(*newPopulation, 0.9);
+      mutatePopulation(*newPopulation);
       population = std::move(newPopulation);
 
       for (auto& chromosome : *population) {
@@ -123,7 +150,7 @@ class Evolution {
       }
 
       std::stringstream ss{};
-      ss << "\33[2K\riter " << i+1 << " functional " << best.second;
+      ss << "\33[2K\riter " << i + 1 << " functional " << best.second;
       std::cout << ss.rdbuf() << std::flush;
     }
     std::cout << "\n";
@@ -143,11 +170,10 @@ class Evolution {
     return doubles;
   }
 
-  static void mutatePopulation(std::array<Chromosome, P>& population,
-                               double threshold) {
+  void mutatePopulation(std::array<Chromosome, P>& population) const {
+    const auto threshold{1 / mutationRate_};
     for (auto& individual : population) {
       for (auto& gen : individual) {
-        // mutateGen<Z * 2, D>(gen, threshold);
         mutateGenSimple(gen, threshold);
       }
     }
@@ -170,8 +196,8 @@ class Evolution {
       }
       const auto lhsFit{fitness[lhsIndex]};
       const auto rhsFit{fitness[rhsIndex]};
-      const auto prob{std::max(1 / lhsFit, 1 / rhsFit)};
-      if (prob > Probability::get() * probModifier) {
+      const auto prob{1 / std::min(lhsFit, rhsFit)};
+      if (prob * probModifier > Probability::get()) {
         for (std::size_t j{0}; j < paramsCount_; ++j) {
           auto [childLhs, childRhs] = crossover<Z * 2, D>(
               population[lhsIndex][j], population[rhsIndex][j]);
@@ -211,14 +237,26 @@ class Evolution {
     std::generate(
         population->begin(), population->end(), [this]() -> Chromosome {
           auto chromosome = Chromosome(paramsCount_);
-          std::generate(chromosome.begin(), chromosome.end(), [this]() {
-            return DoubleGrayCode<D>{(uMax_ + uMin_) / 2 +
-                                     DoubleGenerator::get() /
-                                         DoubleGenerator::absLimit() *
-                                         (uMax_ - uMin_) / 2};
-          });
+          if (!baseline_.empty()) {
+            std::transform(baseline_.begin(), baseline_.end(),
+                           chromosome.begin(), [this](Gray v) {
+                             return v + DoubleGenerator::get() /
+                                            DoubleGenerator::absLimit() *
+                                            maxDifference_;
+                           });
+          } else {
+            std::generate(chromosome.begin(), chromosome.end(), [this]() {
+              return Gray{(uMax_ + uMin_) / 2 +
+                          DoubleGenerator::get() / DoubleGenerator::absLimit() *
+                              (uMax_ - uMin_) / 2};
+            });
+          }
           return chromosome;
         });
+
+    if (!baseline_.empty()) {
+      (*population)[0] = baseline_;
+    }
     return population;
   }
 
@@ -247,5 +285,11 @@ class Evolution {
 
   double uMin_;
   double uMax_;
+
+  double mutationRate_;
+  double crossoverRate_;
+
+  Chromosome baseline_{};
+  double maxDifference_;
 };
 }  // namespace optimization

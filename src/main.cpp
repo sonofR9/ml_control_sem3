@@ -23,6 +23,8 @@ namespace optimization {
 unsigned int seed = 50;
 }
 
+constexpr double kMaxDiff{1};
+
 template <class Alloc, class VectorAlloc>
 void writeTrajectoryToFiles(
     const std::vector<std::vector<double, Alloc>, VectorAlloc>& trajectory) {
@@ -96,8 +98,14 @@ void modelTestEvolution(const optimization::GlobalOptions& options) {
     assert((solverResult.size() == paramsCount));
     return functional<double, Alloc>(solverResult, tMax, dt);
   };
-  Evolution<1000, 1000, Alloc, decltype(adap), 500> solver(adap, paramsCount,
-                                                           -10, 10);
+  Evolution<1000, 1000, Alloc, decltype(adap), 500> solver(
+      adap, paramsCount,
+      {.min = options.controlOptions.uMin, .max = options.controlOptions.uMax},
+      {.mutation = options.evolutionOpt.mutationRate,
+       .crossover = options.evolutionOpt.crossoverRate});
+  if (!init.empty()) {
+    solver.setBaseline(init, kMaxDiff);
+  }
   const auto best{solver.solve(iters)};
 
   if (!options.controlSaveFile.empty()) {
@@ -122,7 +130,7 @@ void modelTestGray(const optimization::GlobalOptions& options) {
   Tensor<double, Alloc> init{};
   if (!options.controlSaveFile.empty() && !options.clearSaveBeforeStart) {
     // create file if it does not exist
-    { std::ofstream file(options.controlSaveFile); }
+    { std::ofstream file(options.controlSaveFile, std::ofstream::app); }
     std::ifstream file(options.controlSaveFile);
     try {
       boost::archive::text_iarchive ia(file);
@@ -143,6 +151,9 @@ void modelTestGray(const optimization::GlobalOptions& options) {
   };
   GrayWolfAlgorithm<Alloc, decltype(adap), 512, 3> solver(adap, 2 * paramsCount,
                                                           10);
+  if (!init.empty()) {
+    solver.setBaseline(init, kMaxDiff);
+  }
   const auto best{solver.solve(iters)};
 
   if (!options.controlSaveFile.empty()) {
