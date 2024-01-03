@@ -43,8 +43,12 @@ void writeTrajectoryToFiles(
 using namespace optimization;
 
 template <class Alloc>
-void modelTestEvolution(std::size_t paramsCount, int iters, double tMax,
-                        double dt) {
+void modelTestEvolution(const optimization::GlobalOptions& options) {
+  const double tMax{options.tMax};
+  const double dt{options.integrationDt};
+  const int iters{options.iter};
+  std::size_t paramsCount{options.controlOptions.numOfParams};
+
   auto start = std::chrono::high_resolution_clock::now();
 
   using namespace two_wheeled_robot;
@@ -75,7 +79,12 @@ void modelTestEvolution(std::size_t paramsCount, int iters, double tMax,
 }
 
 template <class Alloc>
-void modelTestGrey(std::size_t paramsCount, int iters, double tMax, double dt) {
+void modelTestGrey(const optimization::GlobalOptions& options) {
+  const double tMax{options.tMax};
+  const double dt{options.integrationDt};
+  const int iters{options.iter};
+  std::size_t paramsCount{options.controlOptions.numOfParams};
+
   auto start = std::chrono::high_resolution_clock::now();
 
   using namespace two_wheeled_robot;
@@ -108,20 +117,15 @@ void modelTestGrey(std::size_t paramsCount, int iters, double tMax, double dt) {
 int main(int argc, const char** argv) try {
   using namespace optimization;
   const auto& options{parseOptions(argc, argv)};
-  const double tMax{options.tMax};
-  const double dt{options.integrationDt};
-  const int iter{options.iter};
+
   seed = options.seed;
-  std::size_t paramsCount{options.controlOptions.numOfParams};
 
   switch (options.method) {
   case GlobalOptions::Method::kEvolution:
-
-    modelTestEvolution<RepetitiveAllocator<double>>(paramsCount, iter, tMax,
-                                                    dt);
+    modelTestEvolution<RepetitiveAllocator<double>>(options);
     break;
   case GlobalOptions::Method::kGrayWolf:
-    modelTestGrey<RepetitiveAllocator<double>>(paramsCount, iter, tMax, dt);
+    modelTestGrey<RepetitiveAllocator<double>>(options);
     break;
   }
   return 0;
