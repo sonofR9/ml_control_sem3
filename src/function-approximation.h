@@ -4,7 +4,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <map>
 
 namespace optimization {
 template <typename T, typename U, class Alloc>
@@ -49,10 +48,32 @@ class PiecewiseLinearApproximation {
       : dt_{dt}, points_{points} {
   }
 
-  Tensor<U, Alloc> operator()(double time) const {
-    // auto lb{points_.lower_bound(time)};
+  void operator()(double time, Tensor<U, Alloc>& preallocatedResult) const {
+    const auto index{
+        std::min(static_cast<std::size_t>(time / dt_), points_.size() - 1)};
+    auto lb{points_.begin() + index};
 
-    // points_[std::min(time / dt, points.size()-1)]
+    auto next{lb};
+    if (next != points_.end()) {
+      ++next;
+    }
+    if (lb == points_.end() || next == points_.end()) {
+      auto tmp = points_.end();
+      lb = --tmp;
+      next = lb--;
+      double lbTime{dt_ * (points_.size() - 2)};
+      const double partOfdt{1.0 / dt_ * (time - lbTime)};
+      preallocatedResult = *lb + (*next - *lb) * partOfdt;
+    } else {
+      double lbTime{dt_ * index};
+      const double partOfdt{1.0 / dt_ * (time - lbTime)};
+      preallocatedResult = *lb + (*next - *lb) * partOfdt;
+    }
+  }
+
+  Tensor<U, Alloc> operator()(double time) const {
+    // code dublication probably more efficient then calling preallocated
+    // version (because would have to preallocate it => potential memset)
     const auto index{
         std::min(static_cast<std::size_t>(time / dt_), points_.size() - 1)};
     auto lb{points_.begin() + index};
@@ -69,19 +90,13 @@ class PiecewiseLinearApproximation {
       const double partOfdt{1.0 / dt_ * (time - lbTime)};
       return *lb + (*next - *lb) * partOfdt;
     }
-
     double lbTime{dt_ * index};
     const double partOfdt{1.0 / dt_ * (time - lbTime)};
     return *lb + (*next - *lb) * partOfdt;
   }
 
-  // void insert(double time, const Tensor<U, Alloc>& point) {
-  //   points_.insert({time, point});
-  // }
-
  private:
   double dt_;
-  // std::map<double, Tensor<U, Alloc>> points_;
   const Tensor<Tensor<U, Alloc>>& points_;
 };
 
@@ -98,6 +113,13 @@ class PiecewiseConstantApproximation {
         std::min(static_cast<std::size_t>(time / dt_), points_.size() - 1)};
     auto lb{points_.begin() + index};
     return *lb;
+  }
+
+  void operator()(double time, Tensor<U, Alloc>& preallocatedResult) const {
+    const auto index{
+        std::min(static_cast<std::size_t>(time / dt_), points_.size() - 1)};
+    auto lb{points_.begin() + index};
+    preallocatedResult = *lb;
   }
 
  private:

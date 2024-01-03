@@ -14,6 +14,8 @@ Tensor<T, Alloc> rungeKutteStep(double startT, const Tensor<T, Alloc>& startX,
   const auto delta2{delta / 2};
   const auto delta6{delta / 6};
 
+  // thread_local static auto k = Tensor<T, Alloc>(curX.size());
+  // thread_local static auto tmp{k};
   while (curT < interestT) {
     // bringing outside and preallocating does nothing
     auto k = fun(curX, curT);

@@ -56,6 +56,9 @@ class Model {
    */
   optimization::StateDerivativesPoint<double, Alloc> operator()(
       optimization::Tensor<double, Alloc> state, double time);
+  void operator()(
+      const optimization::Tensor<double, Alloc>& state, double time,
+      optimization::StateDerivativesPoint<double, Alloc>& preallocatedResult);
 };
 
 template <class Alloc, ControlFunctionTimeOnly<Alloc> C>
@@ -77,10 +80,24 @@ class Model<Alloc, C> {
    */
   optimization::StateDerivativesPoint<double, Alloc> operator()(
       const optimization::Tensor<double, Alloc>& state, double time) {
-    const auto res{u_(time)};
+    thread_local static auto res =
+        optimization::StateDerivativesPoint<double, Alloc>(3);
+    res = u_(time);
     const auto xyCommon{rdiv2_ * (res[0] + res[1])};
     return {xyCommon * std::cos(state[2]), xyCommon * std::sin(state[2]),
             (res[0] - res[1]) * rdiva_};
+  }
+
+  void operator()(
+      const optimization::Tensor<double, Alloc>& state, double time,
+      optimization::StateDerivativesPoint<double, Alloc>& preallocatedResult) {
+    thread_local static auto res =
+        optimization::StateDerivativesPoint<double, Alloc>(3);
+    res = u_(time);
+    const auto xyCommon{rdiv2_ * (res[0] + res[1])};
+    preallocatedResult[0] = xyCommon * std::cos(state[2]);
+    preallocatedResult[1] = xyCommon * std::sin(state[2]);
+    preallocatedResult[1] = (res[0] - res[1]) * rdiva_;
   }
 
  private:
@@ -109,10 +126,24 @@ class Model<Alloc, C> {
    */
   optimization::StateDerivativesPoint<double, Alloc> operator()(
       const optimization::Tensor<double, Alloc>& state, double time) {
-    auto res{u_(state, time)};
+    thread_local static auto res =
+        optimization::StateDerivativesPoint<double, Alloc>(3);
+    res = u_(state, time);
     const auto xyCommon{rdiv2_ * (res[0] + res[1])};
     return {xyCommon * std::cos(state[2]), xyCommon * std::sin(state[2]),
             (res[0] - res[1]) * rdiva_};
+  }
+
+  void operator()(
+      const optimization::Tensor<double, Alloc>& state, double time,
+      optimization::StateDerivativesPoint<double, Alloc>& preallocatedResult) {
+    thread_local static auto res =
+        optimization::StateDerivativesPoint<double, Alloc>(3);
+    res = u_(state, time);
+    const auto xyCommon{rdiv2_ * (res[0] + res[1])};
+    preallocatedResult[0] = xyCommon * std::cos(state[2]);
+    preallocatedResult[1] = xyCommon * std::sin(state[2]);
+    preallocatedResult[1] = (res[0] - res[1]) * rdiva_;
   }
 
  private:
