@@ -1,8 +1,11 @@
 #include "function-approximation.h"
 #include "global.h"
+#include "parse-function.h"
+#include "runge-kutte.h"
 #include "two-wheel-robot.h"
 
 #include <cassert>
+
 
 namespace two_wheeled_robot {
 using namespace optimization;
@@ -43,24 +46,24 @@ Tensor<T, Alloc> stdVectorToStaticTensor(const std::vector<T, Alloc>& vec) {
   return result;
 }
 
-template <typename T, class Alloc, StateSpaceFunction<T, Alloc> F>
-double integrate(double startT, const Tensor<T, Alloc>& startX, F fun,
-                 double interestT, double delta = 0.001) {
-  assert((startX.size() == fun(startX, startT).size()));
-  double curT{startT};
-  Tensor<T, Alloc> curX{startX};
+// template <typename T, class Alloc, StateSpaceFunction<T, Alloc> F>
+// double integrate(double startT, const Tensor<T, Alloc>& startX, F fun,
+//                  double interestT, double delta = 0.001) {
+//   assert((startX.size() == fun(startX, startT).size()));
+//   double curT{startT};
+//   Tensor<T, Alloc> curX{startX};
 
-  while (curT < interestT) {
-    auto k1 = fun(curX, curT);
-    auto k2 = fun(curX + delta / 2 * k1, curT + delta / 2);
-    auto k3 = fun(curX + delta / 2 * k2, curT + delta / 2);
-    auto k4 = fun(curX + delta * k3, curT + delta);
+//   while (curT < interestT) {
+//     auto k1 = fun(curX, curT);
+//     auto k2 = fun(curX + delta / 2 * k1, curT + delta / 2);
+//     auto k3 = fun(curX + delta / 2 * k2, curT + delta / 2);
+//     auto k4 = fun(curX + delta * k3, curT + delta);
 
-    curX += delta / 6 * (k1 + 2 * k2 + 2 * k3 + k4);
-    curT += delta;
-  }
-  return curX;
-}
+//     curX += delta / 6 * (k1 + 2 * k2 + 2 * k3 + k4);
+//     curT += delta;
+//   }
+//   return curX;
+// }
 
 template <typename T, class Alloc,
           class VectorAlloc = std::allocator<std::vector<T, Alloc>>>
@@ -72,18 +75,34 @@ std::vector<std::vector<T, Alloc>, VectorAlloc> getTrajectoryFromControl(
   const ControlApproximation<T, Alloc> func{tMax / approx.size(), approx};
   assert((func(0).size() == 2));
 
-  const auto control = [&func](const Tensor<T, Alloc>&,
-                               double time) -> Tensor<T, Alloc> {
-    return func(time);
-  };
-  Model<Alloc, decltype(control)> robot{control, 1};
-
   Tensor<T, Alloc> x0{10, 10, 0};
   double curT{0};
   double endT{tMax};
-  const auto result = solveDiffEqRungeKutte(curT, x0, robot, endT, dt);
-  assert((result.size() == 3 + 1));
-  return result;
+
+  // TODO(novak) code duplication
+
+  if constexpr (CallableOneArgPreallocatedResult<decltype(func), double, T,
+                                                 Alloc>) {
+    const auto control = [&func](const Tensor<T, Alloc>&, double time,
+                                 Tensor<T, Alloc>& preallocatedResult) -> void {
+      return func(time, preallocatedResult);
+    };
+    Model<Alloc, decltype(control)> robot{control, 1};
+
+    const auto result = solveDiffEqRungeKutte(curT, x0, robot, endT, dt);
+    assert((result.size() == 3 + 1));
+    return result;
+  } else {
+    const auto control = [&func](const Tensor<T, Alloc>&,
+                                 double time) -> Tensor<T, Alloc> {
+      return func(time);
+    };
+    Model<Alloc, decltype(control)> robot{control, 1};
+
+    const auto result = solveDiffEqRungeKutte(curT, x0, robot, endT, dt);
+    assert((result.size() == 3 + 1));
+    return result;
+  }
 }
 
 /**
