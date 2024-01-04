@@ -1,6 +1,6 @@
 #pragma once
 
-#include "runge-kutte.h"
+#include "global.h"
 #include "tensor.h"
 
 #include <cmath>
@@ -27,9 +27,33 @@ concept ControlFunctionFullRvalue =
     };
 
 template <typename T, class Alloc>
+concept ControlFunctionFullLvaluePreallocated =
+    requires(T fun, const optimization::Tensor<double, Alloc>& state,
+             double time, optimization::Tensor<double, Alloc>& result) {
+      { fun(state, time, result) } -> std::same_as<void>;
+    };
+
+template <typename T, class Alloc>
+concept ControlFunctionTimeOnlyPreallocated =
+    requires(T fun, double time, optimization::Tensor<double, Alloc>& result) {
+      { fun(time, result) } -> std::same_as<void>;
+    };
+
+template <typename T, class Alloc>
+concept ControlFunctionFullRvaluePreallocated =
+    requires(T fun, optimization::Tensor<double, Alloc>&& state, double time,
+             optimization::Tensor<double, Alloc>& result) {
+      { fun(std::move(state), time, result) } -> std::same_as<void>;
+    };
+
+template <typename T, class Alloc>
 concept ControlFunction =
     ControlFunctionFullLvalue<T, Alloc> || ControlFunctionTimeOnly<T, Alloc> ||
-    ControlFunctionFullRvalue<T, Alloc>;
+    ControlFunctionFullRvalue<T, Alloc> ||
+    // preallocated variants
+    ControlFunctionFullLvaluePreallocated<T, Alloc> ||
+    ControlFunctionTimeOnlyPreallocated<T, Alloc> ||
+    ControlFunctionFullRvaluePreallocated<T, Alloc>;
 
 template <class Alloc, ControlFunction<Alloc> C>
 class Model {
@@ -56,6 +80,9 @@ class Model {
    */
   optimization::StateDerivativesPoint<double, Alloc> operator()(
       optimization::Tensor<double, Alloc> state, double time);
+  void operator()(
+      const optimization::Tensor<double, Alloc>& state, double time,
+      optimization::StateDerivativesPoint<double, Alloc>& preallocatedResult);
 };
 
 template <class Alloc, ControlFunctionTimeOnly<Alloc> C>
@@ -77,10 +104,24 @@ class Model<Alloc, C> {
    */
   optimization::StateDerivativesPoint<double, Alloc> operator()(
       const optimization::Tensor<double, Alloc>& state, double time) {
-    const auto res{u_(time)};
+    thread_local static auto res =
+        optimization::StateDerivativesPoint<double, Alloc>(3);
+    res = u_(time);
     const auto xyCommon{rdiv2_ * (res[0] + res[1])};
     return {xyCommon * std::cos(state[2]), xyCommon * std::sin(state[2]),
             (res[0] - res[1]) * rdiva_};
+  }
+
+  void operator()(
+      const optimization::Tensor<double, Alloc>& state, double time,
+      optimization::StateDerivativesPoint<double, Alloc>& preallocatedResult) {
+    thread_local static auto res =
+        optimization::StateDerivativesPoint<double, Alloc>(3);
+    res = u_(time);
+    const auto xyCommon{rdiv2_ * (res[0] + res[1])};
+    preallocatedResult[0] = xyCommon * std::cos(state[2]);
+    preallocatedResult[1] = xyCommon * std::sin(state[2]);
+    preallocatedResult[1] = (res[0] - res[1]) * rdiva_;
   }
 
  private:
@@ -109,10 +150,116 @@ class Model<Alloc, C> {
    */
   optimization::StateDerivativesPoint<double, Alloc> operator()(
       const optimization::Tensor<double, Alloc>& state, double time) {
-    auto res{u_(state, time)};
+    thread_local static auto res =
+        optimization::StateDerivativesPoint<double, Alloc>(3);
+    res = u_(state, time);
     const auto xyCommon{rdiv2_ * (res[0] + res[1])};
     return {xyCommon * std::cos(state[2]), xyCommon * std::sin(state[2]),
             (res[0] - res[1]) * rdiva_};
+  }
+
+  void operator()(
+      const optimization::Tensor<double, Alloc>& state, double time,
+      optimization::StateDerivativesPoint<double, Alloc>& preallocatedResult) {
+    thread_local static auto res =
+        optimization::StateDerivativesPoint<double, Alloc>(3);
+    res = u_(state, time);
+    const auto xyCommon{rdiv2_ * (res[0] + res[1])};
+    preallocatedResult[0] = xyCommon * std::cos(state[2]);
+    preallocatedResult[1] = xyCommon * std::sin(state[2]);
+    preallocatedResult[1] = (res[0] - res[1]) * rdiva_;
+  }
+
+ private:
+  C u_;
+
+  double rdiv2_;
+  double rdiva_;
+};
+
+template <class Alloc, ControlFunctionTimeOnlyPreallocated<Alloc> C>
+class Model<Alloc, C> {
+ public:
+  explicit Model(C control, double r = 1, double a = 1)
+      : u_{control}, rdiv2_{r / 2}, rdiva_{r / a} {
+    assert((u_(0).size() == 2));
+    assert((u_(0).size() == 2));
+  }
+
+  /**
+   * @brief models equations system of robot (preferred version)
+   *
+   * @param state current state
+   * @param time current time
+   * @return optimization::StateDerivativesPoint left-hand side of equations
+   * system (derivatives of state variables)
+   */
+  optimization::StateDerivativesPoint<double, Alloc> operator()(
+      const optimization::Tensor<double, Alloc>& state, double time) {
+    thread_local static auto res =
+        optimization::StateDerivativesPoint<double, Alloc>(3);
+    u_(time, res);
+    const auto xyCommon{rdiv2_ * (res[0] + res[1])};
+    return {xyCommon * std::cos(state[2]), xyCommon * std::sin(state[2]),
+            (res[0] - res[1]) * rdiva_};
+  }
+
+  void operator()(
+      const optimization::Tensor<double, Alloc>& state, double time,
+      optimization::StateDerivativesPoint<double, Alloc>& preallocatedResult) {
+    thread_local static auto res =
+        optimization::StateDerivativesPoint<double, Alloc>(3);
+    u_(time, res);
+    const auto xyCommon{rdiv2_ * (res[0] + res[1])};
+    preallocatedResult[0] = xyCommon * std::cos(state[2]);
+    preallocatedResult[1] = xyCommon * std::sin(state[2]);
+    preallocatedResult[1] = (res[0] - res[1]) * rdiva_;
+  }
+
+ private:
+  C u_;
+
+  double rdiv2_;
+  double rdiva_;
+};
+
+template <class Alloc, ControlFunctionFullLvaluePreallocated<Alloc> C>
+class Model<Alloc, C> {
+ public:
+  explicit Model(C control, double r = 2, double a = 1)
+      : u_{control}, rdiv2_{r / 2}, rdiva_{r / a} {
+    assert((u_({0, 0, 0}, 0).size() == 2));
+    assert((u_({0, 0, 0}, 0).size() == 2));
+  }
+
+  /**
+   * @brief models equations system of robot (preferred version)
+   *
+   * @param state current state
+   * @param time current time
+   * @return optimization::StateDerivativesPoint<3> left-hand side of equations
+   * system (derivatives of state variables)
+   */
+  optimization::StateDerivativesPoint<double, Alloc> operator()(
+      const optimization::Tensor<double, Alloc>& state, double time) {
+    thread_local static auto res =
+        optimization::StateDerivativesPoint<double, Alloc>(3);
+    u_(state, time, res);
+    const auto xyCommon{rdiv2_ * (res[0] + res[1])};
+    return {xyCommon * std::cos(state[2]), xyCommon * std::sin(state[2]),
+            (res[0] - res[1]) * rdiva_};
+  }
+
+  void operator()(
+      const optimization::Tensor<double, Alloc>& state, double time,
+      optimization::StateDerivativesPoint<double, Alloc>& preallocatedResult) {
+    thread_local static auto res =
+        optimization::StateDerivativesPoint<double, Alloc>(3);
+    u_(state, time, res);
+    const auto xyCommon{rdiv2_ * (res[0] + res[1])};
+    preallocatedResult[0] = xyCommon * std::cos(state[2]);
+    preallocatedResult[1] = xyCommon * std::sin(state[2]);
+    preallocatedResult[1] = (res[0] - res[1]) * rdiva_;
   }
 
  private:
