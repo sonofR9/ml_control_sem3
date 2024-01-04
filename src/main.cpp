@@ -10,6 +10,7 @@
 #include "options.h"
 #include "particle-sworm.h"
 #include "tensor.h"
+#include "utils.h"
 
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
@@ -24,27 +25,6 @@ unsigned int seed = 50;
 }
 
 constexpr double kMaxDiff{1};
-
-template <class Alloc, class VectorAlloc>
-void writeTrajectoryToFiles(
-    const std::vector<std::vector<double, Alloc>, VectorAlloc>& trajectory) {
-  assert((trajectory.size() == 4));
-
-  std::ofstream fileX("trajectory_x.txt");
-  std::ofstream fileY("trajectory_y.txt");
-
-  if (!fileX.is_open() || !fileY.is_open()) {
-    throw std::runtime_error("Error opening files");
-  }
-
-  for (size_t i = 0; i < trajectory[0].size(); ++i) {
-    fileX << trajectory[0][i] << "\n";
-    fileY << trajectory[1][i] << "\n";
-  }
-
-  fileX.close();
-  fileY.close();
-}
 
 class TimeMeasurer {
  public:
