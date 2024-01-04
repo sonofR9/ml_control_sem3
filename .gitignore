@@ -1,5 +1,4 @@
-/build
-/build-insiders
+/build*
 /out
 checks.json
 
