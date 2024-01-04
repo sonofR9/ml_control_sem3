@@ -28,12 +28,11 @@ Tensor<T, Alloc> rungeKutteStep(
   const auto delta6{delta / 6};
 
   thread_local static auto k = Tensor<T, Alloc>(curX.size());
-  thread_local static auto tmp{k};
+  thread_local static auto tmp = Tensor<T, Alloc>(k.size());
   while (curT < interestT) {
     // bringing outside and preallocating does nothing
     if constexpr (CallableTwoArgsPreallocatedResult<
                       decltype(fun), decltype(curX), double, T, Alloc>) {
-      k = Tensor<T, Alloc>(curX.size());
       fun(curX, curT, k);
       tmp = k;
       fun(curX + delta2 * k, curT + delta2, k);

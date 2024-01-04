@@ -96,6 +96,14 @@ struct IntGenerator {
   }
 };
 
+struct VaryingIntGenerator {
+  static int get(int min, int max) {
+    static std::mt19937 gen(seed);
+    std::uniform_int_distribution<> dis(min, max);
+    return dis(gen);
+  }
+};
+
 struct Probability {
   static double get() {
     static std::mt19937 gen(seed);

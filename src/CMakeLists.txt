@@ -6,7 +6,7 @@ set(SOURCES
 )
 
 find_package(Qt6 COMPONENTS Widgets)
-if(true AND Qt6_FOUND)
+if(false AND Qt6_FOUND)
     qt_standard_project_setup()
 
     set(SOURCES ${SOURCES}
@@ -36,7 +36,7 @@ set(PRIVATE_PCH
     <cassert>
 )
 
-if(true AND Qt6_FOUND)
+if(false AND Qt6_FOUND)
     # set_target_properties(${TARGET_NAME} PROPERTIES
     #     WIN32_EXECUTABLE ON
     # )
@@ -69,13 +69,6 @@ if(true AND Qt6_FOUND)
         <QValidator>
         <QWidget>
     )
-    if (CMAKE_SYSTEM_NAME MATCHES "Windows")
-        set(PRIVATE_PCH
-            ${PRIVATE_PCH}
-            <windows.h>
-        )
-    endif()
-
 endif()
 
 if (ENABLE_PCH AND NOT ENABLE_CLANG_TIDY)

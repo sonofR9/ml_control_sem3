@@ -82,9 +82,10 @@ void modelTestEvolution(const optimization::GlobalOptions& options) {
     assert((solverResult.size() == paramsCount));
     return functional<double, Alloc>(solverResult, tMax, dt);
   };
-  Evolution<1000, 1000, Alloc, decltype(adap), 500> solver(
+  Evolution<1000, 1000, Alloc, decltype(adap)> solver(
       adap, paramsCount,
       {.min = options.controlOptions.uMin, .max = options.controlOptions.uMax},
+      static_cast<std::size_t>(options.evolutionOpt.populationSize),
       {.mutation = options.evolutionOpt.mutationRate,
        .crossover = options.evolutionOpt.crossoverRate});
   if (!init.empty()) {
