@@ -2,6 +2,7 @@
 
 #include "global.h"
 #include "gray-code.h"
+#include "utils.h"
 
 #include <algorithm>
 #include <array>
@@ -9,6 +10,7 @@
 #include <execution>
 #include <memory>
 #include <ranges>
+#include <sstream>
 
 namespace optimization {
 template <uint64_t N, uint64_t D, uint64_t Z>

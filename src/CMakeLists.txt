@@ -1,12 +1,23 @@
 set(TARGET_NAME ${PROJECT_NAME})
 
-add_executable(${TARGET_NAME}) 
-set_target_properties(${TARGET_NAME} PROPERTIES LINKER_LANGUAGE CXX)
-
-target_sources(${TARGET_NAME} PRIVATE
+set(SOURCES 
     options.cpp
     main.cpp
 )
+
+find_package(Qt6 COMPONENTS Widgets)
+if(true AND Qt6_FOUND)
+    qt_standard_project_setup()
+
+    set(SOURCES ${SOURCES}
+        main-window.cpp
+
+        main-window.h
+    )
+endif()
+
+add_executable(${TARGET_NAME} ${SOURCES}) 
+
 
 find_boost_libs(property_tree program_options serialization)
 
@@ -16,23 +27,21 @@ target_link_libraries(${TARGET_NAME} PRIVATE
     Boost::serialization
 )
 
-find_package(Qt6 COMPONENTS Widgets)
-
 set(PRIVATE_PCH
     <vector>
     <string>
     <iostream>
+    <fstream>
+    <algorithm>
+    <cassert>
 )
 
-if(Qt6_FOUND)
-    qt_standard_project_setup()
+if(true AND Qt6_FOUND)
     # set_target_properties(${TARGET_NAME} PROPERTIES
     #     WIN32_EXECUTABLE ON
     # )
-
-    target_sources(${TARGET_NAME} PRIVATE
-        main-window.cpp
-    )
+    set_property(TARGET ${TARGET_NAME} PROPERTY WIN32_EXECUTABLE true)
+    add_definitions(-DQT_NO_VERSION_TAGGING)
 
     target_compile_definitions(${TARGET_NAME} PRIVATE BUILD_WITH_QT)
 
@@ -42,7 +51,31 @@ if(Qt6_FOUND)
 
     set(PRIVATE_PCH
         ${PRIVATE_PCH}
+        <QLabel>
+        <QCheckBox>
+        <QComboBox>
+        <QFileDialog>
+        <QHBoxLayout>
+        <QLabel>
+        <QLineEdit>
+        <QMenu>
+        <QMenuBar>
+        <QMessageBox>
+        <QProgressBar>
+        <QPushButton>
+        <QSettings>
+        <QTabWidget>
+        <QVBoxLayout>
+        <QValidator>
+        <QWidget>
     )
+    if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+        set(PRIVATE_PCH
+            ${PRIVATE_PCH}
+            <windows.h>
+        )
+    endif()
+
 endif()
 
 if (ENABLE_PCH AND NOT ENABLE_CLANG_TIDY)

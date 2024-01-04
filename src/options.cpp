@@ -32,7 +32,8 @@ constexpr T getValue(const boost::program_options::variables_map& vm,
 }  // namespace
 
 namespace optimization {
-GlobalOptions parseOptions(int argc, const char** argv) noexcept try {
+GlobalOptions parseOptions(int argc, const char** argv,
+                           const std::string& configPathFromQt) noexcept try {
   namespace po = boost::program_options;
 
   // clang-format off
@@ -76,7 +77,7 @@ GlobalOptions parseOptions(int argc, const char** argv) noexcept try {
       ("clear", po::bool_switch()->default_value(false),
           "Clear control save file before start")
       ("seed,s", po::value<unsigned int>()->default_value(std::random_device{}()),
-          "Random seed (type: unsigned int) (default: random)")
+          "Random seed (type: unsigned int) (if empty will be random)")
       ("printStep", po::value<int>()->default_value(5),
           "Print results every N steps")
       ("configFile,c", po::value<std::string>(), "Configuration file")
@@ -91,6 +92,8 @@ GlobalOptions parseOptions(int argc, const char** argv) noexcept try {
     std::exit(0);
   }
 
+  GlobalOptions options;
+
   if (vm.count("configFile") != 0U) {
     const auto& fileName{vm["configFile"].as<std::string>()};
     std::ifstream ifs(fileName);
@@ -99,12 +102,20 @@ GlobalOptions parseOptions(int argc, const char** argv) noexcept try {
       std::exit(1);
     }
 
+    options.configFile = fileName;
+    po::store(po::parse_config_file(ifs, desc), vm);
+  } else if (!configPathFromQt.empty()) {
+    std::ifstream ifs(configPathFromQt);
+    if (!ifs.is_open()) {
+      std::cout << std::format("Config file '{}' does not exist\n",
+                               configPathFromQt);
+      std::exit(1);
+    }
+    options.configFile = configPathFromQt;
     po::store(po::parse_config_file(ifs, desc), vm);
   }
 
   po::notify(vm);
-
-  GlobalOptions options;
 
   // Populate general options
   options.tMax = getValue<double>(vm, "tmax");

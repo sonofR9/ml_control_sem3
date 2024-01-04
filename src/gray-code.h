@@ -5,11 +5,11 @@
 #include <ostream>
 
 namespace optimization {
-uint64_t to_gray(uint64_t n) {
+constexpr uint64_t to_gray(uint64_t n) {
   return (n ^ (n >> 1));
 }
 
-uint64_t from_gray(uint64_t n) {
+constexpr uint64_t from_gray(uint64_t n) {
   int ish = 1;
   uint64_t ans = n;
   uint64_t idiv = 0;

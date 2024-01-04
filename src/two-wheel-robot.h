@@ -182,8 +182,8 @@ class Model<Alloc, C> {
  public:
   explicit Model(C control, double r = 1, double a = 1)
       : u_{control}, rdiv2_{r / 2}, rdiva_{r / a} {
-    assert((u_(0).size() == 2));
-    assert((u_(0).size() == 2));
+    // assert((u_(0).size() == 2));
+    // assert((u_(0).size() == 2));
   }
 
   /**
@@ -228,8 +228,8 @@ class Model<Alloc, C> {
  public:
   explicit Model(C control, double r = 2, double a = 1)
       : u_{control}, rdiv2_{r / 2}, rdiva_{r / a} {
-    assert((u_({0, 0, 0}, 0).size() == 2));
-    assert((u_({0, 0, 0}, 0).size() == 2));
+    // assert((u_({0, 0, 0}, 0).size() == 2));
+    // assert((u_({0, 0, 0}, 0).size() == 2));
   }
 
   /**

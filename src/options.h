@@ -29,6 +29,8 @@ struct ControlOptions {
 };
 
 struct GlobalOptions {
+  std::string configFile;
+
   double tMax;
   double integrationDt;
   // TODO(novak)
@@ -51,7 +53,8 @@ struct GlobalOptions {
   int printStep;
 };
 
-GlobalOptions parseOptions(int argc, const char** argv) noexcept;
+GlobalOptions parseOptions(int argc, const char** argv,
+                           const std::string& configPathFromQt = {}) noexcept;
 void writeConfig(const GlobalOptions& options,
                  const std::filesystem::path& file = {"config.ini"});
 }  // namespace optimization

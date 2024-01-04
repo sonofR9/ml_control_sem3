@@ -119,3 +119,7 @@ if(ENABLE_TEST)
     set(SERVICES_DIR "${PROJECT_SOURCE_DIR}/backend/services")
     set(BACKEND_UTILS_DIR "${PROJECT_SOURCE_DIR}/backend/utils")
 endif()
+
+if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+    add_compile_definitions(WINDOWS)  
+endif()

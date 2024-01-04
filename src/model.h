@@ -3,6 +3,7 @@
 #include "parse-function.h"
 #include "runge-kutte.h"
 #include "two-wheel-robot.h"
+#include "utils.h"
 
 #include <cassert>
 

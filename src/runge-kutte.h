@@ -2,6 +2,7 @@
 
 #include "global.h"
 #include "tensor.h"
+#include "utils.h"
 
 #include <vector>
 namespace optimization {
