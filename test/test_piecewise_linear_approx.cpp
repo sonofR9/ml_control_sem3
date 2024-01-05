@@ -1,5 +1,5 @@
 #include "function-approximation.h"
-#include "model.h"
+#include "functional.h"
 
 #include <gtest/gtest.h>
 

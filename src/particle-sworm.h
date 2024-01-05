@@ -8,8 +8,6 @@
 
 namespace optimization {
 
-// TODO(novak) give template param Alloc => functions uses Alloc<double> etc.?
-
 /**
  * @brief
  *

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "evolution-optimization.h"
+#include "functional.h"
 #include "global.h"
-#include "model.h"
 #include "options.h"
 #include "particle-sworm.h"
 #include "tensor.h"
@@ -10,6 +10,7 @@
 #include <cassert>
 #include <chrono>
 #include <fstream>
+
 
 namespace optimization {
 

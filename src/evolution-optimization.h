@@ -215,8 +215,9 @@ class Evolution {
   std::pair<FitnessArr, int> evaluatePopulation(
       const Population& population) const {
     double min = std::numeric_limits<double>::max();
-    // TODO(novak) preallocate
-    std::pair<FitnessArr, int> fitness{FitnessArr(populationSize_), -1};
+    thread_local static std::pair<FitnessArr, int> fitness{
+        FitnessArr(populationSize_), -1};
+    fitness.first.resize(populationSize_);
 
     std::transform(
         std::execution::par_unseq, population.begin(), population.end(),
@@ -234,7 +235,6 @@ class Evolution {
 
   std::unique_ptr<Population> generatePopulation() const {
     // generate random population (P chromosomes of size N each)
-    // TODO(novak) Tensor => size
     auto population{std::make_unique<Population>(populationSize_)};
     std::generate(
         population->begin(), population->end(), [this]() -> Chromosome {
@@ -264,7 +264,6 @@ class Evolution {
 
   std::unique_ptr<Population> generateEmptyPopulation() const {
     // generate random population (P chromosomes of size N each)
-    // TODO(novak) Tensor => size
     auto population{std::make_unique<Population>(populationSize_)};
     std::generate(population->begin(), population->end(),
                   [this]() -> Chromosome {

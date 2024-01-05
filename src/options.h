@@ -13,7 +13,6 @@ struct GrayWolfOptions {
 
 struct EvolutionOptions {
   int populationSize;
-  // TODO(novak)
   double mutationRate;
   double crossoverRate;
 };
@@ -46,7 +45,7 @@ struct GlobalOptions {
 
   double tMax;
   double integrationDt;
-  // TODO(novak)
+  // TODO(novak) tolerance
   double solutionTolerance;
 
   FunctionalOptions functionalOptions;
