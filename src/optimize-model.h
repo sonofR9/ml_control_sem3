@@ -56,7 +56,8 @@ Tensor<double, Alloc<double>> modelTestEvolution(
   using namespace two_wheeled_robot;
   Functional functional{{.time = options.functionalOptions.coefTime,
                          .terminal = options.functionalOptions.coefTerminal,
-                         .obstacle = options.functionalOptions.coefObstacle}};
+                         .obstacle = options.functionalOptions.coefObstacle},
+                        options.functionalOptions.terminalTolerance};
   const auto adap = [paramsCount, tMax, dt, &functional](
                         const Tensor<double, Alloc<double>>& solverResult) {
     assert((solverResult.size() == paramsCount));
@@ -107,7 +108,8 @@ Tensor<double, Alloc<double>> modelTestGray(
   using namespace two_wheeled_robot;
   Functional functional{{.time = options.functionalOptions.coefTime,
                          .terminal = options.functionalOptions.coefTerminal,
-                         .obstacle = options.functionalOptions.coefObstacle}};
+                         .obstacle = options.functionalOptions.coefObstacle},
+                        options.functionalOptions.terminalTolerance};
   const auto adap = [paramsCount, tMax, dt, &functional](
                         const Tensor<double, Alloc<double>>& solverResult) {
     assert((solverResult.size() == paramsCount));

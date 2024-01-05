@@ -78,6 +78,8 @@ GlobalOptions parseOptions(int argc, const char** argv,
           "Terminal position coefficient in functional")
       ("functional.coefObstacle", po::value<double>()->default_value(1),
           "Obstacle coefficient in functional")
+      ("functional.terminalTolerance", po::value<double>()->default_value(0.1), 
+          "Tolerance of terminal solution")
       ("functional.circleX",
           po::value<std::vector<double>>()->multitoken()->default_value({2.5, 7.5}),
           "Circle centers x coordinates (comma-separated list or separate "
@@ -173,6 +175,8 @@ GlobalOptions parseOptions(int argc, const char** argv,
       getValue<double>(vm, "functional.coefTerminal");
   options.functionalOptions.coefObstacle =
       getValue<double>(vm, "functional.coefObstacle");
+  options.functionalOptions.terminalTolerance =
+      getValue<double>(vm, "functional.terminalTolerance");
   const auto circlesX = getValue<std::vector<double>>(vm, "functional.circleX");
   const auto circlesY = getValue<std::vector<double>>(vm, "functional.circleY");
   const auto circlesR = getValue<std::vector<double>>(vm, "functional.circleR");
@@ -253,6 +257,8 @@ void writeConfig(const GlobalOptions& options,
   pt.put("functional.coefTime", options.functionalOptions.coefTime);
   pt.put("functional.coefTerminal", options.functionalOptions.coefTerminal);
   pt.put("functional.coefObstacle", options.functionalOptions.coefObstacle);
+  pt.put("functional.terminalTolerance",
+         options.functionalOptions.terminalTolerance);
   std::vector<double> circlesX;
   std::vector<double> circlesY;
   std::vector<double> circlesR;

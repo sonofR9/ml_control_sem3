@@ -46,6 +46,7 @@ class MainWindow : public QMainWindow {
 
  signals:
   void iterationChanged(int iteration, double functional);
+  // void batchIterationChanged(int iteration, double functional);
   void closed();
 
  private:
@@ -63,11 +64,13 @@ class MainWindow : public QMainWindow {
   void fillOptionsFromGui();
 
   void startOptimization();
+  // void startBatchOptimization();
 
   void enableCurrentOptimizationMethod();
 
  private slots:
   void onIterationChanged(int iteration, double functional);
+  // void onBatchIterationChanged(int iteration, double functional);
 
  private:
   optimization::GlobalOptions& options_;
@@ -83,6 +86,8 @@ class MainWindow : public QMainWindow {
 
   std::chrono::time_point<std::chrono::high_resolution_clock> tStart_;
 
+  int batchNumber_;
+
   QLineEdit* tMax_;
   QLineEdit* dt_;
   QComboBox* method_;
@@ -96,6 +101,7 @@ class MainWindow : public QMainWindow {
     QLineEdit* coefTime_;
     QLineEdit* coefTerminal_;
     QLineEdit* coefObstacle_;
+    QLineEdit* terminalTolerance_;
     // TODO(novak): circles
   } functional_;
 

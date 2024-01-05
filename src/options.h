@@ -37,6 +37,9 @@ struct FunctionalOptions {
   double coefTime;
   double coefTerminal;
   double coefObstacle;
+  
+  double terminalTolerance;
+
   std::vector<CircleData> circles;
 };
 
@@ -45,9 +48,6 @@ struct GlobalOptions {
 
   double tMax;
   double integrationDt;
-  // TODO(novak) tolerance
-  double solutionTolerance;
-
   FunctionalOptions functionalOptions;
 
   ControlOptions controlOptions;

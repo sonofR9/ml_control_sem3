@@ -470,6 +470,17 @@ QVBoxLayout* MainWindow::constructFunctionalParams(QWidget* tab) {
   addField<QDoubleValidator>(tab, vLayout, "obstacle",
                              functional_.coefObstacle_);
 
+  auto* subTitleOther{new QLabel{"Other", tab}};
+  subTitleOther->setAlignment(Qt::AlignmentFlag::AlignCenter);
+  subTitleOther->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+  font = subTitleOther->font();
+  font.setItalic(true);
+  subTitleOther->setFont(font);
+  vLayout->addWidget(subTitleOther);
+
+  addField<QDoubleValidator>(tab, vLayout, "terminal tolerance",
+                             functional_.terminalTolerance_);
+
   vLayout->addStretch(1);
   vLayout->setSpacing(kSpacing);
 
@@ -551,6 +562,8 @@ void MainWindow::fillGuiFromOptions() {
       QString::number(options_.functionalOptions.coefTerminal));
   functional_.coefObstacle_->setText(
       QString::number(options_.functionalOptions.coefObstacle));
+  functional_.terminalTolerance_->setText(
+      QString::number(options_.functionalOptions.terminalTolerance));
   // TODO(novak) add circles
 
   // Set optimization method
@@ -592,6 +605,8 @@ void MainWindow::fillOptionsFromGui() {
       functional_.coefTerminal_->text().toDouble();
   options_.functionalOptions.coefObstacle =
       functional_.coefObstacle_->text().toDouble();
+  options_.functionalOptions.terminalTolerance =
+      functional_.terminalTolerance_->text().toDouble();
   // TODO(novak) circles
 
   // Read optimization method

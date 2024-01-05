@@ -9,7 +9,6 @@
 
 namespace two_wheeled_robot {
 using namespace optimization;
-constexpr double kEpsTrajectory{1e-1};
 
 /**
  * @brief StaticTensor<N, StaticTensor<2, double>>
@@ -112,8 +111,9 @@ class Functional {
     double terminal;
     double obstacle;
   };
-  constexpr explicit Functional(Coeffients coefficients) noexcept
-      : coeffients_{coefficients} {
+  constexpr explicit Functional(Coeffients coefficients,
+                                double terminalTolerance) noexcept
+      : coeffients_{coefficients}, terminalTolerance_{terminalTolerance} {
   }
 
   /**
@@ -133,8 +133,7 @@ class Functional {
     for (; tEnd < tMax - kEps; tEnd += dt) {
       if (std::abs(solvedX[0][i] - xf[0]) + std::abs(solvedX[1][i] - xf[1]) +
               std::abs(solvedX[2][i] - xf[2]) <
-          kEpsTrajectory) {
-        std::cout << "Target reached at t = " << tEnd << "\n";
+          terminalTolerance_) {
         break;
       }
       ++i;
@@ -170,5 +169,6 @@ class Functional {
 
  private:
   Coeffients coeffients_;
+  double terminalTolerance_;
 };
 }  // namespace two_wheeled_robot
