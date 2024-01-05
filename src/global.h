@@ -2,7 +2,9 @@
 
 #include "tensor.h"
 
+#include <format>
 #include <functional>
+#include <iostream>
 #include <numeric>
 #include <random>
 
@@ -47,6 +49,19 @@ template <typename F, typename T>
 concept Regular1OutFunction = requires(F func, const T& inp) {
   { func(inp) } -> std::same_as<double>;
 };
+
+// ----------------------------- print ---------------------------------------
+template <typename F>
+concept PrintFunction =
+    requires(F func, std::size_t iteration, double functional) {
+      { func(iteration, functional) } -> std::same_as<void>;
+    };
+
+inline void coutPrint(std::size_t iteration, double functional) {
+  std::cout << std::format("\33[2K\riter {} functional {:.5f}", iteration,
+                           functional)
+            << std::flush;
+}
 
 // ----------------------------- norm ---------------------------------------
 template <typename T>

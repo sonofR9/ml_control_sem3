@@ -60,7 +60,7 @@ class TimeMeasurer {
 
 using namespace optimization;
 
-template <class Alloc>
+template <template <typename> class Alloc>
 void modelTestEvolution(const optimization::GlobalOptions& options) {
   const double tMax{options.tMax};
   const double dt{options.integrationDt};
@@ -68,9 +68,9 @@ void modelTestEvolution(const optimization::GlobalOptions& options) {
   std::size_t controlStepsCount{options.controlOptions.numOfParams};
   std::size_t paramsCount{controlStepsCount * 2};
 
-  Tensor<double, Alloc> init{};
+  Tensor<double, Alloc<double>> init{};
   if (!options.controlSaveFile.empty() && !options.clearSaveBeforeStart) {
-    init = readSaveFile<double, Alloc>(options.controlSaveFile);
+    init = readSaveFile<double, Alloc<double>>(options.controlSaveFile);
     init.resize(paramsCount);
   }
 
@@ -78,9 +78,9 @@ void modelTestEvolution(const optimization::GlobalOptions& options) {
 
   using namespace two_wheeled_robot;
   const auto adap = [paramsCount, tMax,
-                     dt](const Tensor<double, Alloc>& solverResult) {
+                     dt](const Tensor<double, Alloc<double>>& solverResult) {
     assert((solverResult.size() == paramsCount));
-    return functional<double, Alloc>(solverResult, tMax, dt);
+    return functional<double, Alloc<double>>(solverResult, tMax, dt);
   };
   Evolution<1000, 1000, Alloc, decltype(adap)> solver(
       adap, paramsCount,
@@ -97,11 +97,12 @@ void modelTestEvolution(const optimization::GlobalOptions& options) {
     writeToSaveFile(options.controlSaveFile, best);
   }
 
-  const auto trajectory{getTrajectoryFromControl<double, Alloc>(best, tMax)};
+  const auto trajectory{
+      getTrajectoryFromControl<double, Alloc<double>>(best, tMax)};
   writeTrajectoryToFiles(trajectory);
 }
 
-template <class Alloc>
+template <template <typename> class Alloc>
 void modelTestGray(const optimization::GlobalOptions& options) {
   const double tMax{options.tMax};
   const double dt{options.integrationDt};
@@ -109,9 +110,9 @@ void modelTestGray(const optimization::GlobalOptions& options) {
   std::size_t controlStepsCount{options.controlOptions.numOfParams};
   std::size_t paramsCount{controlStepsCount * 2};
 
-  Tensor<double, Alloc> init{};
+  Tensor<double, Alloc<double>> init{};
   if (!options.controlSaveFile.empty() && !options.clearSaveBeforeStart) {
-    init = readSaveFile<double, Alloc>(options.controlSaveFile);
+    init = readSaveFile<double, Alloc<double>>(options.controlSaveFile);
     init.resize(paramsCount);
   }
 
@@ -119,9 +120,9 @@ void modelTestGray(const optimization::GlobalOptions& options) {
 
   using namespace two_wheeled_robot;
   const auto adap = [paramsCount, tMax,
-                     dt](const Tensor<double, Alloc>& solverResult) {
+                     dt](const Tensor<double, Alloc<double>>& solverResult) {
     assert((solverResult.size() == paramsCount));
-    return functional<double, Alloc>(solverResult, tMax, dt);
+    return functional<double, Alloc<double>>(solverResult, tMax, dt);
   };
   GrayWolfAlgorithm<Alloc, decltype(adap)> solver(
       adap, paramsCount, 10,
@@ -136,7 +137,8 @@ void modelTestGray(const optimization::GlobalOptions& options) {
     writeToSaveFile(options.controlSaveFile, best);
   }
 
-  const auto trajectory{getTrajectoryFromControl<double, Alloc>(best, tMax)};
+  const auto trajectory{
+      getTrajectoryFromControl<double, Alloc<double>>(best, tMax)};
   writeTrajectoryToFiles(trajectory);
 }
 
@@ -192,10 +194,10 @@ int main(int argc, char** argvCmd) try {
 
   switch (options.method) {
   case GlobalOptions::Method::kEvolution:
-    modelTestEvolution<RepetitiveAllocator<double> >(options);
+    modelTestEvolution<RepetitiveAllocator>(options);
     break;
   case GlobalOptions::Method::kGrayWolf:
-    modelTestGray<RepetitiveAllocator<double> >(options);
+    modelTestGray<RepetitiveAllocator>(options);
     break;
   }
   RepetitiveAllocator<double> alloc{};
