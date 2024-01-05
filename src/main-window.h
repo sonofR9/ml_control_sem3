@@ -24,10 +24,6 @@ class QHBoxLayout;
 class QVBoxLayout;
 class QWidget;
 
-namespace optimization {
-extern unsigned int seed;
-}
-
 constexpr const char* kAppFolder{"ml_control_sem3"};
 constexpr const char* kConfigPathFile{"/config_file_path.ini"};
 
@@ -38,7 +34,8 @@ class MainWindow : public QMainWindow {
   using Tensor = optimization::Tensor<T, Alloc>;
 
   template <typename T>
-  using RepetitiveAllocator = optimization::RepetitiveAllocator<T>;
+  using Allocator = optimization::RepetitiveAllocator<T>;
+  using DoubleAllocator = Allocator<double>;
 
  public:
   explicit MainWindow(optimization::GlobalOptions& options,
@@ -64,6 +61,8 @@ class MainWindow : public QMainWindow {
 
   void startOptimization();
 
+  void enableCurrentOptimizationMethod();
+
  private slots:
   void onIterationChanged(int iteration, double functional);
 
@@ -72,11 +71,12 @@ class MainWindow : public QMainWindow {
   struct {
     std::string savePath;
     std::size_t iters;
+    double tMax;
   } copy_;
 
-  std::future<Tensor<double, RepetitiveAllocator<double>>> optimResult_;
-  Tensor<double, RepetitiveAllocator<double>> best_;
-  std::vector<std::vector<double, RepetitiveAllocator<double>>> trajectory_;
+  std::future<Tensor<double, DoubleAllocator>> optimResult_;
+  Tensor<double, DoubleAllocator> best_;
+  std::vector<std::vector<double, DoubleAllocator>> trajectory_;
 
   std::chrono::time_point<std::chrono::high_resolution_clock> tStart_;
 

@@ -1,8 +1,8 @@
 #include "main-window.h"
 
-#include "evolution-optimization.h"
+#include "global.h"
+#include "optimize-model.h"
 #include "options.h"
-#include "particle-sworm.h"
 #include "utils.h"
 
 #include <QChartView>
@@ -24,7 +24,9 @@
 #include <QValidator>
 #include <QWidget>
 
+#include <array>
 #include <fstream>
+#include <random>
 
 namespace {
 using namespace optimization;
@@ -34,13 +36,19 @@ constexpr int kSpacing{5};
 
 void setTextIteration(QLabel* label, int iter, std::size_t maxIter,
                       double functional) {
-  label->setText(
-      std::format("Iteration: {}/{} Functional: {}", iter, maxIter, functional)
-          .c_str());
+  label->setText(std::format("Iteration: {}/{} Functional: {:.5f}", iter,
+                             maxIter, functional)
+                     .c_str());
 }
 
-void setTextTimePerIteration(QLabel* label, double time) {
-  label->setText(std::format("Time per iteration: {}", time).c_str());
+void setTextTimePerIteration(QLabel* label, double totalTime,
+                             std::size_t maxIter) {
+  if (maxIter != 0) {
+    label->setText(std::format("Total time: {:6f}, Time per iteration: {:6f}",
+                               totalTime,
+                               totalTime / static_cast<double>(maxIter))
+                       .c_str());
+  }
 }
 
 bool isFilePathValid(const std::string& path) {
@@ -65,17 +73,58 @@ void addField(QWidget* parent, QVBoxLayout* vLayout, const QString& lblName,
   hLayout->addWidget(result);
 }
 
-template <class Alloc>
-void updateChart(QChartView* chart_, std::vector<double, Alloc> x,
-                 std::vector<double, Alloc> y) {
-  QChart* chart = chart_->chart();
-  chart->removeAllSeries();
+struct CircleData {
+  double x;
+  double y;
+  double r;
+  bool visible{false};
+};
 
-  auto* series = new QLineSeries();
-  for (size_t i = 0; i < x.size(); ++i) {
-    series->append(x[i], y[i]);
+template <class Alloc>
+void updateChart(QChartView* chart_, const std::vector<double, Alloc>& x,
+                 const std::vector<double, Alloc>& y, CircleData circle1 = {},
+                 CircleData circle2 = {}) {
+  auto* chart{chart_->chart()};
+
+  QLineSeries* lastSeries{nullptr};
+  if (!chart->series().empty()) {
+    lastSeries = qobject_cast<QLineSeries*>(chart->series().last());
+    lastSeries->setName("Previous");
+
+    QPen pen{lastSeries->pen()};
+    pen.setStyle(Qt::DashLine);
+    pen.setColor(Qt::gray);
+    lastSeries->setPen(pen);
   }
-  chart->addSeries(series);
+  for (qsizetype i{chart->series().count() - 2}; i >= 0; --i) {
+    QAbstractSeries* series = chart->series().at(i);
+    chart->removeSeries(series);
+  }
+
+  std::array circles{circle1, circle2};
+  for (auto i{0}; i < 2; ++i) {
+    if (circles[i].visible) {
+      auto* circleSeries{new QLineSeries{}};
+      circleSeries->setName("Obstacle " + QString::number(i + 1));
+      for (auto i{0}; i <= 360; ++i) {
+        double angle = M_PI * i / 180.0;
+        double x = circles[i].x + circles[i].r * cos(angle);
+        double y = circles[i].y + circles[i].r * sin(angle);
+        circleSeries->append(x, y);
+      }
+      circleSeries->setColor(Qt::red);
+      chart->addSeries(circleSeries);
+    }
+  }
+
+  auto* newSeries{new QLineSeries()};
+  newSeries->setName("Current");
+  newSeries->setColor(Qt::blue);
+  for (size_t i = 0; i < x.size(); ++i) {
+    newSeries->append(x[i], y[i]);
+  }
+
+  chart->addSeries(newSeries);
 
   chart->createDefaultAxes();
 
@@ -124,6 +173,58 @@ MainWindow::~MainWindow() {
   writeToSaveFile(options_.controlSaveFile, best_);
 }
 
+void MainWindow::startOptimization() {
+  fillOptionsFromGui();
+  copy_.iters = options_.iter;
+  copy_.savePath = options_.controlSaveFile;
+  copy_.tMax = options_.tMax;
+
+  optimization::SharedGenerator::gen.seed(options_.seed);
+
+  progress_->setMaximum(static_cast<int>(copy_.iters));
+  progress_->setValue(0);
+  setTextIteration(iterations_, 0, copy_.iters, -1);
+
+  tStart_ = std::chrono::high_resolution_clock::now();
+  optimResult_ = std::async(
+      std::launch::async, [this]() -> Tensor<double, DoubleAllocator> {
+        auto printer = [this](int iteration, double functional) {
+          emitIterationChanged(iteration, functional);
+        };
+        switch (options_.method) {
+        case Method::kEvolution:
+          return modelTestEvolution<Allocator, decltype(printer)>(options_,
+                                                                  printer);
+        case Method::kGrayWolf:
+          return modelTestGray<Allocator, decltype(printer)>(options_, printer);
+        };
+      });
+  startOptimization_->setEnabled(false);
+  startOptimization_->show();
+}
+
+void MainWindow::onIterationChanged(int iteration, double functional) {
+  progress_->setValue(iteration);
+  setTextIteration(iterations_, iteration, copy_.iters, functional);
+  auto tNow = std::chrono::high_resolution_clock::now();
+  auto duration =
+      std::chrono::duration_cast<std::chrono::milliseconds>(tNow - tStart_);
+  setTextTimePerIteration(
+      iterTime_, static_cast<double>(duration.count()) / 1000, iteration);
+
+  if (iteration == static_cast<int>(copy_.iters)) {
+    best_ = optimResult_.get();
+    writeToSaveFile(options_.controlSaveFile, best_);
+    startOptimization_->setEnabled(true);
+    startOptimization_->show();
+    // TODO(novak)
+    trajectory_ =
+        two_wheeled_robot::getTrajectoryFromControl<double, DoubleAllocator>(
+            best_, copy_.tMax);
+    updateChart(chart_, trajectory_[0], trajectory_[1]);
+  }
+}
+
 void MainWindow::emitIterationChanged(std::size_t iteration,
                                       double functional) {
   emit iterationChanged(static_cast<int>(iteration), functional);
@@ -132,18 +233,18 @@ void MainWindow::emitIterationChanged(std::size_t iteration,
 void MainWindow::constructView() {
   auto* central{new QWidget{this}};
   setCentralWidget(central);
-  // central->setEnabled(false);
   auto* vLayout{new QVBoxLayout{}};
   vLayout->setSpacing(kSpacing);
   centralWidget()->setLayout(vLayout);
 
   auto* tabWidget{new QTabWidget{this}};
   vLayout->addWidget(tabWidget);
+  tabWidget->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Maximum);
 
   auto* optimizationTab{constructOptimizationTab(tabWidget)};
   tabWidget->addTab(optimizationTab, "Optimization");
 
-  auto* menu{new QMenuBar{this}};
+  auto* menu{menuBar()};
   auto* config{menu->addMenu("&Config")};
   auto* openConfig{config->addAction("Open config...")};
   connect(openConfig, &QAction::triggered, [this]() -> void {
@@ -162,6 +263,7 @@ void MainWindow::constructView() {
   });
 
   chart_ = new QChartView{centralWidget()};
+  chart_->setRenderHint(QPainter::Antialiasing);
   chart_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::MinimumExpanding);
   vLayout->addWidget(chart_);
 }
@@ -181,6 +283,7 @@ QWidget* MainWindow::constructOptimizationTab(QWidget* tabWidget) {
   hLayout->addWidget(wolfParams);
   auto* evolutionParams{constructEvolutionParams(tab)};
   hLayout->addWidget(evolutionParams);
+  enableCurrentOptimizationMethod();
 
   hLayout->addStretch(1);
   hLayout->setSpacing(kSpacing);
@@ -204,7 +307,7 @@ QWidget* MainWindow::constructOptimizationTab(QWidget* tabWidget) {
   setTextIteration(iterations_, 0, 0, 0);
   hLayout->addWidget(iterations_);
   iterTime_ = new QLabel{tab};
-  setTextTimePerIteration(iterTime_, -1);
+  iterTime_->setText("Run to display time statistics");
   iterTime_->setAlignment(Qt::AlignmentFlag::AlignRight);
   hLayout->addWidget(iterTime_);
 
@@ -233,19 +336,7 @@ QVBoxLayout* MainWindow::constructGlobalParams(QWidget* tab) {
   method_->insertItem(static_cast<int>(Method::kEvolution),
                       methodToName(Method::kEvolution).c_str());
   connect(method_, qOverload<int>(&QComboBox::currentIndexChanged),
-          [this](int index) {
-            options_.method = static_cast<Method>(index);
-            switch (options_.method) {
-            case Method::kEvolution:
-              evolution_.widget_->show();
-              wolf_.widget_->hide();
-              break;
-            case Method::kGrayWolf:
-              evolution_.widget_->hide();
-              wolf_.widget_->show();
-              break;
-            }
-          });
+          [this](int) { enableCurrentOptimizationMethod(); });
   hLayout->addWidget(method_);
 
   addField<QIntValidator>(tab, vLayout, "seed (-1 random)", seed_);
@@ -393,7 +484,12 @@ void MainWindow::fillOptionsFromGui() {
   // Read optimization method
   options_.method = static_cast<Method>(method_->currentIndex());
 
-  options_.seed = seed_->text().toUInt();
+  const auto seed{seed_->text().toInt()};
+  if (seed < 0) {
+    options_.seed = std::random_device{}();
+  } else {
+    options_.seed = seed_->text().toUInt();
+  }
   options_.printStep = printStep_->text().toInt();
   options_.controlSaveFile = filePath_->text().toStdString();
   options_.clearSaveBeforeStart = clear_->isChecked();
@@ -414,33 +510,15 @@ void MainWindow::fillOptionsFromGui() {
       evolution_.crossover_->text().toDouble();
 }
 
-void MainWindow::startOptimization() {
-  fillOptionsFromGui();
-  copy_.iters = options_.iter;
-  copy_.savePath = options_.controlSaveFile;
-
-  progress_->setMaximum(static_cast<int>(copy_.iters));
-
-  tStart_ = std::chrono::high_resolution_clock::now();
-  optimResult_ = std::async(
-      std::launch::async,
-      [this]() -> Tensor<double, RepetitiveAllocator<double>> { return {}; });
-  startOptimization_->setEnabled(false);
-}
-
-void MainWindow::onIterationChanged(int iteration, double functional) {
-  // TODO(novak) if end => show button
-  progress_->setValue(iteration);
-  setTextIteration(iterations_, iteration, copy_.iters, functional);
-  if (iteration == static_cast<int>(copy_.iters)) {
-    auto tEnd = std::chrono::high_resolution_clock::now();
-    auto duration =
-        std::chrono::duration_cast<std::chrono::milliseconds>(tEnd - tStart_);
-    setTextTimePerIteration(iterTime_,
-                            static_cast<double>(duration.count()) / 1000);
-
-    best_ = optimResult_.get();
-    writeToSaveFile(options_.controlSaveFile, best_);
-    startOptimization_->setEnabled(true);
+void MainWindow::enableCurrentOptimizationMethod() {
+  evolution_.widget_->hide();
+  wolf_.widget_->hide();
+  switch (static_cast<Method>(method_->currentIndex())) {
+  case Method::kEvolution:
+    evolution_.widget_->show();
+    break;
+  case Method::kGrayWolf:
+    wolf_.widget_->show();
+    break;
   }
 }
