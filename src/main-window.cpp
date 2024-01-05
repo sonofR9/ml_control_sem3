@@ -309,6 +309,11 @@ void MainWindow::constructView() {
       std::erase_if(charts_, [chart](QChart* c) -> bool { return c == chart; });
     });
 
+    connect(this, &MainWindow::destroyed, [dialog]() {
+      dialog->disconnect();
+      dialog->close();
+    });
+
     dialog->show();
   });
 }
@@ -369,6 +374,7 @@ QVBoxLayout* MainWindow::constructGlobalParams(QWidget* tab) {
 
   addField<QDoubleValidator>(tab, vLayout, "tmax", tMax_);
   addField<QDoubleValidator>(tab, vLayout, "dt", dt_);
+  addField<QIntValidator>(tab, vLayout, "iterations", itersInput_);
 
   auto* hLayout{new QHBoxLayout{}};
   hLayout->setSpacing(kSpacing);
@@ -504,6 +510,7 @@ void MainWindow::fillGuiFromOptions() {
   // Global options
   tMax_->setText(QString::number(options_.tMax));
   dt_->setText(QString::number(options_.integrationDt));
+  itersInput_->setText(QString::number(options_.iter));
 
   // Set optimization method
   method_->setCurrentIndex(static_cast<int>(options_.method));
@@ -536,6 +543,7 @@ void MainWindow::fillOptionsFromGui() {
   // Global options
   options_.tMax = tMax_->text().toDouble();
   options_.integrationDt = dt_->text().toDouble();
+  options_.iter = std::min(itersInput_->text().toUInt(), 1U);
 
   // Read optimization method
   options_.method = static_cast<Method>(method_->currentIndex());

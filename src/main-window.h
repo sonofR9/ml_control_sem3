@@ -81,6 +81,7 @@ class MainWindow : public QMainWindow {
   QLineEdit* tMax_;
   QLineEdit* dt_;
   QComboBox* method_;
+  QLineEdit* itersInput_;
   QLineEdit* seed_;
   QLineEdit* printStep_;
   QPushButton* saveFile_;
