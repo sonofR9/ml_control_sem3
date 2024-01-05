@@ -23,6 +23,13 @@ constexpr T getValue(const boost::program_options::variables_map& vm,
   return {};
 }
 
+std::string vectorToCommaSeparatedString(const std::vector<double>& values) {
+  std::stringstream stream;
+  std::copy(values.begin(), values.end(),
+            std::ostream_iterator<double>(stream, ","));
+  return stream.str();
+}
+
 void vectorToSeparateLines(const std::string& fileName, std::string tag) {
   if (tag.back() != '=') {
     tag += '=';
@@ -64,6 +71,25 @@ GlobalOptions parseOptions(int argc, const char** argv,
       // General options
       ("tmax,t", po::value<double>()->default_value(10.0), "Maximum simulation time")
       ("dt", po::value<double>()->default_value(0.01), "Integration time step")
+      // functional options
+      ("functional.coefTime", po::value<double>()->default_value(1), 
+          "Time coefficient in functional")
+      ("functional.coefTerminal", po::value<double>()->default_value(1),
+          "Terminal position coefficient in functional")
+      ("functional.coefObstacle", po::value<double>()->default_value(1),
+          "Obstacle coefficient in functional")
+      ("functional.circleX",
+          po::value<std::vector<double>>()->multitoken()->default_value({2.5, 7.5}),
+          "Circle centers x coordinates (comma-separated list or separate "
+          "entries in config file). Should be the same amount as circleY, circleR")
+      ("functional.circleY",
+          po::value<std::vector<double>>()->multitoken()->default_value({2.5, 7.5}),
+          "Circle centers y coordinates (comma-separated list or separate "
+          "entries in config file). Should be the same amount as circleX, circleR")
+      ("functional.circleR",
+          po::value<std::vector<double>>()->multitoken()->default_value({2, 2}),
+          "Circle radii (comma-separated list or separate "
+          "entries in config file). Should be the same amount as circleX, circleY")
       // Control options
       ("control.number", po::value<std::size_t>()->default_value(30),
           "Number of control parameters")
@@ -73,10 +99,10 @@ GlobalOptions parseOptions(int argc, const char** argv,
           "Maximum control value")
       ("control.initial",
           po::value<std::vector<double>>()->multitoken()->default_value({10,10,0}),
-          "Initial state values (comma-separated list)")
+          "Initial state values (comma-separated list or separate entries in config file)")
       ("control.target",
           po::value<std::vector<double>>()->multitoken()->default_value({0, 0, 0}),
-          "Target state values (comma-separated list)")
+          "Target state values (comma-separated list or separate entries in config file)")
       // Optimization method options
       ("method", po::value<std::string>()->default_value("wolf"),
           "Optimization method (wolf or evolution)")
@@ -99,8 +125,6 @@ GlobalOptions parseOptions(int argc, const char** argv,
           "Clear control save file before start")
       ("seed,s", po::value<unsigned int>()->default_value(std::random_device{}()),
           "Random seed (type: unsigned int) (if empty will be random)")
-      ("printStep", po::value<int>()->default_value(5),
-          "Print results every N steps")
       ("configFile,c", po::value<std::string>(), "Configuration file")
   ;
   // clang-format on
@@ -141,6 +165,29 @@ GlobalOptions parseOptions(int argc, const char** argv,
   // Populate general options
   options.tMax = getValue<double>(vm, "tmax");
   options.integrationDt = getValue<double>(vm, "dt");
+
+  // Populate functional options
+  options.functionalOptions.coefTime =
+      getValue<double>(vm, "functional.coefTime");
+  options.functionalOptions.coefTerminal =
+      getValue<double>(vm, "functional.coefTerminal");
+  options.functionalOptions.coefObstacle =
+      getValue<double>(vm, "functional.coefObstacle");
+  const auto circlesX = getValue<std::vector<double>>(vm, "functional.circleX");
+  const auto circlesY = getValue<std::vector<double>>(vm, "functional.circleY");
+  const auto circlesR = getValue<std::vector<double>>(vm, "functional.circleR");
+  if (circlesX.size() != circlesY.size() ||
+      circlesX.size() != circlesR.size()) {
+    std::cout << std::format(
+        "Circles count does not match. Number of x coordinates provided is {}, "
+        "y coordinates is {}, and radii is {}\n",
+        circlesX.size(), circlesY.size(), circlesR.size());
+    std::exit(1);
+  }
+  for (std::size_t i = 0; i < circlesX.size(); ++i) {
+    options.functionalOptions.circles.emplace_back(circlesX[i], circlesY[i],
+                                                   circlesR[i]);
+  }
 
   // Populate control options
   options.controlOptions.numOfParams =
@@ -183,7 +230,6 @@ GlobalOptions parseOptions(int argc, const char** argv,
   options.clearSaveBeforeStart = getValue<bool>(vm, "clear");
 
   options.seed = getValue<unsigned int>(vm, "seed");
-  options.printStep = getValue<int>(vm, "printStep");
 
   if (options.clearSaveBeforeStart) {
     std::ofstream ofs(options.controlSaveFile,
@@ -197,52 +243,61 @@ GlobalOptions parseOptions(int argc, const char** argv,
 }
 
 void writeConfig(const GlobalOptions& options,
-                 const std::filesystem::path& file) {
-  try {
-    boost::property_tree::ptree pt;
+                 const std::filesystem::path& file) try {
+  boost::property_tree::ptree pt;
 
-    // General options
-    pt.put("tmax", options.tMax);
-    pt.put("dt", options.integrationDt);
+  // General options
+  pt.put("tmax", options.tMax);
+  pt.put("dt", options.integrationDt);
 
-    std::stringstream initialSs;
-    std::stringstream targetSs;
-    std::copy(options.controlOptions.initialState.begin(),
-              options.controlOptions.initialState.end(),
-              std::ostream_iterator<double>(initialSs, ","));
-    std::copy(options.controlOptions.targetState.begin(),
-              options.controlOptions.targetState.end(),
-              std::ostream_iterator<double>(targetSs, ","));
-    pt.put("control.initial", initialSs.str());
-    pt.put("control.target", targetSs.str());
-    pt.put("control.number", options.controlOptions.numOfParams);
-    pt.put("control.min", options.controlOptions.uMin);
-    pt.put("control.max", options.controlOptions.uMax);
-
-    // Optimization method options
-    pt.put("method", methodToName(options.method));
-
-    pt.put("wolf.num", options.wolfOpt.wolfNum);
-    pt.put("wolf.best", options.wolfOpt.numBest);
-
-    pt.put("evolution.population", options.evolutionOpt.populationSize);
-    pt.put("evolution.mutation", options.evolutionOpt.mutationRate);
-    pt.put("evolution.crossover", options.evolutionOpt.crossoverRate);
-
-    pt.put("iter", options.iter);
-
-    // Other options
-    pt.put("seed", options.seed);
-    pt.put("printStep", options.printStep);
-    pt.put("file", options.controlSaveFile);
-    pt.put("clear", options.clearSaveBeforeStart);
-
-    // Write to file
-    boost::property_tree::write_ini(file.string(), pt);
-    vectorToSeparateLines(file.string(), "initial");
-    vectorToSeparateLines(file.string(), "target");
-  } catch (const std::exception& e) {
-    std::cerr << std::format("Error writing configuration: {}\n", e.what());
+  pt.put("functional.coefTime", options.functionalOptions.coefTime);
+  pt.put("functional.coefTerminal", options.functionalOptions.coefTerminal);
+  pt.put("functional.coefObstacle", options.functionalOptions.coefObstacle);
+  std::vector<double> circlesX;
+  std::vector<double> circlesY;
+  std::vector<double> circlesR;
+  for (const auto& circle : options.functionalOptions.circles) {
+    circlesX.push_back(circle.x);
+    circlesY.push_back(circle.y);
+    circlesR.push_back(circle.r);
   }
+  pt.put("functional.circleX", vectorToCommaSeparatedString(circlesX));
+  pt.put("functional.circleY", vectorToCommaSeparatedString(circlesY));
+  pt.put("functional.circleR", vectorToCommaSeparatedString(circlesR));
+
+  pt.put("control.initial",
+         vectorToCommaSeparatedString(options.controlOptions.initialState));
+  pt.put("control.target",
+         vectorToCommaSeparatedString(options.controlOptions.targetState));
+  pt.put("control.number", options.controlOptions.numOfParams);
+  pt.put("control.min", options.controlOptions.uMin);
+  pt.put("control.max", options.controlOptions.uMax);
+
+  // Optimization method options
+  pt.put("method", methodToName(options.method));
+
+  pt.put("wolf.num", options.wolfOpt.wolfNum);
+  pt.put("wolf.best", options.wolfOpt.numBest);
+
+  pt.put("evolution.population", options.evolutionOpt.populationSize);
+  pt.put("evolution.mutation", options.evolutionOpt.mutationRate);
+  pt.put("evolution.crossover", options.evolutionOpt.crossoverRate);
+
+  pt.put("iter", options.iter);
+
+  // Other options
+  pt.put("seed", options.seed);
+  pt.put("file", options.controlSaveFile);
+  pt.put("clear", options.clearSaveBeforeStart);
+
+  // Write to file
+  boost::property_tree::write_ini(file.string(), pt);
+  vectorToSeparateLines(file.string(), "circleX");
+  vectorToSeparateLines(file.string(), "circleY");
+  vectorToSeparateLines(file.string(), "circleR");
+  vectorToSeparateLines(file.string(), "initial");
+  vectorToSeparateLines(file.string(), "target");
+} catch (const std::exception& e) {
+  std::cerr << std::format("Error writing configuration: {}\n", e.what());
 }
 }  // namespace optimization

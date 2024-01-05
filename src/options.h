@@ -28,6 +28,19 @@ struct ControlOptions {
   std::vector<double> targetState;
 };
 
+struct CircleData {
+  double x;
+  double y;
+  double r;
+};
+
+struct FunctionalOptions {
+  double coefTime;
+  double coefTerminal;
+  double coefObstacle;
+  std::vector<CircleData> circles;
+};
+
 struct GlobalOptions {
   std::string configFile;
 
@@ -35,6 +48,8 @@ struct GlobalOptions {
   double integrationDt;
   // TODO(novak)
   double solutionTolerance;
+
+  FunctionalOptions functionalOptions;
 
   ControlOptions controlOptions;
   std::string controlSaveFile;
@@ -49,8 +64,6 @@ struct GlobalOptions {
   int iter;
 
   unsigned int seed;
-
-  int printStep;
 };
 
 constexpr std::string methodToName(optimization::GlobalOptions::Method method) {

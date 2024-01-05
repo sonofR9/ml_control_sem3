@@ -85,12 +85,6 @@ void setLineSeriesPen(QLineSeries* series, int width,
   series->setPen(pen);
 }
 
-struct CircleData {
-  double x;
-  double y;
-  double r;
-};
-
 template <class Alloc>
 void updateChart(QChart* chart, const std::vector<double, Alloc>& x,
                  const std::vector<double, Alloc>& y,
@@ -407,8 +401,6 @@ QVBoxLayout* MainWindow::constructGlobalParams(QWidget* tab) {
   });
   vLayout->addWidget(resetSeed);
 
-  addField<QIntValidator>(tab, vLayout, "Print step", printStep_);
-
   hLayout = new QHBoxLayout{};
   hLayout->setSpacing(kSpacing);
   vLayout->addItem(hLayout);
@@ -526,7 +518,6 @@ void MainWindow::fillGuiFromOptions() {
   method_->setCurrentIndex(static_cast<int>(options_.method));
 
   seed_->setText(QString::number(options_.seed));
-  printStep_->setText(QString::number(options_.printStep));
   filePath_->setText(QString::fromStdString(options_.controlSaveFile));
   clear_->setChecked(options_.clearSaveBeforeStart);
 
@@ -564,7 +555,6 @@ void MainWindow::fillOptionsFromGui() {
   } else {
     options_.seed = seed_->text().toUInt();
   }
-  options_.printStep = printStep_->text().toInt();
   options_.controlSaveFile = filePath_->text().toStdString();
   options_.clearSaveBeforeStart = clear_->isChecked();
 
