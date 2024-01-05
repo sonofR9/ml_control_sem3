@@ -7,7 +7,6 @@
 
 #include <cassert>
 
-
 namespace two_wheeled_robot {
 using namespace optimization;
 constexpr double kEpsTrajectory{1e-1};
@@ -106,53 +105,70 @@ std::vector<std::vector<T, Alloc>, VectorAlloc> getTrajectoryFromControl(
   }
 }
 
-/**
- * @param solverResult .shape (2 * N)
- * @param dt for integration
- */
-template <typename T = double, class Alloc = std::allocator<T>,
-          class VectorAlloc = std::allocator<std::vector<T, Alloc>>>
-double functional(const Tensor<T, Alloc>& solverResult, double tMax = 10,
-                  double dt = 0.01) {
-  const auto solvedX =
-      getTrajectoryFromControl<T, Alloc, VectorAlloc>(solverResult, tMax, dt);
-
-  Tensor<T, Alloc> xf{0, 0, 0};
-  std::size_t i{0};
-  double tEnd{0};
-  for (; tEnd < tMax - kEps; tEnd += dt) {
-    if (std::abs(solvedX[0][i] - xf[0]) + std::abs(solvedX[1][i] - xf[1]) +
-            std::abs(solvedX[2][i] - xf[2]) <
-        kEpsTrajectory) {
-      break;
-    }
-    ++i;
-  }
-
-  std::size_t iFinal{i == solvedX[0].size() ? i - 1 : i};
-
-  const auto subIntegrative = [dt](const Tensor<T, Alloc>& point) -> double {
-    auto mySqr = [](auto x) { return x * x; };
-    const double h1{std::sqrt(2.5) -
-                    std::sqrt(mySqr(point[0] - 2.5) + mySqr(point[1] - 2.5))};
-    const double h2{std::sqrt(2.5) -
-                    std::sqrt(mySqr(point[0] - 7.5) + mySqr(point[1] - 7.5))};
-    if (h1 > 0 || h2 > 0) {
-      const double kBigNumber = 1e5;
-      return kBigNumber * dt;
-    }
-    return 0.0;
+class Functional {
+ public:
+  struct Coeffients {
+    double time;
+    double terminal;
+    double obstacle;
   };
-
-  double integral{0};
-  for (std::size_t i{0}; i < iFinal; ++i) {
-    integral += subIntegrative({solvedX[0][i], solvedX[1][i], solvedX[2][i]});
+  constexpr explicit Functional(Coeffients coefficients) noexcept
+      : coeffients_{coefficients} {
   }
 
-  return tEnd +
-         std::sqrt(std::pow(solvedX[0][iFinal] - xf[0], 2) +
-                   std::pow(solvedX[1][iFinal] - xf[1], 2) +
-                   std::pow(solvedX[2][iFinal] - xf[2], 2)) +
-         integral;
-}
+  /**
+   * @param solverResult .shape (2 * N)
+   * @param dt for integration
+   */
+  template <typename T = double, class Alloc = std::allocator<T>,
+            class VectorAlloc = std::allocator<std::vector<T, Alloc>>>
+  double operator()(const Tensor<T, Alloc>& solverResult, double tMax = 10,
+                    double dt = 0.01) {
+    const auto solvedX =
+        getTrajectoryFromControl<T, Alloc, VectorAlloc>(solverResult, tMax, dt);
+
+    Tensor<T, Alloc> xf{0, 0, 0};
+    std::size_t i{0};
+    double tEnd{0};
+    for (; tEnd < tMax - kEps; tEnd += dt) {
+      if (std::abs(solvedX[0][i] - xf[0]) + std::abs(solvedX[1][i] - xf[1]) +
+              std::abs(solvedX[2][i] - xf[2]) <
+          kEpsTrajectory) {
+        std::cout << "Target reached at t = " << tEnd << "\n";
+        break;
+      }
+      ++i;
+    }
+
+    std::size_t iFinal{i == solvedX[0].size() ? i - 1 : i};
+
+    const auto subIntegrative = [dt](const Tensor<T, Alloc>& point) -> double {
+      auto mySqr = [](auto x) { return x * x; };
+      const double h1{std::sqrt(2.5) -
+                      std::sqrt(mySqr(point[0] - 2.5) + mySqr(point[1] - 2.5))};
+      const double h2{std::sqrt(2.5) -
+                      std::sqrt(mySqr(point[0] - 7.5) + mySqr(point[1] - 7.5))};
+      if (h1 > 0 || h2 > 0) {
+        const double kBigNumber = 1e5;
+        return kBigNumber * dt;
+      }
+      return 0.0;
+    };
+
+    double integral{0};
+    for (std::size_t i{0}; i < iFinal; ++i) {
+      integral += subIntegrative({solvedX[0][i], solvedX[1][i], solvedX[2][i]});
+    }
+
+    return coeffients_.time * tEnd +
+           coeffients_.terminal *
+               std::sqrt(std::pow(solvedX[0][iFinal] - xf[0], 2) +
+                         std::pow(solvedX[1][iFinal] - xf[1], 2) +
+                         std::pow(solvedX[2][iFinal] - xf[2], 2)) +
+           coeffients_.obstacle * integral;
+  }
+
+ private:
+  Coeffients coeffients_;
+};
 }  // namespace two_wheeled_robot

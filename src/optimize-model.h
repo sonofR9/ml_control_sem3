@@ -11,7 +11,6 @@
 #include <chrono>
 #include <fstream>
 
-
 namespace optimization {
 
 constexpr double kMaxDiff{1};
@@ -55,11 +54,15 @@ Tensor<double, Alloc<double>> modelTestEvolution(
   TimeMeasurer tm("Evolution");
 
   using namespace two_wheeled_robot;
-  const auto adap = [paramsCount, tMax,
-                     dt](const Tensor<double, Alloc<double>>& solverResult) {
+  Functional functional{{.time = options.functionalOptions.coefTime,
+                         .terminal = options.functionalOptions.coefTerminal,
+                         .obstacle = options.functionalOptions.coefObstacle}};
+  const auto adap = [paramsCount, tMax, dt, &functional](
+                        const Tensor<double, Alloc<double>>& solverResult) {
     assert((solverResult.size() == paramsCount));
-    return functional<double, Alloc<double>>(solverResult, tMax, dt);
+    return functional.operator()<double, Alloc<double>>(solverResult, tMax, dt);
   };
+
   Evolution<1000, 1000, Alloc, decltype(adap), Printer> solver(
       adap, paramsCount,
       {.min = options.controlOptions.uMin, .max = options.controlOptions.uMax},
@@ -102,11 +105,15 @@ Tensor<double, Alloc<double>> modelTestGray(
   TimeMeasurer tm("gray wolf");
 
   using namespace two_wheeled_robot;
-  const auto adap = [paramsCount, tMax,
-                     dt](const Tensor<double, Alloc<double>>& solverResult) {
+  Functional functional{{.time = options.functionalOptions.coefTime,
+                         .terminal = options.functionalOptions.coefTerminal,
+                         .obstacle = options.functionalOptions.coefObstacle}};
+  const auto adap = [paramsCount, tMax, dt, &functional](
+                        const Tensor<double, Alloc<double>>& solverResult) {
     assert((solverResult.size() == paramsCount));
-    return functional<double, Alloc<double>>(solverResult, tMax, dt);
+    return functional.operator()<double, Alloc<double>>(solverResult, tMax, dt);
   };
+
   GrayWolfAlgorithm<Alloc, decltype(adap), Printer> solver(
       adap, paramsCount, 10,
       {.populationSize = static_cast<std::size_t>(options.wolfOpt.wolfNum),
