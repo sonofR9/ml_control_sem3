@@ -20,10 +20,6 @@
 
 #include <cstdlib>
 
-// #ifdef WINDOWS
-// #include <windows.h>
-// #endif
-
 #endif
 
 using namespace optimization;
@@ -46,7 +42,7 @@ int commonMain(int argc, const char** argv) {
   auto options{parseOptions(argc, argv, configFilePath.toStdString())};
   settings.setValue("config_file_path", QString(options.configFile.c_str()));
 
-  seed = options.seed;
+  SharedGenerator::gen.seed(options.seed);
 
   int qtArgc{1};
   char** qtArgv{new char*[1]};

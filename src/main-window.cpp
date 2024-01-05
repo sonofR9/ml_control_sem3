@@ -5,9 +5,11 @@
 #include "options.h"
 #include "utils.h"
 
+#include <QApplication>
 #include <QChartView>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDialog>
 #include <QFileDialog>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -77,15 +79,12 @@ struct CircleData {
   double x;
   double y;
   double r;
-  bool visible{false};
 };
 
 template <class Alloc>
-void updateChart(QChartView* chart_, const std::vector<double, Alloc>& x,
-                 const std::vector<double, Alloc>& y, CircleData circle1 = {},
-                 CircleData circle2 = {}) {
-  auto* chart{chart_->chart()};
-
+void updateChart(QChart* chart, const std::vector<double, Alloc>& x,
+                 const std::vector<double, Alloc>& y,
+                 const std::vector<CircleData> circles = {}) {
   QLineSeries* lastSeries{nullptr};
   if (!chart->series().empty()) {
     lastSeries = qobject_cast<QLineSeries*>(chart->series().last());
@@ -101,20 +100,16 @@ void updateChart(QChartView* chart_, const std::vector<double, Alloc>& x,
     chart->removeSeries(series);
   }
 
-  std::array circles{circle1, circle2};
-  for (auto i{0}; i < 2; ++i) {
-    if (circles[i].visible) {
-      auto* circleSeries{new QLineSeries{}};
-      circleSeries->setName("Obstacle " + QString::number(i + 1));
-      for (auto i{0}; i <= 360; ++i) {
-        double angle = M_PI * i / 180.0;
-        double x = circles[i].x + circles[i].r * cos(angle);
-        double y = circles[i].y + circles[i].r * sin(angle);
-        circleSeries->append(x, y);
-      }
-      circleSeries->setColor(Qt::red);
-      chart->addSeries(circleSeries);
+  for (const auto& circle : circles) {
+    auto* circleSeries{new QLineSeries{}};
+    for (auto i{0}; i <= 360; ++i) {
+      double angle = M_PI * i / 180.0;
+      double x = circle.x + circle.r * cos(angle);
+      double y = circle.y + circle.r * sin(angle);
+      circleSeries->append(x, y);
     }
+    circleSeries->setColor(Qt::red);
+    chart->addSeries(circleSeries);
   }
 
   auto* newSeries{new QLineSeries()};
@@ -128,7 +123,10 @@ void updateChart(QChartView* chart_, const std::vector<double, Alloc>& x,
 
   chart->createDefaultAxes();
 
-  chart_->repaint();
+  auto* chartView{qobject_cast<QChartView*>(chart->parentWidget())};
+  if (chartView) {
+    chartView->repaint();
+  }
 }
 }  // namespace
 
@@ -179,8 +177,6 @@ void MainWindow::startOptimization() {
   copy_.savePath = options_.controlSaveFile;
   copy_.tMax = options_.tMax;
 
-  optimization::SharedGenerator::gen.seed(options_.seed);
-
   progress_->setMaximum(static_cast<int>(copy_.iters));
   progress_->setValue(0);
   setTextIteration(iterations_, 0, copy_.iters, -1);
@@ -221,7 +217,11 @@ void MainWindow::onIterationChanged(int iteration, double functional) {
     trajectory_ =
         two_wheeled_robot::getTrajectoryFromControl<double, DoubleAllocator>(
             best_, copy_.tMax);
-    updateChart(chart_, trajectory_[0], trajectory_[1]);
+    for (const auto& chart : charts_) {
+      updateChart(chart, trajectory_[0], trajectory_[1],
+                  {{.x = 2.5, .y = 2.5, .r = std::sqrt(2.5)},
+                   {.x = 7.5, .y = 7.5, .r = std::sqrt(2.5)}});
+    }
   }
 }
 
@@ -231,6 +231,8 @@ void MainWindow::emitIterationChanged(std::size_t iteration,
 }
 
 void MainWindow::constructView() {
+  setWindowFlags(windowFlags());
+  setWindowTitle("ml control sem3");
   auto* central{new QWidget{this}};
   setCentralWidget(central);
   auto* vLayout{new QVBoxLayout{}};
@@ -238,8 +240,8 @@ void MainWindow::constructView() {
   centralWidget()->setLayout(vLayout);
 
   auto* tabWidget{new QTabWidget{this}};
+  tabWidget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
   vLayout->addWidget(tabWidget);
-  tabWidget->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Maximum);
 
   auto* optimizationTab{constructOptimizationTab(tabWidget)};
   tabWidget->addTab(optimizationTab, "Optimization");
@@ -262,10 +264,53 @@ void MainWindow::constructView() {
     settings.setValue("config_file_path", QString(path));
   });
 
-  chart_ = new QChartView{centralWidget()};
-  chart_->setRenderHint(QPainter::Antialiasing);
-  chart_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::MinimumExpanding);
-  vLayout->addWidget(chart_);
+  auto* chartView = new QChartView{centralWidget()};
+  charts_.push_back(chartView->chart());
+  chartView->setRenderHint(QPainter::Antialiasing);
+  chartView->setSizePolicy(QSizePolicy::Preferred,
+                           QSizePolicy::MinimumExpanding);
+  vLayout->addWidget(chartView);
+
+  // does not update when tab 1 is selected
+  // auto* chartTab{new QChartView{tabWidget}};
+  // charts_.push_back(chartTab->chart());
+  // chartTab->setRenderHint(QPainter::Antialiasing);
+  // chartTab->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+  // tabWidget->addTab(chartTab, "Full screen chart");
+  // connect(tabWidget, &QTabWidget::currentChanged,
+  //         [this, tabWidget, chartView](int index) -> void {
+  //           if (index == 0) {
+  //             chartView->show();
+  //             chartView->setSizePolicy(QSizePolicy::Preferred,
+  //                                      QSizePolicy::MinimumExpanding);
+  //             chartView->updateGeometry();
+  //             tabWidget->updateGeometry();
+  //           } else {
+  //             // chartTab->setChart(charts_);
+  //             chartView->hide();
+  //           }
+  //           QApplication::processEvents();
+  //         });
+
+  auto* chartMenu{menu->addMenu("&Chart")};
+  auto* chartInNewWindow{chartMenu->addAction("Open in new window")};
+  connect(chartInNewWindow, &QAction::triggered, [this]() -> void {
+    auto* dialog{new QDialog()};
+    dialog->setWindowFlags(Qt::Window);  // Qt::WindowMinMaxButtonsHint |
+                                         // Qt::WindowCloseButtonHint
+    auto* vLayout{new QVBoxLayout{dialog}};
+    auto* chartView{new QChartView{dialog}};
+    vLayout->addWidget(chartView);
+
+    auto* chart{chartView->chart()};
+    charts_.push_back(chart);
+
+    connect(dialog, &QDialog::finished, [this, chart]() {
+      std::erase_if(charts_, [chart](QChart* c) -> bool { return c == chart; });
+    });
+
+    dialog->show();
+  });
 }
 
 QWidget* MainWindow::constructOptimizationTab(QWidget* tabWidget) {
@@ -340,6 +385,17 @@ QVBoxLayout* MainWindow::constructGlobalParams(QWidget* tab) {
   hLayout->addWidget(method_);
 
   addField<QIntValidator>(tab, vLayout, "seed (-1 random)", seed_);
+  auto* resetSeed{new QPushButton{"Set seed", tab}};
+  connect(resetSeed, &QPushButton::clicked, [this]() {
+    const auto seed{seed_->text().toInt()};
+    if (seed < 0) {
+      SharedGenerator::gen.seed(std::random_device{}());
+    } else {
+      SharedGenerator::gen.seed(seed_->text().toUInt());
+    }
+  });
+  vLayout->addWidget(resetSeed);
+
   addField<QIntValidator>(tab, vLayout, "Print step", printStep_);
 
   hLayout = new QHBoxLayout{};

@@ -6,14 +6,12 @@
 
 #include <QMainWindow>
 
-// TODO(novak) QCharts
-#include <QtCharts/QChartView>
-
 #include <chrono>
 #include <future>
 #include <memory>
+#include <vector>
 
-class QChartView;
+class QChart;
 class QCheckBox;
 class QComboBox;
 class QLabel;
@@ -113,5 +111,5 @@ class MainWindow : public QMainWindow {
   QLabel* iterations_;
   QLabel* iterTime_;
 
-  QChartView* chart_;
+  std::vector<QChart*> charts_;
 };

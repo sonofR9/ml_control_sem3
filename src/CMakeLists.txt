@@ -32,16 +32,6 @@ target_link_libraries(${TARGET_NAME} PRIVATE
 )
 
 set(PRIVATE_PCH
-    <vector>
-    <string>
-    <iostream>
-    <fstream>
-    <algorithm>
-    <cassert>
-    <boost/archive/text_iarchive.hpp>
-    <boost/archive/text_oarchive.hpp>
-    <boost/serialization/vector.hpp>
-
     "optimize-model.h"
     "tensor.h"
 )

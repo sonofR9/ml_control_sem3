@@ -185,7 +185,7 @@ class Evolution {
                            const FitnessArr& fitness, double probModifier,
                            Population& newPop) const {
     // auto newPopPointer{generateEmptyPopulation()};
-    for (std::size_t i = 0; i < populationSize_; i += 2) {
+    for (std::size_t i = 0; i < populationSize_ - 1; i += 2) {
       const auto lhsIndex{VaryingIntGenerator::get(0, populationSize_ - 1)};
       auto rhsIndex{VaryingIntGenerator::get(0, populationSize_ - 1)};
       if (rhsIndex == lhsIndex) {
