@@ -115,6 +115,7 @@ class GrayWolfAlgorithm {
     using CalcSpecimen = std::pair<int, double>;
     thread_local static auto calcPop =
         Tensor<CalcSpecimen, Alloc<CalcSpecimen>>(populationSize_);
+    calcPop.resize(populationSize_);
 
     std::transform(std::execution::par_unseq, population.begin(),
                    population.end(), calcPop.begin(),
@@ -127,6 +128,7 @@ class GrayWolfAlgorithm {
 
     thread_local static auto bestCalc =
         Tensor<CalcSpecimen, Alloc<CalcSpecimen>>(numBest_);
+    bestCalc.resize(numBest_);
     std::partial_sort_copy(
         calcPop.begin(), calcPop.end(), bestCalc.begin(), bestCalc.end(),
         [](const CalcSpecimen& lhs, const CalcSpecimen& rhs) {

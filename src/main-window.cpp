@@ -75,6 +75,16 @@ void addField(QWidget* parent, QVBoxLayout* vLayout, const QString& lblName,
   hLayout->addWidget(result);
 }
 
+void setLineSeriesPen(QLineSeries* series, int width,
+                      Qt::PenStyle style = Qt::SolidLine,
+                      const QColor& color = Qt::blue) {
+  QPen pen{series->pen()};
+  pen.setStyle(style);
+  pen.setColor(color);
+  pen.setWidth(width);
+  series->setPen(pen);
+}
+
 struct CircleData {
   double x;
   double y;
@@ -89,11 +99,7 @@ void updateChart(QChart* chart, const std::vector<double, Alloc>& x,
   if (!chart->series().empty()) {
     lastSeries = qobject_cast<QLineSeries*>(chart->series().last());
     lastSeries->setName("Previous");
-
-    QPen pen{lastSeries->pen()};
-    pen.setStyle(Qt::DashLine);
-    pen.setColor(Qt::gray);
-    lastSeries->setPen(pen);
+    setLineSeriesPen(lastSeries, 3, Qt::DashLine, Qt::gray);
   }
   for (qsizetype i{chart->series().count() - 2}; i >= 0; --i) {
     QAbstractSeries* series = chart->series().at(i);
@@ -108,13 +114,13 @@ void updateChart(QChart* chart, const std::vector<double, Alloc>& x,
       double y = circle.y + circle.r * sin(angle);
       circleSeries->append(x, y);
     }
-    circleSeries->setColor(Qt::red);
+    setLineSeriesPen(circleSeries, 3, Qt::SolidLine, Qt::red);
     chart->addSeries(circleSeries);
   }
 
   auto* newSeries{new QLineSeries()};
   newSeries->setName("Current");
-  newSeries->setColor(Qt::blue);
+  setLineSeriesPen(newSeries, 3, Qt::SolidLine, Qt::blue);
   for (size_t i = 0; i < x.size(); ++i) {
     newSeries->append(x[i], y[i]);
   }
@@ -213,7 +219,6 @@ void MainWindow::onIterationChanged(int iteration, double functional) {
     writeToSaveFile(options_.controlSaveFile, best_);
     startOptimization_->setEnabled(true);
     startOptimization_->show();
-    // TODO(novak)
     trajectory_ =
         two_wheeled_robot::getTrajectoryFromControl<double, DoubleAllocator>(
             best_, copy_.tMax);
@@ -495,10 +500,10 @@ QWidget* MainWindow::constructEvolutionParams(QWidget* tab) {
 
   addField<QIntValidator>(evolution_.widget_, vLayout, "population",
                           evolution_.population_);
-  addField<QIntValidator>(evolution_.widget_, vLayout, "mutation rate",
-                          evolution_.mutation_);
-  addField<QIntValidator>(evolution_.widget_, vLayout, "crossover rate",
-                          evolution_.crossover_);
+  addField<QDoubleValidator>(evolution_.widget_, vLayout, "mutation rate",
+                             evolution_.mutation_);
+  addField<QDoubleValidator>(evolution_.widget_, vLayout, "crossover rate",
+                             evolution_.crossover_);
 
   vLayout->addStretch(1);
   vLayout->setSpacing(kSpacing);
