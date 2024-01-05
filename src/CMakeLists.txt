@@ -5,8 +5,8 @@ set(SOURCES
     main.cpp
 )
 
-find_package(Qt6 COMPONENTS Widgets Core)
-if(true AND Qt6_FOUND)
+find_package(Qt6 COMPONENTS Widgets Core Charts)
+if(false AND Qt6_FOUND)
     # qt_standard_project_setup()
     set(CMAKE_AUTOMOC ON)
     set(CMAKE_AUTORCC ON)
@@ -37,9 +37,12 @@ set(PRIVATE_PCH
     <fstream>
     <algorithm>
     <cassert>
+    <boost/archive/text_iarchive.hpp>
+    <boost/archive/text_oarchive.hpp>
+    <boost/serialization/vector.hpp>
 )
 
-if(true AND Qt6_FOUND)
+if(false AND Qt6_FOUND)
     # set_target_properties(${TARGET_NAME} PROPERTIES
     #     WIN32_EXECUTABLE ON
     # )
@@ -51,6 +54,7 @@ if(true AND Qt6_FOUND)
     target_link_libraries(${TARGET_NAME} PRIVATE
         Qt6::Widgets
         Qt6::Core
+        Qt6::Charts
     )
 
     # if (CMAKE_SYSTEM_NAME MATCHES "Windows")

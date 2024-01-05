@@ -123,8 +123,10 @@ void modelTestGray(const optimization::GlobalOptions& options) {
     assert((solverResult.size() == paramsCount));
     return functional<double, Alloc>(solverResult, tMax, dt);
   };
-  GrayWolfAlgorithm<Alloc, decltype(adap), 512, 3> solver(adap, paramsCount,
-                                                          10);
+  GrayWolfAlgorithm<Alloc, decltype(adap)> solver(
+      adap, paramsCount, 10,
+      {.populationSize = static_cast<std::size_t>(options.wolfOpt.wolfNum),
+       .bestNum = static_cast<std::size_t>(options.wolfOpt.numBest)});
   if (!init.empty()) {
     solver.setBaseline(init, kMaxDiff);
   }

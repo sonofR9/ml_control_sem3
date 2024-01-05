@@ -13,6 +13,7 @@
 #include <future>
 #include <memory>
 
+class QChartView;
 class QCheckBox;
 class QComboBox;
 class QLabel;
@@ -111,4 +112,6 @@ class MainWindow : public QMainWindow {
   QProgressBar* progress_;
   QLabel* iterations_;
   QLabel* iterTime_;
+
+  QChartView* chart_;
 };

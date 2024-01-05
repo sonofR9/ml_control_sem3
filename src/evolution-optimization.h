@@ -97,7 +97,7 @@ class Evolution {
     assert((baseline.size() == paramsCount_));
     baseline_ = Chromosome(baseline.size());
     std::transform(baseline.begin(), baseline.end(), baseline_.begin(),
-                   [this](double v) { return Gray(v); });
+                   [](double v) { return Gray(v); });
 
     maxDifference_ = maxDifference;
   }
@@ -118,7 +118,7 @@ class Evolution {
 
       auto newFitness = FitnessArr(populationSize_);
       (*newPopulationPtr)[0] = best.first;
-      for (int i{0}; i < populationSize_; ++i) {
+      for (std::size_t i{0}; i < populationSize_; ++i) {
         int n1, n2, n3;
         do {
           n1 = VaryingIntGenerator::get(0, populationSize_ - 1);
@@ -188,7 +188,7 @@ class Evolution {
                            const FitnessArr& fitness, double probModifier,
                            Population& newPop) const {
     // auto newPopPointer{generateEmptyPopulation()};
-    for (int i = 0; i < populationSize_; i += 2) {
+    for (std::size_t i = 0; i < populationSize_; i += 2) {
       const auto lhsIndex{VaryingIntGenerator::get(0, populationSize_ - 1)};
       auto rhsIndex{VaryingIntGenerator::get(0, populationSize_ - 1)};
       if (rhsIndex == lhsIndex) {
@@ -225,7 +225,7 @@ class Evolution {
         std::execution::par_unseq, population.begin(), population.end(),
         fitness.first.begin(),
         [this](const Chromosome& q) -> double { return fitAdapter(q); });
-    for (int i{0}; i < populationSize_; ++i) {
+    for (std::size_t i{0}; i < populationSize_; ++i) {
       if (fitness.first[i] < min) {
         fitness.second = i;
         min = fitness.first[i];

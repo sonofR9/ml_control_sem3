@@ -5,12 +5,14 @@
 #include "particle-sworm.h"
 #include "utils.h"
 
+#include <QChartView>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QFileDialog>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QLineSeries>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -61,6 +63,23 @@ void addField(QWidget* parent, QVBoxLayout* vLayout, const QString& lblName,
   result->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
   result->setValidator(new Validator(result));
   hLayout->addWidget(result);
+}
+
+template <class Alloc>
+void updateChart(QChartView* chart_, std::vector<double, Alloc> x,
+                 std::vector<double, Alloc> y) {
+  QChart* chart = chart_->chart();
+  chart->removeAllSeries();
+
+  auto* series = new QLineSeries();
+  for (size_t i = 0; i < x.size(); ++i) {
+    series->append(x[i], y[i]);
+  }
+  chart->addSeries(series);
+
+  chart->createDefaultAxes();
+
+  chart_->repaint();
 }
 }  // namespace
 
@@ -115,6 +134,7 @@ void MainWindow::constructView() {
   setCentralWidget(central);
   // central->setEnabled(false);
   auto* vLayout{new QVBoxLayout{}};
+  vLayout->setSpacing(kSpacing);
   centralWidget()->setLayout(vLayout);
 
   auto* tabWidget{new QTabWidget{this}};
@@ -141,9 +161,9 @@ void MainWindow::constructView() {
     settings.setValue("config_file_path", QString(path));
   });
 
-  vLayout->setSpacing(kSpacing);
-
-  // TODO(novak) QCharts
+  chart_ = new QChartView{centralWidget()};
+  chart_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::MinimumExpanding);
+  vLayout->addWidget(chart_);
 }
 
 QWidget* MainWindow::constructOptimizationTab(QWidget* tabWidget) {
