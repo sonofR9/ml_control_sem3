@@ -87,13 +87,13 @@ void setLineSeriesPen(QLineSeries* series, int width,
 
 template <class Alloc>
 void updateChart(QChart* chart, const std::vector<double, Alloc>& x,
-                 const std::vector<double, Alloc>& y,
+                 const std::vector<double, Alloc>& y, double tolerance,
                  const std::vector<CircleData> circles = {}) {
   QLineSeries* lastSeries{nullptr};
   if (!chart->series().empty()) {
     lastSeries = qobject_cast<QLineSeries*>(chart->series().last());
     lastSeries->setName("Previous");
-    setLineSeriesPen(lastSeries, 3, Qt::DashLine, Qt::gray);
+    setLineSeriesPen(lastSeries, 2, Qt::DashLine, Qt::gray);
   }
   for (qsizetype i{chart->series().count() - 2}; i >= 0; --i) {
     QAbstractSeries* series = chart->series().at(i);
@@ -108,15 +108,34 @@ void updateChart(QChart* chart, const std::vector<double, Alloc>& x,
       double y = circle.y + circle.r * sin(angle);
       circleSeries->append(x, y);
     }
-    setLineSeriesPen(circleSeries, 3, Qt::SolidLine, Qt::red);
+    setLineSeriesPen(circleSeries, 2, Qt::SolidLine, Qt::red);
     chart->addSeries(circleSeries);
   }
 
+  // auto* scatterSeries{new QScatterSeries{}};
+  // scatterSeries->setName("Initial");
+  // scatterSeries->append(10, 10);
+  // scatterSeries->setMarkerSize(5);
+  // scatterSeries->setMarkerShape(QScatterSeries::MarkerShapeTriangle);
+  // scatterSeries->setColor(Qt::yellow);
+  // chart->addSeries(scatterSeries);
+
+  scatterSeries = new QScatterSeries{};
+  scatterSeries->setName("Target");
+  scatterSeries->append(0, 0);
+  scatterSeries->setMarkerSize(5);
+  scatterSeries->setMarkerShape(QScatterSeries::MarkerShapeStar);
+  scatterSeries->setColor(Qt::green);
+  chart->addSeries(scatterSeries);
+
   auto* newSeries{new QLineSeries()};
   newSeries->setName("Current");
-  setLineSeriesPen(newSeries, 3, Qt::SolidLine, Qt::blue);
+  setLineSeriesPen(newSeries, 2, Qt::SolidLine, Qt::blue);
   for (size_t i = 0; i < x.size(); ++i) {
     newSeries->append(x[i], y[i]);
+    if (std::sqrt(x[i] * x[i] + y[i] * y[i]) < tolerance) {
+      break;
+    }
   }
 
   chart->addSeries(newSeries);
