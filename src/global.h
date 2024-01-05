@@ -2,7 +2,9 @@
 
 #include "tensor.h"
 
+#include <format>
 #include <functional>
+#include <iostream>
 #include <numeric>
 #include <random>
 
@@ -18,8 +20,6 @@ using StatePoint = Tensor<T, Alloc>;
  */
 template <typename T, class Alloc>
 using StateDerivativesPoint = Tensor<T, Alloc>;
-
-extern unsigned int seed;
 
 template <typename F, typename T, class Alloc>
 concept StateSpaceFunction =
@@ -48,6 +48,19 @@ concept Regular1OutFunction = requires(F func, const T& inp) {
   { func(inp) } -> std::same_as<double>;
 };
 
+// ----------------------------- print ---------------------------------------
+template <typename F>
+concept PrintFunction =
+    requires(F func, std::size_t iteration, double functional) {
+      { func(iteration, functional) } -> std::same_as<void>;
+    };
+
+inline void coutPrint(std::size_t iteration, double functional) {
+  std::cout << std::format("\33[2K\riter {} functional {:.5f}", iteration,
+                           functional)
+            << std::flush;
+}
+
 // ----------------------------- norm ---------------------------------------
 template <typename T>
 concept Iterable = requires(const T& self) {
@@ -75,11 +88,14 @@ concept CallableTwoArgsPreallocatedResult =
     };
 
 // --------------------------random numbers----------------------------------
+struct SharedGenerator {
+  static std::mt19937 gen;
+};
+
 struct DoubleGenerator {
   static double get() {
-    static std::mt19937 gen(seed);
     static std::uniform_real_distribution<> dis(-100, 100);
-    return dis(gen);
+    return dis(SharedGenerator::gen);
   }
 
   static double absLimit() {
@@ -90,25 +106,22 @@ struct DoubleGenerator {
 template <uint64_t D>
 struct IntGenerator {
   static int get() {
-    static std::mt19937 gen(seed);
     static std::uniform_int_distribution<> dis(0, D - 1);
-    return dis(gen);
+    return dis(SharedGenerator::gen);
   }
 };
 
 struct VaryingIntGenerator {
   static int get(int min, int max) {
-    static std::mt19937 gen(seed);
     std::uniform_int_distribution<> dis(min, max);
-    return dis(gen);
+    return dis(SharedGenerator::gen);
   }
 };
 
 struct Probability {
   static double get() {
-    static std::mt19937 gen(seed);
     static std::uniform_real_distribution<> dis(0, 1);
-    return dis(gen);
+    return dis(SharedGenerator::gen);
   }
 };
 }  // namespace optimization

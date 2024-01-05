@@ -6,16 +6,15 @@
 
 #include <QMainWindow>
 
-// TODO(novak) QCharts
-#include <QtCharts/QChartView>
-
 #include <chrono>
 #include <future>
 #include <memory>
+#include <vector>
 
-class QChartView;
+class QChart;
 class QCheckBox;
 class QComboBox;
+class QCloseEvent;
 class QLabel;
 class QLineEdit;
 class QProgressBar;
@@ -23,10 +22,6 @@ class QPushButton;
 class QHBoxLayout;
 class QVBoxLayout;
 class QWidget;
-
-namespace optimization {
-extern unsigned int seed;
-}
 
 constexpr const char* kAppFolder{"ml_control_sem3"};
 constexpr const char* kConfigPathFile{"/config_file_path.ini"};
@@ -38,7 +33,8 @@ class MainWindow : public QMainWindow {
   using Tensor = optimization::Tensor<T, Alloc>;
 
   template <typename T>
-  using RepetitiveAllocator = optimization::RepetitiveAllocator<T>;
+  using Allocator = optimization::RepetitiveAllocator<T>;
+  using DoubleAllocator = Allocator<double>;
 
  public:
   explicit MainWindow(optimization::GlobalOptions& options,
@@ -50,6 +46,7 @@ class MainWindow : public QMainWindow {
 
  signals:
   void iterationChanged(int iteration, double functional);
+  void closed();
 
  private:
   void constructView();
@@ -59,10 +56,14 @@ class MainWindow : public QMainWindow {
   QWidget* constructWolfParams(QWidget*);
   QWidget* constructEvolutionParams(QWidget*);
 
+  void closeEvent(QCloseEvent* event) override;
+
   void fillGuiFromOptions();
   void fillOptionsFromGui();
 
   void startOptimization();
+
+  void enableCurrentOptimizationMethod();
 
  private slots:
   void onIterationChanged(int iteration, double functional);
@@ -72,17 +73,19 @@ class MainWindow : public QMainWindow {
   struct {
     std::string savePath;
     std::size_t iters;
+    double tMax;
   } copy_;
 
-  std::future<Tensor<double, RepetitiveAllocator<double>>> optimResult_;
-  Tensor<double, RepetitiveAllocator<double>> best_;
-  std::vector<std::vector<double, RepetitiveAllocator<double>>> trajectory_;
+  std::future<Tensor<double, DoubleAllocator>> optimResult_;
+  Tensor<double, DoubleAllocator> best_;
+  std::vector<std::vector<double, DoubleAllocator>> trajectory_;
 
   std::chrono::time_point<std::chrono::high_resolution_clock> tStart_;
 
   QLineEdit* tMax_;
   QLineEdit* dt_;
   QComboBox* method_;
+  QLineEdit* itersInput_;
   QLineEdit* seed_;
   QLineEdit* printStep_;
   QPushButton* saveFile_;
@@ -113,5 +116,5 @@ class MainWindow : public QMainWindow {
   QLabel* iterations_;
   QLabel* iterTime_;
 
-  QChartView* chart_;
+  std::vector<QChart*> charts_;
 };

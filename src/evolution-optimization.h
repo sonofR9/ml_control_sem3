@@ -54,16 +54,16 @@ std::pair<DoubleGrayCode<D, Z>, DoubleGrayCode<D, Z>> crossover(
  * (where 1 is best) accepts Tensor<double> (StaticTensor<N, double>)
  * @tparam P number of individuals in population
  */
-template <uint64_t D, uint64_t Z, class Alloc,
-          Regular1OutFunction<Tensor<double, Alloc>> Fit,
-          class CodeAlloc = std::allocator<DoubleGrayCode<D, Z>>>
+template <uint64_t D, uint64_t Z, template <typename> class Alloc,
+          Regular1OutFunction<Tensor<double, Alloc<double>>> Fit,
+          PrintFunction Printer = decltype(&coutPrint)>
 class Evolution {
   using Gray = DoubleGrayCode<D, Z>;
   /// @brief StaticTensor<N, Gray>
-  using Chromosome = Tensor<Gray, CodeAlloc>;
+  using Chromosome = Tensor<Gray, Alloc<Gray>>;
 
-  using Population = Tensor<Chromosome>;
-  using FitnessArr = Tensor<double, Alloc>;
+  using Population = Tensor<Chromosome, Alloc<Chromosome>>;
+  using FitnessArr = Tensor<double, Alloc<double>>;
 
  public:
   struct Limits {
@@ -86,13 +86,13 @@ class Evolution {
    * @param uMax
    */
   Evolution(Fit fit, std::size_t paramsCount, Limits limits, std::size_t P,
-            Rates rates)
+            Rates rates, Printer printer = &coutPrint)
       : fit_{fit}, paramsCount_{paramsCount}, uMin_{limits.min},
         uMax_{limits.max}, populationSize_{P}, mutationRate_{rates.mutation},
-        crossoverRate_{rates.crossover} {
+        crossoverRate_{rates.crossover}, printer_{printer} {
   }
 
-  void setBaseline(const Tensor<double, Alloc>& baseline,
+  void setBaseline(const Tensor<double, Alloc<double>>& baseline,
                    double maxDifference) noexcept {
     assert((baseline.size() == paramsCount_));
     baseline_ = Chromosome(baseline.size());
@@ -105,7 +105,7 @@ class Evolution {
   /**
    * @return Tensor (StaticTensor<N, double>)
    */
-  [[nodiscard]] Tensor<double, Alloc> solve(int NumIterations) const {
+  [[nodiscard]] Tensor<double, Alloc<double>> solve(int NumIterations) const {
     std::pair<Chromosome, double> best{{}, std::numeric_limits<double>::max()};
     auto populationPtr{generatePopulation()};
     auto newPopulationPtr{generateEmptyPopulation()};
@@ -154,11 +154,8 @@ class Evolution {
 
       (*populationPtr)[0] = best.first;
 
-      std::stringstream ss{};
-      ss << "\33[2K\riter " << i + 1 << " functional " << best.second;
-      std::cout << ss.rdbuf() << std::flush;
+      printer_(i + 1, best.second);
     }
-    std::cout << "\n";
     return chromosomeToDoubles(best.first);
   }
 
@@ -167,9 +164,9 @@ class Evolution {
    * @param chromosome
    * @return StaticTensor<N, double>
    */
-  static Tensor<double, Alloc> chromosomeToDoubles(
+  static Tensor<double, Alloc<double>> chromosomeToDoubles(
       const Chromosome& chromosome) {
-    auto doubles = Tensor<double, Alloc>(chromosome.size());
+    auto doubles = Tensor<double, Alloc<double>>(chromosome.size());
     std::transform(chromosome.cbegin(), chromosome.cend(), doubles.begin(),
                    [](const Gray& code) { return code.getDouble(); });
     return doubles;
@@ -188,7 +185,7 @@ class Evolution {
                            const FitnessArr& fitness, double probModifier,
                            Population& newPop) const {
     // auto newPopPointer{generateEmptyPopulation()};
-    for (std::size_t i = 0; i < populationSize_; i += 2) {
+    for (std::size_t i = 0; i < populationSize_ - 1; i += 2) {
       const auto lhsIndex{VaryingIntGenerator::get(0, populationSize_ - 1)};
       auto rhsIndex{VaryingIntGenerator::get(0, populationSize_ - 1)};
       if (rhsIndex == lhsIndex) {
@@ -279,7 +276,7 @@ class Evolution {
 
   double fitAdapter(const Chromosome& q) const {
     assert((q.size() == paramsCount_));
-    auto qDouble = Tensor<double, Alloc>(q.size());
+    auto qDouble = Tensor<double, Alloc<double>>(q.size());
     for (std::size_t i{0}; i < paramsCount_; ++i) {
       qDouble[i] = q[i].getDouble();
     }
@@ -298,5 +295,7 @@ class Evolution {
 
   Chromosome baseline_{};
   double maxDifference_;
+
+  Printer printer_;
 };
 }  // namespace optimization

@@ -1,12 +1,13 @@
 set(TARGET_NAME ${PROJECT_NAME})
 
 set(SOURCES 
+    global.cpp
     options.cpp
     main.cpp
 )
 
 find_package(Qt6 COMPONENTS Widgets Core Charts)
-if(false AND Qt6_FOUND)
+if(true AND Qt6_FOUND)
     # qt_standard_project_setup()
     set(CMAKE_AUTOMOC ON)
     set(CMAKE_AUTORCC ON)
@@ -31,18 +32,11 @@ target_link_libraries(${TARGET_NAME} PRIVATE
 )
 
 set(PRIVATE_PCH
-    <vector>
-    <string>
-    <iostream>
-    <fstream>
-    <algorithm>
-    <cassert>
-    <boost/archive/text_iarchive.hpp>
-    <boost/archive/text_oarchive.hpp>
-    <boost/serialization/vector.hpp>
+    "optimize-model.h"
+    "tensor.h"
 )
 
-if(false AND Qt6_FOUND)
+if(true AND Qt6_FOUND)
     # set_target_properties(${TARGET_NAME} PROPERTIES
     #     WIN32_EXECUTABLE ON
     # )
