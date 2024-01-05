@@ -5,6 +5,7 @@ option(ENABLE_CLANG_FORMAT "Set to \"ON\" to add clang-format build target" OFF)
 option(ENABLE_CLANG_TIDY "Set to \"ON\" to enable clang-tidy" OFF)
 option(ENABLE_CPPLINT "Set to \"ON\" to enable cpplint" OFF)
 option(ENABLE_CPPCHECK "Set to \"ON\" to enable cppcheck" OFF)
+option(DISABLE_WARNINGS "Set to \"ON\" to disable warnings" OFF)
 
 option(ENABLE_SANITIZER "Set to \"ON\" to enable sanitizer in debug build" OFF)
 

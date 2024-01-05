@@ -2,6 +2,7 @@
 
 #include "global.h"
 #include "gray-code.h"
+#include "utils.h"
 
 #include <algorithm>
 #include <array>
@@ -9,6 +10,7 @@
 #include <execution>
 #include <memory>
 #include <ranges>
+#include <sstream>
 
 namespace optimization {
 template <uint64_t N, uint64_t D, uint64_t Z>
@@ -53,12 +55,15 @@ std::pair<DoubleGrayCode<D, Z>, DoubleGrayCode<D, Z>> crossover(
  * @tparam P number of individuals in population
  */
 template <uint64_t D, uint64_t Z, class Alloc,
-          Regular1OutFunction<Tensor<double, Alloc>> Fit, int P = 100,
+          Regular1OutFunction<Tensor<double, Alloc>> Fit,
           class CodeAlloc = std::allocator<DoubleGrayCode<D, Z>>>
 class Evolution {
   using Gray = DoubleGrayCode<D, Z>;
   /// @brief StaticTensor<N, Gray>
   using Chromosome = Tensor<Gray, CodeAlloc>;
+
+  using Population = Tensor<Chromosome>;
+  using FitnessArr = Tensor<double, Alloc>;
 
  public:
   struct Limits {
@@ -80,9 +85,10 @@ class Evolution {
    * @param uMin
    * @param uMax
    */
-  Evolution(Fit fit, std::size_t paramsCount, Limits limits, Rates rates)
+  Evolution(Fit fit, std::size_t paramsCount, Limits limits, std::size_t P,
+            Rates rates)
       : fit_{fit}, paramsCount_{paramsCount}, uMin_{limits.min},
-        uMax_{limits.max}, mutationRate_{rates.mutation},
+        uMax_{limits.max}, populationSize_{P}, mutationRate_{rates.mutation},
         crossoverRate_{rates.crossover} {
   }
 
@@ -91,7 +97,7 @@ class Evolution {
     assert((baseline.size() == paramsCount_));
     baseline_ = Chromosome(baseline.size());
     std::transform(baseline.begin(), baseline.end(), baseline_.begin(),
-                   [this](double v) { return Gray(v); });
+                   [](double v) { return Gray(v); });
 
     maxDifference_ = maxDifference;
   }
@@ -101,30 +107,29 @@ class Evolution {
    */
   [[nodiscard]] Tensor<double, Alloc> solve(int NumIterations) const {
     std::pair<Chromosome, double> best{{}, std::numeric_limits<double>::max()};
-    auto population{generatePopulation()};
+    auto populationPtr{generatePopulation()};
+    auto newPopulationPtr{generateEmptyPopulation()};
 
     for (int i{0}; best.second > 1 + kEps && i < NumIterations; ++i) {
-      auto [fitness, minIndex] = evaluatePopulation(*population);
+      auto [fitness, minIndex] = evaluatePopulation(*populationPtr);
       if (fitness[minIndex] < best.second) {
-        best = {(*population)[minIndex], fitness[minIndex]};
+        best = {(*populationPtr)[minIndex], fitness[minIndex]};
       }
 
-      auto newPopulation{
-          std::make_unique<std::array<Chromosome, P>>(*population)};
-      auto newFitness{fitness};
-      (*newPopulation)[0] = best.first;
-      for (int i{0}; i < P; ++i) {
+      auto newFitness = FitnessArr(populationSize_);
+      (*newPopulationPtr)[0] = best.first;
+      for (std::size_t i{0}; i < populationSize_; ++i) {
         int n1, n2, n3;
         do {
-          n1 = IntGenerator<P>::get();
-          n2 = IntGenerator<P>::get();
-          n3 = IntGenerator<P>::get();
+          n1 = VaryingIntGenerator::get(0, populationSize_ - 1);
+          n2 = VaryingIntGenerator::get(0, populationSize_ - 1);
+          n3 = VaryingIntGenerator::get(0, populationSize_ - 1);
         } while (n1 == n2 || n2 == n3 || n3 == n1);
 
         int j{n1};
         j = fitness[n2] < fitness[j] ? n2 : j;
         j = fitness[n3] < fitness[j] ? n3 : j;
-        (*newPopulation)[i] = (*population)[j];
+        (*newPopulationPtr)[i] = (*populationPtr)[j];
         newFitness[i] = fitness[j];
       }
 
@@ -132,14 +137,12 @@ class Evolution {
       // crossover happens when (1/ min(fit1, fit2)) * probModifier > random
       // At the start 1/fit->0 => crossover will not happen. With modification
       // equation above closer to 1 * trueProbModifier > random
-      crossoverPopulation(*newPopulation, newFitness,
-                          crossoverRate_ * best.second);
-      (*newPopulation)[0] = best.first;
+      crossoverPopulation(*newPopulationPtr, newFitness,
+                          crossoverRate_ * best.second, *populationPtr);
+      // now new population is stored in populationPtr
 
-      mutatePopulation(*newPopulation);
-      population = std::move(newPopulation);
-
-      for (auto& chromosome : *population) {
+      mutatePopulation(*populationPtr);
+      for (auto& chromosome : *populationPtr) {
         for (auto& gen : chromosome) {
           if (gen.getDouble() < uMin_) {
             gen = uMin_;
@@ -148,6 +151,8 @@ class Evolution {
           }
         }
       }
+
+      (*populationPtr)[0] = best.first;
 
       std::stringstream ss{};
       ss << "\33[2K\riter " << i + 1 << " functional " << best.second;
@@ -170,7 +175,7 @@ class Evolution {
     return doubles;
   }
 
-  void mutatePopulation(std::array<Chromosome, P>& population) const {
+  void mutatePopulation(Population& population) const {
     const auto threshold{1 / mutationRate_};
     for (auto& individual : population) {
       for (auto& gen : individual) {
@@ -179,16 +184,15 @@ class Evolution {
     }
   }
 
-  void crossoverPopulation(std::array<Chromosome, P>& population,
-                           const std::array<double, P>& fitness,
-                           double probModifier) const {
-    auto newPopPointer{generateEmptyPopulation()};
-    auto& newPop{*newPopPointer};
-    for (int i = 0; i < P; i += 2) {
-      const auto lhsIndex{IntGenerator<P>::get()};
-      auto rhsIndex{IntGenerator<P>::get()};
+  void crossoverPopulation(const Population& population,
+                           const FitnessArr& fitness, double probModifier,
+                           Population& newPop) const {
+    // auto newPopPointer{generateEmptyPopulation()};
+    for (std::size_t i = 0; i < populationSize_; i += 2) {
+      const auto lhsIndex{VaryingIntGenerator::get(0, populationSize_ - 1)};
+      auto rhsIndex{VaryingIntGenerator::get(0, populationSize_ - 1)};
       if (rhsIndex == lhsIndex) {
-        if (rhsIndex < P - 1) {
+        if (rhsIndex < populationSize_ - 1) {
           ++rhsIndex;
         } else {
           --rhsIndex;
@@ -209,19 +213,19 @@ class Evolution {
         newPop[i + 1] = population[rhsIndex];
       }
     }
-    population = std::move(newPop);
   }
 
-  std::pair<std::array<double, P>, int> evaluatePopulation(
-      const std::array<Chromosome, P>& population) const {
+  std::pair<FitnessArr, int> evaluatePopulation(
+      const Population& population) const {
     double min = std::numeric_limits<double>::max();
-    std::pair<std::array<double, P>, int> fitness{{}, -1};
+    // TODO(novak) preallocate
+    std::pair<FitnessArr, int> fitness{FitnessArr(populationSize_), -1};
 
     std::transform(
         std::execution::par_unseq, population.begin(), population.end(),
         fitness.first.begin(),
         [this](const Chromosome& q) -> double { return fitAdapter(q); });
-    for (int i{0}; i < P; ++i) {
+    for (std::size_t i{0}; i < populationSize_; ++i) {
       if (fitness.first[i] < min) {
         fitness.second = i;
         min = fitness.first[i];
@@ -231,9 +235,10 @@ class Evolution {
     return fitness;
   }
 
-  std::unique_ptr<std::array<Chromosome, P>> generatePopulation() const {
+  std::unique_ptr<Population> generatePopulation() const {
     // generate random population (P chromosomes of size N each)
-    auto population{std::make_unique<std::array<Chromosome, P>>()};
+    // TODO(novak) Tensor => size
+    auto population{std::make_unique<Population>(populationSize_)};
     std::generate(
         population->begin(), population->end(), [this]() -> Chromosome {
           auto chromosome = Chromosome(paramsCount_);
@@ -260,9 +265,10 @@ class Evolution {
     return population;
   }
 
-  std::unique_ptr<std::array<Chromosome, P>> generateEmptyPopulation() const {
+  std::unique_ptr<Population> generateEmptyPopulation() const {
     // generate random population (P chromosomes of size N each)
-    auto population{std::make_unique<std::array<Chromosome, P>>()};
+    // TODO(novak) Tensor => size
+    auto population{std::make_unique<Population>(populationSize_)};
     std::generate(population->begin(), population->end(),
                   [this]() -> Chromosome {
                     auto chromosome = Chromosome(paramsCount_);
@@ -281,13 +287,14 @@ class Evolution {
   }
 
   Fit fit_;
-  std::size_t paramsCount_;
+  const std::size_t paramsCount_;
 
-  double uMin_;
-  double uMax_;
+  const double uMin_;
+  const double uMax_;
 
-  double mutationRate_;
-  double crossoverRate_;
+  const std::size_t populationSize_;
+  const double mutationRate_;
+  const double crossoverRate_;
 
   Chromosome baseline_{};
   double maxDifference_;

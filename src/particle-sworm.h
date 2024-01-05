@@ -7,6 +7,9 @@
 #include <iostream>
 
 namespace optimization {
+
+// TODO(novak) give template param Alloc => functions uses Alloc<double> etc.?
+
 /**
  * @brief
  *
@@ -14,14 +17,19 @@ namespace optimization {
  * @tparam P number of wolfs in population
  * @tparam B number of best wolfs
  */
-template <class Alloc, Regular1OutFunction<Tensor<double, Alloc>> Fit,
-          int P = 100, int B = 3>
+template <class Alloc, Regular1OutFunction<Tensor<double, Alloc>> Fit>
 class GrayWolfAlgorithm {
   /// @brief StaticTensor<N, double>
   using Specimen = Tensor<double, Alloc>;
-  using Population = std::array<Specimen, P>;
+  /// @brief StaticTensor<P, Specimen>
+  using Population = Tensor<Specimen>;
 
  public:
+  struct Parameters {
+    std::size_t populationSize;
+    std::size_t bestNum;
+  };
+
   /**
    * @brief Construct a new Gray Wolf Algorithm object
    *
@@ -30,8 +38,10 @@ class GrayWolfAlgorithm {
    * of steps in piecewise function)
    * @param limit
    */
-  GrayWolfAlgorithm(Fit fit, std::size_t paramsCount, double limit)
-      : fit_{fit}, paramsCount_{paramsCount}, limit_{std::abs(limit)} {
+  GrayWolfAlgorithm(Fit fit, std::size_t paramsCount, double limit,
+                    Parameters params)
+      : fit_{fit}, paramsCount_{paramsCount}, limit_{std::abs(limit)},
+        populationSize_{params.populationSize}, numBest_{params.bestNum} {
   }
 
   void setBaseline(Specimen baseline, double maxDifference) noexcept {
@@ -49,28 +59,24 @@ class GrayWolfAlgorithm {
   Tensor<double, Alloc> solve(int numIterations) {
     auto generated{GrayWolfAlgorithm::generatePopulation()};
     auto& population{*generated};
-
+    auto best = Tensor<Specimen>(numBest_);
+    auto ksi = Tensor<double, Alloc>(2 * numBest_);
     for (int i{0}; i < numIterations; ++i) {
-      const auto& best{getBest(population)};
+      getBest(population, best);
 
       const double alpha{2.0 * (1 - 1.0 * i / numIterations)};
 
       for (auto& spec : population) {
-        const auto& ksi{GrayWolfAlgorithm::generateKsi()};
+        GrayWolfAlgorithm::generateKsi(ksi);
         for (std::size_t j{0}; j < paramsCount_; ++j) {
           double qj{spec[j]};
           double res{0};
-          for (int k{0}; k < B; ++k) {
-            // res += best[k][j] -
-            //        (2.0 * ksi[2 * k + 1]) *
-            //            std::abs((2 * ksi[2 * k] - 1) * alpha * best[k][j] -
-            //            qj);
-
+          for (std::size_t k{0}; k < numBest_; ++k) {
             res +=
                 best[k][j] - (2.0 * ksi[2 * k + 1] - 1) * alpha *
                                  std::abs((2 * ksi[2 * k]) * best[k][j] - qj);
           }
-          spec[j] = res / B;
+          spec[j] = res / numBest_;
           if (spec[j] > limit_) {
             spec[j] = limit_;
           } else if (spec[j] < -limit_) {
@@ -93,44 +99,46 @@ class GrayWolfAlgorithm {
   }
 
  private:
-  static std::array<double, static_cast<std::size_t>(2) * B> generateKsi() {
-    std::array<double, static_cast<std::size_t>(2) * B> result{};
+  /**
+   * @return shape 2*Best.size()
+   */
+  void generateKsi(Tensor<double, Alloc>& result) const {
     std::generate(result.begin(), result.end(),
                   []() -> double { return 2.0 * (Probability::get() - 0.5); });
-    return result;
   }
 
-  std::array<Specimen, B> getBest(Population& population) {
+  /**
+   * @return shape Best.size()
+   */
+  void getBest(Population& population, Tensor<Specimen>& best) {
     using CalcSpecimen = std::pair<int, double>;
-    std::array<CalcSpecimen, P> calcPop{};
+    thread_local static auto calcPop = Tensor<CalcSpecimen>(populationSize_);
 
     std::transform(std::execution::par_unseq, population.begin(),
                    population.end(), calcPop.begin(),
                    [this](const Specimen& q) -> CalcSpecimen {
                      return {0, fit_(q)};
                    });
-    for (int i{0}; i < P; ++i) {
+    for (std::size_t i{0}; i < populationSize_; ++i) {
       calcPop[i].first = i;
     }
 
-    std::array<CalcSpecimen, B> best;
+    thread_local static auto bestCalc = Tensor<CalcSpecimen>(numBest_);
     std::partial_sort_copy(
-        calcPop.begin(), calcPop.end(), best.begin(), best.end(),
+        calcPop.begin(), calcPop.end(), bestCalc.begin(), bestCalc.end(),
         [](const CalcSpecimen& lhs, const CalcSpecimen& rhs) {
           return lhs.second < rhs.second;
         });
 
-    std::array<Specimen, B> result;
-    for (int i{0}; i < B; ++i) {
-      result[i] = population[best[i].first];
+    for (std::size_t i{0}; i < numBest_; ++i) {
+      best[i] = population[bestCalc[i].first];
     }
-    return result;
   }
 
   std::unique_ptr<Population> generatePopulation() {
     // generate random population (P chromosomes of size N each)
-    auto result{std::make_unique<std::array<Specimen, P>>()};
-    std::array<Specimen, P>& population{*result};
+    auto result{std::make_unique<Population>(populationSize_)};
+    Population& population{*result};
     std::ranges::generate(population, [this]() -> Specimen {
       auto chromosome = Specimen(paramsCount_);
       if (!baseline_.empty()) {
@@ -158,6 +166,9 @@ class GrayWolfAlgorithm {
   std::size_t paramsCount_;
 
   double limit_;
+
+  std::size_t populationSize_;
+  std::size_t numBest_;
 
   Specimen baseline_{};
   double maxDifference_;

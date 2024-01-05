@@ -10,10 +10,23 @@
 #include "options.h"
 #include "particle-sworm.h"
 #include "tensor.h"
+#include "utils.h"
 
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/serialization/vector.hpp>
+#ifdef BUILD_WITH_QT
+#include "main-window.h"
+
+#include <QApplication>
+#include <QDir>
+#include <QSettings>
+#include <QStandardPaths>
+
+#include <cstdlib>
+
+// #ifdef WINDOWS
+// #include <windows.h>
+// #endif
+
+#endif
 
 #include <cassert>
 #include <chrono>
@@ -24,27 +37,6 @@ unsigned int seed = 50;
 }
 
 constexpr double kMaxDiff{1};
-
-template <class Alloc, class VectorAlloc>
-void writeTrajectoryToFiles(
-    const std::vector<std::vector<double, Alloc>, VectorAlloc>& trajectory) {
-  assert((trajectory.size() == 4));
-
-  std::ofstream fileX("trajectory_x.txt");
-  std::ofstream fileY("trajectory_y.txt");
-
-  if (!fileX.is_open() || !fileY.is_open()) {
-    throw std::runtime_error("Error opening files");
-  }
-
-  for (size_t i = 0; i < trajectory[0].size(); ++i) {
-    fileX << trajectory[0][i] << "\n";
-    fileY << trajectory[1][i] << "\n";
-  }
-
-  fileX.close();
-  fileY.close();
-}
 
 class TimeMeasurer {
  public:
@@ -78,15 +70,7 @@ void modelTestEvolution(const optimization::GlobalOptions& options) {
 
   Tensor<double, Alloc> init{};
   if (!options.controlSaveFile.empty() && !options.clearSaveBeforeStart) {
-    // create file if it does not exist
-    { std::ofstream file(options.controlSaveFile, std::ofstream::app); }
-    std::ifstream file(options.controlSaveFile);
-    try {
-      boost::archive::text_iarchive ia(file);
-      ia >> init;
-    } catch (const boost::archive::archive_exception& e) {
-      std::cout << e.what() << "\n";
-    }
+    init = readSaveFile<double, Alloc>(options.controlSaveFile);
     init.resize(paramsCount);
   }
 
@@ -98,9 +82,10 @@ void modelTestEvolution(const optimization::GlobalOptions& options) {
     assert((solverResult.size() == paramsCount));
     return functional<double, Alloc>(solverResult, tMax, dt);
   };
-  Evolution<1000, 1000, Alloc, decltype(adap), 500> solver(
+  Evolution<1000, 1000, Alloc, decltype(adap)> solver(
       adap, paramsCount,
       {.min = options.controlOptions.uMin, .max = options.controlOptions.uMax},
+      static_cast<std::size_t>(options.evolutionOpt.populationSize),
       {.mutation = options.evolutionOpt.mutationRate,
        .crossover = options.evolutionOpt.crossoverRate});
   if (!init.empty()) {
@@ -109,10 +94,7 @@ void modelTestEvolution(const optimization::GlobalOptions& options) {
   const auto best{solver.solve(iters)};
 
   if (!options.controlSaveFile.empty()) {
-    std::ofstream file(options.controlSaveFile,
-                       std::ofstream::out | std::ofstream::trunc);
-    boost::archive::text_oarchive oa(file);
-    oa << best;
+    writeToSaveFile(options.controlSaveFile, best);
   }
 
   const auto trajectory{getTrajectoryFromControl<double, Alloc>(best, tMax)};
@@ -129,15 +111,7 @@ void modelTestGray(const optimization::GlobalOptions& options) {
 
   Tensor<double, Alloc> init{};
   if (!options.controlSaveFile.empty() && !options.clearSaveBeforeStart) {
-    // create file if it does not exist
-    { std::ofstream file(options.controlSaveFile, std::ofstream::app); }
-    std::ifstream file(options.controlSaveFile);
-    try {
-      boost::archive::text_iarchive ia(file);
-      ia >> init;
-    } catch (const boost::archive::archive_exception& e) {
-      std::cout << e.what() << "\n";
-    }
+    init = readSaveFile<double, Alloc>(options.controlSaveFile);
     init.resize(paramsCount);
   }
 
@@ -149,42 +123,122 @@ void modelTestGray(const optimization::GlobalOptions& options) {
     assert((solverResult.size() == paramsCount));
     return functional<double, Alloc>(solverResult, tMax, dt);
   };
-  GrayWolfAlgorithm<Alloc, decltype(adap), 512, 3> solver(adap, paramsCount,
-                                                          10);
+  GrayWolfAlgorithm<Alloc, decltype(adap)> solver(
+      adap, paramsCount, 10,
+      {.populationSize = static_cast<std::size_t>(options.wolfOpt.wolfNum),
+       .bestNum = static_cast<std::size_t>(options.wolfOpt.numBest)});
   if (!init.empty()) {
     solver.setBaseline(init, kMaxDiff);
   }
   const auto best{solver.solve(iters)};
 
   if (!options.controlSaveFile.empty()) {
-    std::ofstream file(options.controlSaveFile,
-                       std::ofstream::out | std::ofstream::trunc);
-    boost::archive::text_oarchive oa(file);
-    oa << best;
+    writeToSaveFile(options.controlSaveFile, best);
   }
 
   const auto trajectory{getTrajectoryFromControl<double, Alloc>(best, tMax)};
   writeTrajectoryToFiles(trajectory);
 }
 
-int main(int argc, const char** argv) try {
+#ifdef BUILD_WITH_QT
+int commonMain(int argc, const char** argv) {
+  const auto configsPath{QDir::homePath() + "/" + kAppFolder};
+  if (!QDir(configsPath).exists()) {
+    if (!QDir().mkdir(configsPath)) {
+      std::cerr << std::format(
+          "Directory {} does not exist and can not be created.\nPlease create "
+          "it manually.\n",
+          configsPath.toStdString());
+      return 1;
+    }
+  }
+  QSettings settings(configsPath + kConfigPathFile, QSettings::IniFormat);
+  const auto configFilePath{settings.value("config_file_path").toString()};
+
+  auto options{parseOptions(argc, argv, configFilePath.toStdString())};
+  settings.setValue("config_file_path", QString(options.configFile.c_str()));
+
+  seed = options.seed;
+
+  int qtArgc{1};
+  char** qtArgv{new char*[1]};
+  qtArgv[0] = const_cast<char*>(argv[0]);
+
+  QApplication app{qtArgc, qtArgv};
+  MainWindow window{options};
+  window.show();
+
+  const auto res{QApplication::exec()};
+
+  RepetitiveAllocator<double> alloc{};
+  alloc.deallocateAll();
+  delete[] qtArgv;
+
+  return res;
+}
+#endif
+
+int main(int argc, char** argvCmd) try {
   using namespace optimization;
-  const auto& options{parseOptions(argc, argv)};
+
+  const char** argv = const_cast<const char**>(argvCmd);
+
+#ifdef BUILD_WITH_QT
+  return commonMain(argc, argv);
+#else
+  auto options{parseOptions(argc, argv)};
 
   seed = options.seed;
 
   switch (options.method) {
   case GlobalOptions::Method::kEvolution:
-    modelTestEvolution<RepetitiveAllocator<double>>(options);
+    modelTestEvolution<RepetitiveAllocator<double> >(options);
     break;
   case GlobalOptions::Method::kGrayWolf:
-    modelTestGray<RepetitiveAllocator<double>>(options);
+    modelTestGray<RepetitiveAllocator<double> >(options);
     break;
   }
+  RepetitiveAllocator<double> alloc{};
+  alloc.deallocateAll();
   return 0;
+#endif
 } catch (const std::exception& e) {
   std::cerr << e.what() << "\n";
   return 1;
 } catch (...) {
   return 1;
 }
+
+// #if defined(WINDOWS) and defined(BUILD_WITH_QT)
+// void wcharToCharArr(wchar_t* argv[], char** char_argv, int argc) {
+//   for (int i = 0; i < argc; i++) {
+//     size_t converted = 0;
+//     char_argv[i] = new char[wcslen(argv[i]) + 1];
+//     wcstombs_s(&converted, char_argv[i], wcslen(argv[i]) + 1, argv[i],
+//                _TRUNCATE);
+//   }
+// }
+
+// int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+//                    LPSTR lpCmdLine, int nCmdShow) try {
+//   int argc = 0;  // Count the arguments
+//   wchar_t** argv_wide = CommandLineToArgvW(GetCommandLineW(), &argc);
+
+//   char** char_argv = new char*[argc];
+//   wcharToCharArr(argv_wide, char_argv, argc);
+
+//   const auto res{commonMain(argc, const_cast<const char**>(char_argv))};
+
+//   for (int i = 0; i < argc; i++) {
+//     delete[] char_argv[i];
+//   }
+//   delete[] char_argv;
+//   LocalFree(argv_wide);
+//   return res;
+// } catch (const std::exception& e) {
+//   std::cerr << e.what() << "\n";
+//   return 1;
+// } catch (...) {
+//   return 1;
+// }
+// #endif

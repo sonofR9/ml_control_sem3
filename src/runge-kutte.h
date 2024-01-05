@@ -2,27 +2,39 @@
 
 #include "global.h"
 #include "tensor.h"
+#include "utils.h"
 
 #include <vector>
 namespace optimization {
-template <typename T, class Alloc, StateSpaceFunctionAll<T, Alloc> F>
-Tensor<T, Alloc> rungeKutteStep(double startT, const Tensor<T, Alloc>& startX,
-                                F fun, double interestT, double delta = 0.001) {
+
+template <typename F, typename T, class Alloc>
+concept RungeKutteSaveFun = requires(F fun, Tensor<T, Alloc> x, double t) {
+  { fun(x, t) };
+};
+
+template <typename T, class Alloc>
+void emptySave(const Tensor<T, Alloc>&, double) {
+}
+
+template <typename T, class Alloc, StateSpaceFunctionAll<T, Alloc> F,
+          RungeKutteSaveFun<T, Alloc> SaveF>
+Tensor<T, Alloc> rungeKutteStep(
+    double startT, const Tensor<T, Alloc>& startX, F fun, double interestT,
+    double delta = 0.001, SaveF save = [](const Tensor<T, Alloc>&, double) {}) {
   double curT{startT};
   auto curX{startX};
 
   const auto delta2{delta / 2};
   const auto delta6{delta / 6};
 
-  // thread_local static auto k = Tensor<T, Alloc>(curX.size());
-  // thread_local static auto tmp{k};
+  thread_local static auto k = Tensor<T, Alloc>(curX.size());
+  thread_local static auto tmp = Tensor<T, Alloc>(k.size());
   while (curT < interestT) {
     // bringing outside and preallocating does nothing
     if constexpr (CallableTwoArgsPreallocatedResult<
                       decltype(fun), decltype(curX), double, T, Alloc>) {
-      auto k = Tensor<T, Alloc>(curX.size());
       fun(curX, curT, k);
-      auto tmp{k};
+      tmp = k;
       fun(curX + delta2 * k, curT + delta2, k);
       tmp += 2 * k;
       fun(curX + delta2 * k, curT + delta2, k);
@@ -31,9 +43,10 @@ Tensor<T, Alloc> rungeKutteStep(double startT, const Tensor<T, Alloc>& startX,
       tmp += k;
       curX += delta6 * tmp;
       curT += delta;
+      save(curX, curT);
     } else {
-      auto k = fun(curX, curT);
-      auto tmp{k};
+      k = fun(curX, curT);
+      tmp = k;
       k = fun(curX + delta2 * k, curT + delta2);
       tmp += 2 * k;
       k = fun(curX + delta2 * k, curT + delta2);
@@ -42,6 +55,7 @@ Tensor<T, Alloc> rungeKutteStep(double startT, const Tensor<T, Alloc>& startX,
       tmp += k;
       curX += delta6 * tmp;
       curT += delta;
+      save(curX, curT);
     }
   }
   return curX;
@@ -63,28 +77,22 @@ std::vector<std::vector<T, Alloc>, VectorAlloc> solveDiffEqRungeKutte(
   for (auto& vec : result) {
     vec.reserve(static_cast<std::size_t>((lastT - startT) / delta));
   }
-  double curT{startT};
-  Tensor<T, Alloc> curX{startX};
 
   auto addPointToResult = [&result](const Tensor<T, Alloc>& point,
                                     double curT) -> void {
-    for (std::size_t i{0}; i < result.size() - 1; ++i) {
+    const auto lastIndex{result.size() - 1};
+    for (std::size_t i{0}; i < lastIndex; ++i) {
       result[i].push_back(point[i]);
     }
-    result[result.size() - 1].push_back(curT);
+    result[lastIndex].push_back(curT);
   };
 
-  addPointToResult(curX, curT);
+  addPointToResult(startX, startT);
 
-  while (curT < lastT - kEps) {
-    curX = rungeKutteStep(
-        curT, curX,
-        std::function<Tensor<T, Alloc>(Tensor<T, Alloc>, double)>(
-            fun),  // std::function<Tensor<3>(Tensor<3>, double)
-        curT + delta, delta);
-    curT += delta;
-    addPointToResult(curX, curT);
-  }
+  rungeKutteStep(startT, startX,
+                 std::function<Tensor<T, Alloc>(Tensor<T, Alloc>, double)>(
+                     fun),  // std::function<Tensor<3>(Tensor<3>, double)
+                 lastT - kEps, delta, addPointToResult);
 
   return result;
 }

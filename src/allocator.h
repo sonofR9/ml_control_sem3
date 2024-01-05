@@ -92,7 +92,7 @@ class RepetitiveAllocator {
       freeSize.pop_back();
     } else {
       result = allocator_.allocate(n);
-      allocated_.push_back(result);
+      allocated_.push_back({result, n});
 #ifdef COLLECT_ALLOCATOR_STATS
       statCollector_.insert(n);
 #endif
@@ -110,7 +110,7 @@ class RepetitiveAllocator {
   constexpr void deallocateAll() {
     free_.clear();
     for (auto& p : allocated_) {
-      allocator_.deallocate(p);
+      allocator_.deallocate(p.first, p.second);
     }
     allocated_.clear();
     // if (smthInUse) {
@@ -122,7 +122,7 @@ class RepetitiveAllocator {
   static thread_local std::allocator<T> allocator_;
 
   static thread_local std::vector<std::vector<T*>> free_;
-  static thread_local std::vector<T*> allocated_;
+  static thread_local std::vector<std::pair<T*, std::size_t>> allocated_;
 
 #ifdef COLLECT_ALLOCATOR_STATS
   static thread_local AllocatorStatCollector<T> statCollector_;
@@ -136,7 +136,8 @@ template <typename T>
 thread_local std::vector<std::vector<T*>> RepetitiveAllocator<T>::free_ =
     std::vector<std::vector<T*>>(kMaxSize);
 template <typename T>
-thread_local std::vector<T*> RepetitiveAllocator<T>::allocated_{};
+thread_local std::vector<std::pair<T*, std::size_t>>
+    RepetitiveAllocator<T>::allocated_{};
 
 #ifdef COLLECT_ALLOCATOR_STATS
 template <typename T>

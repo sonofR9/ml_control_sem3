@@ -10,17 +10,10 @@
 #include <fstream>
 #include <iostream>
 #include <random>
+#include <sstream>
+#include <string>
 
 namespace {
-constexpr std::string methodToName(optimization::GlobalOptions::Method method) {
-  switch (method) {
-  case optimization::GlobalOptions::Method::kGrayWolf:
-    return "wolf";
-  case optimization::GlobalOptions::Method::kEvolution:
-    return "evolution";
-  }
-}
-
 template <typename T>
 constexpr T getValue(const boost::program_options::variables_map& vm,
                      const std::string& name) {
@@ -29,10 +22,39 @@ constexpr T getValue(const boost::program_options::variables_map& vm,
   }
   return {};
 }
+
+void vectorToSeparateLines(const std::string& fileName, std::string tag) {
+  if (tag.back() != '=') {
+    tag += '=';
+  }
+  std::ifstream inputFile(fileName);
+  std::stringstream modifiedLines;  // Store modified lines temporarily
+
+  std::string line;
+  while (std::getline(inputFile, line)) {
+    if (line.starts_with(tag)) {
+      // Split the values and write separate lines to the stringstream
+      std::istringstream iss(line.substr(tag.size()));  // Skip startingWord
+      std::string value;
+      while (std::getline(iss, value, ',')) {
+        modifiedLines << tag << value << std::endl;
+      }
+    } else {
+      modifiedLines << line << std::endl;  // Copy other lines directly
+    }
+  }
+
+  inputFile.close();
+
+  std::ofstream outputFile(fileName);
+  outputFile << modifiedLines.str();
+  outputFile.close();
+}
 }  // namespace
 
 namespace optimization {
-GlobalOptions parseOptions(int argc, const char** argv) noexcept try {
+GlobalOptions parseOptions(int argc, const char** argv,
+                           const std::string& configPathFromQt) noexcept try {
   namespace po = boost::program_options;
 
   // clang-format off
@@ -76,7 +98,7 @@ GlobalOptions parseOptions(int argc, const char** argv) noexcept try {
       ("clear", po::bool_switch()->default_value(false),
           "Clear control save file before start")
       ("seed,s", po::value<unsigned int>()->default_value(std::random_device{}()),
-          "Random seed (type: unsigned int) (default: random)")
+          "Random seed (type: unsigned int) (if empty will be random)")
       ("printStep", po::value<int>()->default_value(5),
           "Print results every N steps")
       ("configFile,c", po::value<std::string>(), "Configuration file")
@@ -91,6 +113,8 @@ GlobalOptions parseOptions(int argc, const char** argv) noexcept try {
     std::exit(0);
   }
 
+  GlobalOptions options;
+
   if (vm.count("configFile") != 0U) {
     const auto& fileName{vm["configFile"].as<std::string>()};
     std::ifstream ifs(fileName);
@@ -99,12 +123,20 @@ GlobalOptions parseOptions(int argc, const char** argv) noexcept try {
       std::exit(1);
     }
 
+    options.configFile = fileName;
+    po::store(po::parse_config_file(ifs, desc), vm);
+  } else if (!configPathFromQt.empty()) {
+    std::ifstream ifs(configPathFromQt);
+    if (!ifs.is_open()) {
+      std::cout << std::format("Config file '{}' does not exist\n",
+                               configPathFromQt);
+      std::exit(1);
+    }
+    options.configFile = configPathFromQt;
     po::store(po::parse_config_file(ifs, desc), vm);
   }
 
   po::notify(vm);
-
-  GlobalOptions options;
 
   // Populate general options
   options.tMax = getValue<double>(vm, "tmax");
@@ -173,12 +205,6 @@ void writeConfig(const GlobalOptions& options,
     pt.put("tmax", options.tMax);
     pt.put("dt", options.integrationDt);
 
-    // Control options
-    boost::property_tree::ptree controlOptionsPt;
-    controlOptionsPt.put("number", options.controlOptions.numOfParams);
-    controlOptionsPt.put("min", options.controlOptions.uMin);
-    controlOptionsPt.put("max", options.controlOptions.uMax);
-
     std::stringstream initialSs;
     std::stringstream targetSs;
     std::copy(options.controlOptions.initialState.begin(),
@@ -187,35 +213,34 @@ void writeConfig(const GlobalOptions& options,
     std::copy(options.controlOptions.targetState.begin(),
               options.controlOptions.targetState.end(),
               std::ostream_iterator<double>(targetSs, ","));
-    controlOptionsPt.put("initial", initialSs.str());
-    controlOptionsPt.put("target", targetSs.str());
-    pt.add_child("control", controlOptionsPt);
+    pt.put("control.initial", initialSs.str());
+    pt.put("control.target", targetSs.str());
+    pt.put("control.number", options.controlOptions.numOfParams);
+    pt.put("control.min", options.controlOptions.uMin);
+    pt.put("control.max", options.controlOptions.uMax);
 
     // Optimization method options
-    pt.put("name", methodToName(options.method));
+    pt.put("method", methodToName(options.method));
 
-    boost::property_tree::ptree wolfOptionsPt;
-    wolfOptionsPt.put("num", options.wolfOpt.wolfNum);
-    wolfOptionsPt.put("best", options.wolfOpt.numBest);
-    pt.add_child("wolf", wolfOptionsPt);
+    pt.put("wolf.num", options.wolfOpt.wolfNum);
+    pt.put("wolf.best", options.wolfOpt.numBest);
 
-    boost::property_tree::ptree evolutionsOptionsPt;
-    evolutionsOptionsPt.put("population", options.evolutionOpt.populationSize);
-    evolutionsOptionsPt.put("mutation", options.evolutionOpt.mutationRate);
-    evolutionsOptionsPt.put("crossover", options.evolutionOpt.crossoverRate);
-    pt.add_child("evolution", evolutionsOptionsPt);
+    pt.put("evolution.population", options.evolutionOpt.populationSize);
+    pt.put("evolution.mutation", options.evolutionOpt.mutationRate);
+    pt.put("evolution.crossover", options.evolutionOpt.crossoverRate);
 
     pt.put("iter", options.iter);
 
     // Other options
     pt.put("seed", options.seed);
-    pt.put("print.step", options.printStep);
-    pt.put("control.savefile", options.controlSaveFile);
-    pt.put("clear.savefile", options.clearSaveBeforeStart);
+    pt.put("printStep", options.printStep);
+    pt.put("file", options.controlSaveFile);
+    pt.put("clear", options.clearSaveBeforeStart);
 
     // Write to file
     boost::property_tree::write_ini(file.string(), pt);
-
+    vectorToSeparateLines(file.string(), "initial");
+    vectorToSeparateLines(file.string(), "target");
   } catch (const std::exception& e) {
     std::cerr << std::format("Error writing configuration: {}\n", e.what());
   }

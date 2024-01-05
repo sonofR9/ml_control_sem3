@@ -1,7 +1,5 @@
 #pragma once
 
-#include "utils.h"
-
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 
@@ -13,6 +11,11 @@
 #include <vector>
 
 namespace optimization {
+template <typename R, typename T>
+concept ConvertibleInputRangeTo =
+    std::ranges::input_range<R> &&
+    std::convertible_to<std::ranges::range_value_t<R>, T>;
+
 /**
  * @brief class to represent state of system using T variables
  *
