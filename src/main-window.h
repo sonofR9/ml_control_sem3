@@ -14,6 +14,7 @@
 class QChart;
 class QCheckBox;
 class QComboBox;
+class QCloseEvent;
 class QLabel;
 class QLineEdit;
 class QProgressBar;
@@ -45,6 +46,7 @@ class MainWindow : public QMainWindow {
 
  signals:
   void iterationChanged(int iteration, double functional);
+  void closed();
 
  private:
   void constructView();
@@ -53,6 +55,8 @@ class MainWindow : public QMainWindow {
   QVBoxLayout* constructControlParams(QWidget*);
   QWidget* constructWolfParams(QWidget*);
   QWidget* constructEvolutionParams(QWidget*);
+
+  void closeEvent(QCloseEvent* event) override;
 
   void fillGuiFromOptions();
   void fillOptionsFromGui();

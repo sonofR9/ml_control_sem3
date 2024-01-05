@@ -309,7 +309,7 @@ void MainWindow::constructView() {
       std::erase_if(charts_, [chart](QChart* c) -> bool { return c == chart; });
     });
 
-    connect(this, &MainWindow::destroyed, [dialog]() {
+    connect(this, &MainWindow::closed, [dialog]() {
       dialog->disconnect();
       dialog->close();
     });
@@ -506,6 +506,11 @@ QWidget* MainWindow::constructEvolutionParams(QWidget* tab) {
   return evolution_.widget_;
 }
 
+void MainWindow::closeEvent(QCloseEvent* event) {
+  emit closed();
+  QMainWindow::closeEvent(event);
+}
+
 void MainWindow::fillGuiFromOptions() {
   // Global options
   tMax_->setText(QString::number(options_.tMax));
@@ -543,7 +548,7 @@ void MainWindow::fillOptionsFromGui() {
   // Global options
   options_.tMax = tMax_->text().toDouble();
   options_.integrationDt = dt_->text().toDouble();
-  options_.iter = std::min(itersInput_->text().toUInt(), 1U);
+  options_.iter = std::max(itersInput_->text().toUInt(), 1U);
 
   // Read optimization method
   options_.method = static_cast<Method>(method_->currentIndex());
