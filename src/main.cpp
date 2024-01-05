@@ -164,7 +164,8 @@ int commonMain(int argc, const char** argv) {
 
   QApplication app{qtArgc, qtArgv};
   MainWindow window{options};
-  // window.show();
+  window.show();
+
   const auto res{QApplication::exec()};
 
   RepetitiveAllocator<double> alloc{};

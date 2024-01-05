@@ -28,6 +28,8 @@ namespace {
 using namespace optimization;
 using Method = GlobalOptions::Method;
 
+constexpr int kSpacing{5};
+
 void setTextIteration(QLabel* label, int iter, std::size_t maxIter,
                       double functional) {
   label->setText(
@@ -45,16 +47,18 @@ bool isFilePathValid(const std::string& path) {
 }
 
 template <class Validator>
-void addField(QVBoxLayout* vLayout, const QString& lblName,
+void addField(QWidget* parent, QVBoxLayout* vLayout, const QString& lblName,
               QLineEdit*& result) {
-  auto* parent{vLayout->parentWidget()};
-  auto* hLayout{new QHBoxLayout{parent}};
+  auto* hLayout{new QHBoxLayout{}};
+  hLayout->setSpacing(kSpacing);
   vLayout->addItem(hLayout);
+
   auto* lbl{new QLabel{lblName, parent}};
-  lbl->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+  lbl->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
   hLayout->addWidget(lbl);
+
   result = new QLineEdit{parent};
-  result->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+  result->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
   result->setValidator(new Validator(result));
   hLayout->addWidget(result);
 }
@@ -109,15 +113,17 @@ void MainWindow::emitIterationChanged(std::size_t iteration,
 void MainWindow::constructView() {
   auto* central{new QWidget{this}};
   setCentralWidget(central);
-  central->setEnabled(false);
-  auto* vLayout{new QVBoxLayout{this}};
+  // central->setEnabled(false);
+  auto* vLayout{new QVBoxLayout{}};
   centralWidget()->setLayout(vLayout);
 
   auto* tabWidget{new QTabWidget{this}};
+  vLayout->addWidget(tabWidget);
+
   auto* optimizationTab{constructOptimizationTab(tabWidget)};
   tabWidget->addTab(optimizationTab, "Optimization");
 
-  auto* menu{new QMenuBar(this)};
+  auto* menu{new QMenuBar{this}};
   auto* config{menu->addMenu("&Config")};
   auto* openConfig{config->addAction("Open config...")};
   connect(openConfig, &QAction::triggered, [this]() -> void {
@@ -135,14 +141,17 @@ void MainWindow::constructView() {
     settings.setValue("config_file_path", QString(path));
   });
 
+  vLayout->setSpacing(kSpacing);
+
   // TODO(novak) QCharts
 }
 
 QWidget* MainWindow::constructOptimizationTab(QWidget* tabWidget) {
   auto* tab{new QWidget{tabWidget}};
-  auto* vLayout{new QVBoxLayout{tab}};
+  auto* vLayout{new QVBoxLayout{}};
+  tab->setLayout(vLayout);
 
-  auto* hLayout{new QHBoxLayout{tab}};
+  auto* hLayout{new QHBoxLayout{}};
   vLayout->addItem(hLayout);
   auto* globalParams{constructGlobalParams(tab)};
   hLayout->addItem(globalParams);
@@ -152,6 +161,9 @@ QWidget* MainWindow::constructOptimizationTab(QWidget* tabWidget) {
   hLayout->addWidget(wolfParams);
   auto* evolutionParams{constructEvolutionParams(tab)};
   hLayout->addWidget(evolutionParams);
+
+  hLayout->addStretch(1);
+  hLayout->setSpacing(kSpacing);
 
   startOptimization_ = new QPushButton{"Start optimization", tab};
   vLayout->addWidget(startOptimization_);
@@ -166,7 +178,7 @@ QWidget* MainWindow::constructOptimizationTab(QWidget* tabWidget) {
   progress_ = new QProgressBar{tab};
   vLayout->addWidget(progress_);
 
-  hLayout = new QHBoxLayout{tab};
+  hLayout = new QHBoxLayout{};
   vLayout->addItem(hLayout);
   iterations_ = new QLabel{tab};
   setTextIteration(iterations_, 0, 0, 0);
@@ -176,25 +188,30 @@ QWidget* MainWindow::constructOptimizationTab(QWidget* tabWidget) {
   iterTime_->setAlignment(Qt::AlignmentFlag::AlignRight);
   hLayout->addWidget(iterTime_);
 
+  vLayout->setSpacing(kSpacing);
+
   return tab;
 }
 
 QVBoxLayout* MainWindow::constructGlobalParams(QWidget* tab) {
-  auto* vLayout{new QVBoxLayout{tab}};
+  auto* vLayout{new QVBoxLayout{}};
   auto* title{new QLabel{"Global parameters", tab}};
   title->setAlignment(Qt::AlignmentFlag::AlignCenter);
   vLayout->addWidget(title);
 
-  addField<QDoubleValidator>(vLayout, "tmax", tMax_);
-  addField<QDoubleValidator>(vLayout, "dt", dt_);
+  addField<QDoubleValidator>(tab, vLayout, "tmax", tMax_);
+  addField<QDoubleValidator>(tab, vLayout, "dt", dt_);
 
-  auto* hLayout{new QHBoxLayout{tab}};
+  auto* hLayout{new QHBoxLayout{}};
+  hLayout->setSpacing(kSpacing);
   vLayout->addItem(hLayout);
   auto* lbl{new QLabel{"method", tab}};
   hLayout->addWidget(lbl);
   method_ = new QComboBox{tab};
-  method_->insertItem(static_cast<int>(Method::kGrayWolf), "wolf");
-  method_->insertItem(static_cast<int>(Method::kEvolution), "evolution");
+  method_->insertItem(static_cast<int>(Method::kGrayWolf),
+                      methodToName(Method::kGrayWolf).c_str());
+  method_->insertItem(static_cast<int>(Method::kEvolution),
+                      methodToName(Method::kEvolution).c_str());
   connect(method_, qOverload<int>(&QComboBox::currentIndexChanged),
           [this](int index) {
             options_.method = static_cast<Method>(index);
@@ -211,10 +228,11 @@ QVBoxLayout* MainWindow::constructGlobalParams(QWidget* tab) {
           });
   hLayout->addWidget(method_);
 
-  addField<QIntValidator>(vLayout, "seed (-1 random)", seed_);
-  addField<QIntValidator>(vLayout, "Print step", printStep_);
+  addField<QIntValidator>(tab, vLayout, "seed (-1 random)", seed_);
+  addField<QIntValidator>(tab, vLayout, "Print step", printStep_);
 
-  hLayout = new QHBoxLayout{tab};
+  hLayout = new QHBoxLayout{};
+  hLayout->setSpacing(kSpacing);
   vLayout->addItem(hLayout);
   saveFile_ = new QPushButton{"Save-file", tab};
   connect(saveFile_, &QPushButton::clicked, [this]() -> void {
@@ -252,48 +270,65 @@ QVBoxLayout* MainWindow::constructGlobalParams(QWidget* tab) {
   clear_ = new QCheckBox{"Start from scratch (clear save)", tab};
   vLayout->addWidget(clear_);
 
+  vLayout->addStretch(1);
+  vLayout->setSpacing(kSpacing);
+
   return vLayout;
 }
 
 QVBoxLayout* MainWindow::constructControlParams(QWidget* tab) {
-  auto* vLayout{new QVBoxLayout{tab}};
+  auto* vLayout{new QVBoxLayout{}};
   auto* title{new QLabel{"Control parameters", tab}};
   title->setAlignment(Qt::AlignmentFlag::AlignCenter);
   title->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
   vLayout->addWidget(title);
 
-  addField<QIntValidator>(vLayout, "number", control_.number_);
-  addField<QDoubleValidator>(vLayout, "min", control_.min_);
-  addField<QDoubleValidator>(vLayout, "max", control_.max_);
+  addField<QIntValidator>(tab, vLayout, "number", control_.number_);
+  addField<QDoubleValidator>(tab, vLayout, "min", control_.min_);
+  addField<QDoubleValidator>(tab, vLayout, "max", control_.max_);
+
+  vLayout->addStretch(1);
+  vLayout->setSpacing(kSpacing);
 
   return vLayout;
 }
 
 QWidget* MainWindow::constructWolfParams(QWidget* tab) {
   wolf_.widget_ = new QWidget{tab};
-  auto* vLayout{new QVBoxLayout{wolf_.widget_}};
+  auto* vLayout{new QVBoxLayout{}};
+  wolf_.widget_->setLayout(vLayout);
   auto* title{new QLabel{"Wolf parameters", wolf_.widget_}};
   title->setAlignment(Qt::AlignmentFlag::AlignCenter);
   title->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
   vLayout->addWidget(title);
 
-  addField<QIntValidator>(vLayout, "number", wolf_.num_);
-  addField<QIntValidator>(vLayout, "Best number", wolf_.best_);
+  addField<QIntValidator>(wolf_.widget_, vLayout, "number", wolf_.num_);
+  addField<QIntValidator>(wolf_.widget_, vLayout, "Best number", wolf_.best_);
+
+  vLayout->addStretch(1);
+  vLayout->setSpacing(kSpacing);
 
   return wolf_.widget_;
 }
 
 QWidget* MainWindow::constructEvolutionParams(QWidget* tab) {
   evolution_.widget_ = new QWidget{tab};
-  auto* vLayout{new QVBoxLayout{evolution_.widget_}};
+  auto* vLayout{new QVBoxLayout{}};
+  evolution_.widget_->setLayout(vLayout);
   auto* title{new QLabel{"Evolution parameters", evolution_.widget_}};
   title->setAlignment(Qt::AlignmentFlag::AlignCenter);
   title->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
   vLayout->addWidget(title);
 
-  addField<QIntValidator>(vLayout, "population", evolution_.population_);
-  addField<QIntValidator>(vLayout, "mutation rate", evolution_.mutation_);
-  addField<QIntValidator>(vLayout, "crossover rate", evolution_.crossover_);
+  addField<QIntValidator>(evolution_.widget_, vLayout, "population",
+                          evolution_.population_);
+  addField<QIntValidator>(evolution_.widget_, vLayout, "mutation rate",
+                          evolution_.mutation_);
+  addField<QIntValidator>(evolution_.widget_, vLayout, "crossover rate",
+                          evolution_.crossover_);
+
+  vLayout->addStretch(1);
+  vLayout->setSpacing(kSpacing);
 
   return evolution_.widget_;
 }
