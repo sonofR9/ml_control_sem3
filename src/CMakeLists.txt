@@ -5,9 +5,12 @@ set(SOURCES
     main.cpp
 )
 
-find_package(Qt6 COMPONENTS Widgets)
-if(false AND Qt6_FOUND)
-    qt_standard_project_setup()
+find_package(Qt6 COMPONENTS Widgets Core)
+if(true AND Qt6_FOUND)
+    # qt_standard_project_setup()
+    set(CMAKE_AUTOMOC ON)
+    set(CMAKE_AUTORCC ON)
+    set(CMAKE_AUTOUIC ON)
 
     set(SOURCES ${SOURCES}
         main-window.cpp
@@ -36,18 +39,28 @@ set(PRIVATE_PCH
     <cassert>
 )
 
-if(false AND Qt6_FOUND)
+if(true AND Qt6_FOUND)
     # set_target_properties(${TARGET_NAME} PROPERTIES
     #     WIN32_EXECUTABLE ON
     # )
-    set_property(TARGET ${TARGET_NAME} PROPERTY WIN32_EXECUTABLE true)
+    set_property(TARGET ${TARGET_NAME} PROPERTY WIN32_EXECUTABLE false)
     add_definitions(-DQT_NO_VERSION_TAGGING)
 
     target_compile_definitions(${TARGET_NAME} PRIVATE BUILD_WITH_QT)
 
     target_link_libraries(${TARGET_NAME} PRIVATE
         Qt6::Widgets
+        Qt6::Core
     )
+
+    # if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+        # cmake_policy(SET CMP0111 OLD)
+        # add_library(qwindows_plugin SHARED IMPORTED)
+        # set_target_properties(qwindows_plugin PROPERTIES
+        #     IMPORTED_LOCATION "$ENV{QT_PLUGIN_PATH}\\qwindows.dll"
+        # )
+        # target_link_libraries(${TARGET_NAME} PRIVATE qwindows_plugin)
+    # endif()
 
     set(PRIVATE_PCH
         ${PRIVATE_PCH}

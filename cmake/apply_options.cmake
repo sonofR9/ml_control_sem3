@@ -50,28 +50,25 @@ if(ENABLE_CLANG_FORMAT)
     clangformat_setup(${ALL_SOURCE_FILES})
 endif()
 
-# warnig flags
-if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") 
-    set(WARNINGS_FLAGS
-        # "-W2"
-    )
-else()
-    set(WARNINGS_FLAGS
-        "-Wall"
-        "-Wextra"
-        "-Wpedantic"
-        "-Wno-error=language-extension-token"
-    )
-    message("${WARNINGS_FLAGS}")
-    if (WIN32)
-        list(APPEND ${WARNINGS_FLAGS} "-Wno-error=nested-anon-types") 
+if(NOT DISABLE_WARNINGS)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") 
+        set(WARNINGS_FLAGS
+            # "-W2"
+        )
+    else()
+        set(WARNINGS_FLAGS
+            "-Wall"
+            "-Wextra"
+            "-Wpedantic"
+        )
+        message("${WARNINGS_FLAGS}")
+        if(NOT ENABLE_CLANG_TIDY)
+            list(APPEND ${WARNINGS_FLAGS} "-Wabi=${CMAKE_CXX_STANDARD}")
+        endif()
     endif()
-    if(NOT ENABLE_CLANG_TIDY)
-        list(APPEND ${WARNINGS_FLAGS} "-Wabi=${CMAKE_CXX_STANDARD}")
-    endif()
+    add_compile_options(${WARNINGS_FLAGS})
 endif()
 
-add_compile_options(${WARNINGS_FLAGS})
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(BoldMagenta "${Esc}[1;35m")

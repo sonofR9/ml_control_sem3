@@ -133,7 +133,6 @@ class Evolution {
         newFitness[i] = fitness[j];
       }
 
-      // TODO(novak) pass popPtr as result (it allocates population inside)?
       // *best.second is necessary:
       // crossover happens when (1/ min(fit1, fit2)) * probModifier > random
       // At the start 1/fit->0 => crossover will not happen. With modification
