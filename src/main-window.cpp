@@ -326,6 +326,8 @@ QWidget* MainWindow::constructOptimizationTab(QWidget* tabWidget) {
   vLayout->addItem(hLayout);
   auto* globalParams{constructGlobalParams(tab)};
   hLayout->addItem(globalParams);
+  auto* functionalParams{constructFunctionalParams(tab)};
+  hLayout->addItem(functionalParams);
   auto* controlParams{constructControlParams(tab)};
   hLayout->addItem(controlParams);
   auto* wolfParams{constructWolfParams(tab)};
@@ -446,6 +448,34 @@ QVBoxLayout* MainWindow::constructGlobalParams(QWidget* tab) {
   return vLayout;
 }
 
+QVBoxLayout* MainWindow::constructFunctionalParams(QWidget* tab) {
+  auto* vLayout{new QVBoxLayout{}};
+  auto* title{new QLabel{"Functional parameters", tab}};
+  title->setAlignment(Qt::AlignmentFlag::AlignCenter);
+  title->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+  vLayout->addWidget(title);
+
+  auto* subTitleCoefficients{new QLabel{"Coefficients", tab}};
+  subTitleCoefficients->setAlignment(Qt::AlignmentFlag::AlignCenter);
+  subTitleCoefficients->setSizePolicy(QSizePolicy::Preferred,
+                                      QSizePolicy::Maximum);
+  auto font{subTitleCoefficients->font()};
+  font.setItalic(true);
+  subTitleCoefficients->setFont(font);
+  vLayout->addWidget(subTitleCoefficients);
+
+  addField<QDoubleValidator>(tab, vLayout, "time", functional_.coefTime_);
+  addField<QDoubleValidator>(tab, vLayout, "terminal position",
+                             functional_.coefTerminal_);
+  addField<QDoubleValidator>(tab, vLayout, "obstacle",
+                             functional_.coefObstacle_);
+
+  vLayout->addStretch(1);
+  vLayout->setSpacing(kSpacing);
+
+  return vLayout;
+}
+
 QVBoxLayout* MainWindow::constructControlParams(QWidget* tab) {
   auto* vLayout{new QVBoxLayout{}};
   auto* title{new QLabel{"Control parameters", tab}};
@@ -514,6 +544,15 @@ void MainWindow::fillGuiFromOptions() {
   dt_->setText(QString::number(options_.integrationDt));
   itersInput_->setText(QString::number(options_.iter));
 
+  // functional
+  functional_.coefTime_->setText(
+      QString::number(options_.functionalOptions.coefTime));
+  functional_.coefTerminal_->setText(
+      QString::number(options_.functionalOptions.coefTerminal));
+  functional_.coefObstacle_->setText(
+      QString::number(options_.functionalOptions.coefObstacle));
+  // TODO(novak) add circles
+
   // Set optimization method
   method_->setCurrentIndex(static_cast<int>(options_.method));
 
@@ -545,6 +584,15 @@ void MainWindow::fillOptionsFromGui() {
   options_.tMax = tMax_->text().toDouble();
   options_.integrationDt = dt_->text().toDouble();
   options_.iter = std::max(itersInput_->text().toUInt(), 1U);
+
+  // functional options
+  options_.functionalOptions.coefTime =
+      functional_.coefTime_->text().toDouble();
+  options_.functionalOptions.coefTerminal =
+      functional_.coefTerminal_->text().toDouble();
+  options_.functionalOptions.coefObstacle =
+      functional_.coefObstacle_->text().toDouble();
+  // TODO(novak) circles
 
   // Read optimization method
   options_.method = static_cast<Method>(method_->currentIndex());

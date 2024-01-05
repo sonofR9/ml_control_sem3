@@ -52,6 +52,7 @@ class MainWindow : public QMainWindow {
   void constructView();
   QWidget* constructOptimizationTab(QWidget* tabWidget);
   QVBoxLayout* constructGlobalParams(QWidget*);
+  QVBoxLayout* constructFunctionalParams(QWidget*);
   QVBoxLayout* constructControlParams(QWidget*);
   QWidget* constructWolfParams(QWidget*);
   QWidget* constructEvolutionParams(QWidget*);
@@ -87,10 +88,16 @@ class MainWindow : public QMainWindow {
   QComboBox* method_;
   QLineEdit* itersInput_;
   QLineEdit* seed_;
-  QLineEdit* printStep_;
   QPushButton* saveFile_;
   QLineEdit* filePath_;
   QCheckBox* clear_;
+
+  struct Functional {
+    QLineEdit* coefTime_;
+    QLineEdit* coefTerminal_;
+    QLineEdit* coefObstacle_;
+    // TODO(novak): circles
+  } functional_;
 
   struct Control {
     QLineEdit* number_;
