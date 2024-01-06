@@ -20,6 +20,7 @@
 #include <QMessageBox>
 #include <QProgressBar>
 #include <QPushButton>
+#include <QScatterSeries>
 #include <QSettings>
 #include <QTabWidget>
 #include <QVBoxLayout>
@@ -58,12 +59,12 @@ bool isFilePathValid(const std::string& path) {
   return static_cast<bool>(test);
 }
 
-template <class Validator>
-void addField(QWidget* parent, QVBoxLayout* vLayout, const QString& lblName,
+template <class Validator, class L = QVBoxLayout>
+void addField(QWidget* parent, L* layout, const QString& lblName,
               QLineEdit*& result) {
   auto* hLayout{new QHBoxLayout{}};
   hLayout->setSpacing(kSpacing);
-  vLayout->addItem(hLayout);
+  layout->addItem(hLayout);
 
   auto* lbl{new QLabel{lblName, parent}};
   lbl->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
@@ -88,7 +89,7 @@ void setLineSeriesPen(QLineSeries* series, int width,
 template <class Alloc>
 void updateChart(QChart* chart, const std::vector<double, Alloc>& x,
                  const std::vector<double, Alloc>& y, double tolerance,
-                 const std::vector<CircleData> circles = {}) {
+                 const std::vector<CircleData>& circles = {}) {
   QLineSeries* lastSeries{nullptr};
   if (!chart->series().empty()) {
     lastSeries = qobject_cast<QLineSeries*>(chart->series().last());
@@ -120,7 +121,7 @@ void updateChart(QChart* chart, const std::vector<double, Alloc>& x,
   // scatterSeries->setColor(Qt::yellow);
   // chart->addSeries(scatterSeries);
 
-  scatterSeries = new QScatterSeries{};
+  auto* scatterSeries{new QScatterSeries{}};
   scatterSeries->setName("Target");
   scatterSeries->append(0, 0);
   scatterSeries->setMarkerSize(5);
@@ -159,6 +160,8 @@ MainWindow::MainWindow(optimization::GlobalOptions& options, QWidget* parent)
   constructView();
   connect(this, &MainWindow::iterationChanged, this,
           &MainWindow::onIterationChanged);
+  connect(this, &MainWindow::batchIterationChanged, this,
+          &MainWindow::onBatchIterationChanged);
 
   if (options_.configFile.empty()) {
     QString path{};
@@ -196,6 +199,8 @@ void MainWindow::startOptimization() {
   copy_.savePath = options_.controlSaveFile;
   copy_.tMax = options_.tMax;
 
+  clear_->setCheckState(Qt::CheckState::Unchecked);
+
   progress_->setMaximum(static_cast<int>(copy_.iters));
   progress_->setValue(0);
   setTextIteration(iterations_, 0, copy_.iters, -1);
@@ -215,7 +220,7 @@ void MainWindow::startOptimization() {
         };
       });
   startOptimization_->setEnabled(false);
-  startOptimization_->show();
+  startBatchOptimization_->setEnabled(false);
 }
 
 void MainWindow::onIterationChanged(int iteration, double functional) {
@@ -230,15 +235,92 @@ void MainWindow::onIterationChanged(int iteration, double functional) {
   if (iteration == static_cast<int>(copy_.iters)) {
     best_ = optimResult_.get();
     writeToSaveFile(options_.controlSaveFile, best_);
+
     startOptimization_->setEnabled(true);
-    startOptimization_->show();
+    startBatchOptimization_->setEnabled(true);
+
     trajectory_ =
         two_wheeled_robot::getTrajectoryFromControl<double, DoubleAllocator>(
             best_, copy_.tMax);
     for (const auto& chart : charts_) {
       updateChart(chart, trajectory_[0], trajectory_[1],
+                  options_.functionalOptions.terminalTolerance,
                   {{.x = 2.5, .y = 2.5, .r = std::sqrt(2.5)},
                    {.x = 7.5, .y = 7.5, .r = std::sqrt(2.5)}});
+    }
+  }
+}
+
+void MainWindow::startBatchOptimization() {
+  fillOptionsFromGui();
+  copy_.iters = options_.iter;
+  copy_.savePath = options_.controlSaveFile;
+  copy_.tMax = options_.tMax;
+
+  clear_->setCheckState(Qt::CheckState::Unchecked);
+
+  batchNumber_ = 0;
+  batchCount_ = batchCountInput_->text().toInt();
+  progress_->setMaximum(static_cast<int>(copy_.iters * batchCount_));
+  progress_->setValue(0);
+  setTextIteration(iterations_, 0, copy_.iters * batchCount_, -1);
+
+  tStart_ = std::chrono::high_resolution_clock::now();
+  startNextBatch();
+  startOptimization_->setEnabled(false);
+  startBatchOptimization_->setEnabled(false);
+}
+
+void MainWindow::startNextBatch() {
+  ++batchNumber_;
+  optimResult_ = std::async(
+      std::launch::async, [this]() -> Tensor<double, DoubleAllocator> {
+        auto printer = [this](int iteration, double functional) {
+          emitBatchIterationChanged(iteration, functional);
+        };
+        switch (options_.method) {
+        case Method::kEvolution:
+          return modelTestEvolution<Allocator, decltype(printer)>(options_,
+                                                                  printer);
+        case Method::kGrayWolf:
+          return modelTestGray<Allocator, decltype(printer)>(options_, printer);
+        };
+      });
+}
+
+void MainWindow::onBatchIterationChanged(int iteration, double functional) {
+  int adjustedIteration{iteration +
+                        static_cast<int>(batchNumber_ * copy_.iters)};
+
+  progress_->setValue(adjustedIteration);
+  setTextIteration(iterations_, adjustedIteration, copy_.iters * batchCount_,
+                   functional);
+
+  auto tNow = std::chrono::high_resolution_clock::now();
+  auto duration =
+      std::chrono::duration_cast<std::chrono::milliseconds>(tNow - tStart_);
+  setTextTimePerIteration(iterTime_,
+                          static_cast<double>(duration.count()) / 1000,
+                          adjustedIteration);
+
+  if (iteration == static_cast<int>(copy_.iters)) {
+    best_ = optimResult_.get();
+    writeToSaveFile(options_.controlSaveFile, best_);
+    trajectory_ =
+        two_wheeled_robot::getTrajectoryFromControl<double, DoubleAllocator>(
+            best_, copy_.tMax);
+    for (const auto& chart : charts_) {
+      updateChart(chart, trajectory_[0], trajectory_[1],
+                  options_.functionalOptions.terminalTolerance,
+                  {{.x = 2.5, .y = 2.5, .r = std::sqrt(2.5)},
+                   {.x = 7.5, .y = 7.5, .r = std::sqrt(2.5)}});
+    }
+
+    if (adjustedIteration == static_cast<int>(copy_.iters * batchCount_)) {
+      startOptimization_->setEnabled(true);
+      startBatchOptimization_->setEnabled(true);
+    } else {
+      startNextBatch();
     }
   }
 }
@@ -246,6 +328,11 @@ void MainWindow::onIterationChanged(int iteration, double functional) {
 void MainWindow::emitIterationChanged(std::size_t iteration,
                                       double functional) {
   emit iterationChanged(static_cast<int>(iteration), functional);
+}
+
+void MainWindow::emitBatchIterationChanged(std::size_t iteration,
+                                           double functional) {
+  emit batchIterationChanged(static_cast<int>(iteration), functional);
 }
 
 void MainWindow::constructView() {
@@ -358,15 +445,24 @@ QWidget* MainWindow::constructOptimizationTab(QWidget* tabWidget) {
   hLayout->addStretch(1);
   hLayout->setSpacing(kSpacing);
 
+  hLayout = new QHBoxLayout{};
+  hLayout->setSpacing(kSpacing);
+
   startOptimization_ = new QPushButton{"Start optimization", tab};
-  vLayout->addWidget(startOptimization_);
-  connect(startOptimization_, &QPushButton::clicked, [this]() {
-    startOptimization_->hide();
-    progress_->show();
-    iterations_->show();
-    iterTime_->show();
-    startOptimization();
-  });
+  connect(startOptimization_, &QPushButton::clicked,
+          [this]() { startOptimization(); });
+  hLayout->addWidget(startOptimization_);
+
+  hLayout->addStretch(1);
+
+  startBatchOptimization_ = new QPushButton{"Start batch optimization", tab};
+  hLayout->addWidget(startBatchOptimization_);
+  connect(startBatchOptimization_, &QPushButton::clicked,
+          [this]() { startBatchOptimization(); });
+  addField<QIntValidator, QHBoxLayout>(tab, hLayout, "batch count",
+                                       batchCountInput_);
+
+  vLayout->addItem(hLayout);
 
   progress_ = new QProgressBar{tab};
   vLayout->addWidget(progress_);

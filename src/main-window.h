@@ -43,10 +43,11 @@ class MainWindow : public QMainWindow {
   ~MainWindow() override;
 
   void emitIterationChanged(std::size_t iteration, double functional);
+  void emitBatchIterationChanged(std::size_t iteration, double functional);
 
  signals:
   void iterationChanged(int iteration, double functional);
-  // void batchIterationChanged(int iteration, double functional);
+  void batchIterationChanged(int iteration, double functional);
   void closed();
 
  private:
@@ -64,13 +65,14 @@ class MainWindow : public QMainWindow {
   void fillOptionsFromGui();
 
   void startOptimization();
-  // void startBatchOptimization();
+  void startBatchOptimization();
+  void startNextBatch();
 
   void enableCurrentOptimizationMethod();
 
  private slots:
   void onIterationChanged(int iteration, double functional);
-  // void onBatchIterationChanged(int iteration, double functional);
+  void onBatchIterationChanged(int iteration, double functional);
 
  private:
   optimization::GlobalOptions& options_;
@@ -86,6 +88,7 @@ class MainWindow : public QMainWindow {
 
   std::chrono::time_point<std::chrono::high_resolution_clock> tStart_;
 
+  int batchCount_;
   int batchNumber_;
 
   QLineEdit* tMax_;
@@ -125,6 +128,8 @@ class MainWindow : public QMainWindow {
   } evolution_;
 
   QPushButton* startOptimization_;
+  QPushButton* startBatchOptimization_;
+  QLineEdit* batchCountInput_;
   QProgressBar* progress_;
   QLabel* iterations_;
   QLabel* iterTime_;
