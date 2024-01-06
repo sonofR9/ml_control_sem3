@@ -121,12 +121,21 @@ void updateChart(QChart* chart, const std::vector<double, Alloc>& x,
   // scatterSeries->setColor(Qt::yellow);
   // chart->addSeries(scatterSeries);
 
+  // add invisible point so that target will be always seen clearly
   auto* scatterSeries{new QScatterSeries{}};
+  scatterSeries->append(-0.3, -0.3);
+  scatterSeries->setMarkerSize(0.1);
+  scatterSeries->setColor(Qt::white);
+  scatterSeries->setBorderColor(Qt::white);
+  chart->addSeries(scatterSeries);
+
+  scatterSeries = new QScatterSeries{};
   scatterSeries->setName("Target");
   scatterSeries->append(0, 0);
-  scatterSeries->setMarkerSize(5);
+  scatterSeries->setMarkerSize(20);
   scatterSeries->setMarkerShape(QScatterSeries::MarkerShapeStar);
   scatterSeries->setColor(Qt::green);
+  scatterSeries->setBorderColor(Qt::green);
   chart->addSeries(scatterSeries);
 
   auto* newSeries{new QLineSeries()};
