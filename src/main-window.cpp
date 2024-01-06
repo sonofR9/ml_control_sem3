@@ -270,8 +270,10 @@ void MainWindow::startOptimization() {
 
   clear_->setCheckState(Qt::CheckState::Unchecked);
 
-  progress_[0]->setMaximum(static_cast<int>(copy_.iters));
-  progress_[0]->setValue(0);
+  for (auto* bar : progress_) {
+    bar->setMaximum(static_cast<int>(copy_.iters));
+    bar->setValue(0);
+  }
   setTextIteration(iterations_, 0, copy_.iters, -1);
 
   tStart_ = std::chrono::high_resolution_clock::now();
@@ -294,7 +296,9 @@ void MainWindow::startOptimization() {
 }
 
 void MainWindow::onIterationChanged(int iteration, double functional) {
-  progress_[0]->setValue(iteration);
+  for (auto* bar : progress_) {
+    bar->setValue(iteration);
+  }
   setTextIteration(iterations_, iteration, copy_.iters, functional);
   auto tNow = std::chrono::high_resolution_clock::now();
   auto duration =
@@ -317,8 +321,10 @@ void MainWindow::startBatchOptimization() {
 
   batchNumber_ = 0;
   batchCount_ = batchCountInput_[0]->text().toInt();
-  progress_[0]->setMaximum(static_cast<int>(copy_.iters * batchCount_));
-  progress_[0]->setValue(0);
+  for (auto* bar : progress_) {
+    bar->setMaximum(static_cast<int>(copy_.iters));
+    bar->setValue(0);
+  }
   setTextIteration(iterations_, 0, copy_.iters * batchCount_, -1);
 
   tStart_ = std::chrono::high_resolution_clock::now();
@@ -359,7 +365,9 @@ void MainWindow::onBatchIterationChanged(int iteration, double functional) {
   int adjustedIteration{iteration +
                         static_cast<int>(batchNumber_ * copy_.iters)};
 
-  progress_[0]->setValue(adjustedIteration);
+  for (auto* bar : progress_) {
+    progress_[0]->setValue(adjustedIteration);
+  }
   setTextIteration(iterations_, adjustedIteration, copy_.iters * batchCount_,
                    functional);
 
