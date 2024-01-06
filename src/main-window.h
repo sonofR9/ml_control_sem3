@@ -130,6 +130,8 @@ class MainWindow : public QMainWindow {
   QPushButton* startOptimization_;
   QPushButton* startBatchOptimization_;
   QLineEdit* batchCountInput_;
+  QCheckBox* updateOptionsDynamically_;
+
   QProgressBar* progress_;
   QLabel* iterations_;
   QLabel* iterTime_;

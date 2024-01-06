@@ -158,10 +158,15 @@ MainWindow::MainWindow(optimization::GlobalOptions& options, QWidget* parent)
           .value("main_window")
           .toByteArray());
   constructView();
+
   connect(this, &MainWindow::iterationChanged, this,
           &MainWindow::onIterationChanged);
   connect(this, &MainWindow::batchIterationChanged, this,
           &MainWindow::onBatchIterationChanged);
+
+  batchCount_ = QSettings(QDir::homePath() + "/" + kAppFolder + "/misc.ini",
+                          QSettings::IniFormat)
+                    .value("batch_count");
 
   if (options_.configFile.empty()) {
     QString path{};
@@ -188,6 +193,11 @@ MainWindow::~MainWindow() {
   QSettings(QDir::homePath() + "/" + kAppFolder + "/geometry.ini",
             QSettings::IniFormat)
       .setValue("main_window", saveGeometry());
+
+  QSettings(QDir::homePath() + "/" + kAppFolder + "/misc.ini",
+            QSettings::IniFormat)
+      .setValue("batch_count", batchCount_);
+
   fillOptionsFromGui();
   writeConfig(options_, options_.configFile);
   writeToSaveFile(options_.controlSaveFile, best_);
@@ -257,8 +267,6 @@ void MainWindow::startBatchOptimization() {
   copy_.savePath = options_.controlSaveFile;
   copy_.tMax = options_.tMax;
 
-  clear_->setCheckState(Qt::CheckState::Unchecked);
-
   batchNumber_ = 0;
   batchCount_ = batchCountInput_->text().toInt();
   progress_->setMaximum(static_cast<int>(copy_.iters * batchCount_));
@@ -273,6 +281,12 @@ void MainWindow::startBatchOptimization() {
 
 void MainWindow::startNextBatch() {
   ++batchNumber_;
+  if (updateOptionsDynamically_->isChecked()) {
+    fillOptionsFromGui();
+  } else {
+    options_.clearSaveBeforeStart = clear_.isChecked();
+  }
+
   optimResult_ = std::async(
       std::launch::async, [this]() -> Tensor<double, DoubleAllocator> {
         auto printer = [this](int iteration, double functional) {
@@ -286,6 +300,10 @@ void MainWindow::startNextBatch() {
           return modelTestGray<Allocator, decltype(printer)>(options_, printer);
         };
       });
+
+  if (batchNumber_ == 0) {
+    clear_->setCheckState(Qt::CheckState::Unchecked);
+  }
 }
 
 void MainWindow::onBatchIterationChanged(int iteration, double functional) {
@@ -461,6 +479,9 @@ QWidget* MainWindow::constructOptimizationTab(QWidget* tabWidget) {
           [this]() { startBatchOptimization(); });
   addField<QIntValidator, QHBoxLayout>(tab, hLayout, "batch count",
                                        batchCountInput_);
+  batchCountInput_->setText(batchCount_);
+  updateOptionsDynamically_ = new QCheckBox{"Update options dynamically", tab};
+  hLayout->addWidget(updateOptionsDynamically_);
 
   vLayout->addItem(hLayout);
 
