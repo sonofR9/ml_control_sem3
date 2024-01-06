@@ -366,7 +366,7 @@ void MainWindow::onBatchIterationChanged(int iteration, double functional) {
                         static_cast<int>(batchNumber_ * copy_.iters)};
 
   for (auto* bar : progress_) {
-    progress_[0]->setValue(adjustedIteration);
+    bar->setValue(adjustedIteration);
   }
   setTextIteration(iterations_, adjustedIteration, copy_.iters * batchCount_,
                    functional);
