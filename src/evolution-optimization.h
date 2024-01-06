@@ -240,17 +240,21 @@ class Evolution {
         population->begin(), population->end(), [this]() -> Chromosome {
           auto chromosome = Chromosome(paramsCount_);
           if (!baseline_.empty()) {
-            std::transform(baseline_.begin(), baseline_.end(),
-                           chromosome.begin(), [this](Gray v) {
-                             return v + DoubleGenerator::get() /
-                                            DoubleGenerator::absLimit() *
-                                            maxDifference_;
-                           });
+            std::transform(
+                baseline_.begin(), baseline_.end(), chromosome.begin(),
+                [this](Gray v) {
+                  const auto value{v + DoubleGenerator::get() /
+                                           DoubleGenerator::absLimit() *
+                                           maxDifference_};
+                  return Gray{std::max(std::min(value, uMax_), uMin_)};
+                });
           } else {
             std::generate(chromosome.begin(), chromosome.end(), [this]() {
-              return Gray{(uMax_ + uMin_) / 2 +
-                          DoubleGenerator::get() / DoubleGenerator::absLimit() *
-                              (uMax_ - uMin_) / 2};
+              const auto value{(uMax_ + uMin_) / 2 +
+                               DoubleGenerator::get() /
+                                   DoubleGenerator::absLimit() *
+                                   (uMax_ - uMin_) / 2};
+              return Gray{value};
             });
           }
           return chromosome;

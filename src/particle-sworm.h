@@ -30,6 +30,11 @@ class GrayWolfAlgorithm {
     std::size_t bestNum;
   };
 
+  struct Limit {
+    double max;
+    double min;
+  };
+
   /**
    * @brief Construct a new Gray Wolf Algorithm object
    *
@@ -38,11 +43,11 @@ class GrayWolfAlgorithm {
    * of steps in piecewise function)
    * @param limit
    */
-  GrayWolfAlgorithm(Fit fit, std::size_t paramsCount, double limit,
+  GrayWolfAlgorithm(Fit fit, std::size_t paramsCount, Limit limit,
                     Parameters params, Printer printer = &coutPrint)
-      : fit_{fit}, paramsCount_{paramsCount}, limit_{std::abs(limit)},
-        populationSize_{params.populationSize}, numBest_{params.bestNum},
-        printer_{printer} {
+      : fit_{fit}, paramsCount_{paramsCount}, uMax_{limit.max},
+        uMin_{limit.min}, populationSize_{params.populationSize},
+        numBest_{params.bestNum}, printer_{printer} {
   }
 
   void setBaseline(Specimen baseline, double maxDifference) noexcept {
@@ -78,10 +83,10 @@ class GrayWolfAlgorithm {
                                  std::abs((2 * ksi[2 * k]) * best[k][j] - qj);
           }
           spec[j] = res / numBest_;
-          if (spec[j] > limit_) {
-            spec[j] = limit_;
-          } else if (spec[j] < -limit_) {
-            spec[j] = -limit_;
+          if (spec[j] > uMax_) {
+            spec[j] = uMax_;
+          } else if (spec[j] < uMin_) {
+            spec[j] = uMin_;
           }
         }
       }
@@ -147,13 +152,14 @@ class GrayWolfAlgorithm {
       if (!baseline_.empty()) {
         std::transform(baseline_.begin(), baseline_.end(), chromosome.begin(),
                        [this](double v) {
-                         return v + DoubleGenerator::get() /
-                                        DoubleGenerator::absLimit() *
-                                        maxDifference_;
+                         const auto value{v + DoubleGenerator::get() /
+                                                  DoubleGenerator::absLimit() *
+                                                  maxDifference_};
+                         return Gray{std::max(std::min(value, uMax_), uMin_)};
                        });
       } else {
         std::ranges::generate(chromosome, [this]() {
-          return DoubleGenerator::get() / DoubleGenerator::absLimit() * limit_;
+          return DoubleGenerator::get() / DoubleGenerator::absLimit() * uMax_;
         });
       }
       return chromosome;
@@ -168,7 +174,8 @@ class GrayWolfAlgorithm {
   Fit fit_;
   std::size_t paramsCount_;
 
-  double limit_;
+  double uMax_;
+  double uMin_;
 
   std::size_t populationSize_;
   std::size_t numBest_;

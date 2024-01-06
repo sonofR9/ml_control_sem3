@@ -121,6 +121,7 @@ Tensor<double, Alloc<double>> modelTestGray(
       adap, paramsCount, 10,
       {.populationSize = static_cast<std::size_t>(options.wolfOpt.wolfNum),
        .bestNum = static_cast<std::size_t>(options.wolfOpt.numBest)},
+      {.max = options.controlOptions.uMax, .min = options.controlOptions.uMin},
       printer);
   if (!init.empty()) {
     solver.setBaseline(init, kMaxDiff);
