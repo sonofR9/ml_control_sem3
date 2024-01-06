@@ -26,9 +26,10 @@ For gui one will need qt6 installed and configured.
     - symbolic regression
 7. test pontryagin algorithm
 8. rewrite gradient descent
-9. add tests
-10. add benchmarks
-11. improve documentation, generate doxygen
+9. add different integration solvers
+10. add tests
+11. add benchmarks
+12. improve documentation, generate doxygen
 
 ## Miscellaneous
 
