@@ -16,8 +16,8 @@ using namespace optimization;
 template <typename T, class Alloc, class TensorAlloc>
 using ControlParams = Tensor<Tensor<T, Alloc>, TensorAlloc>;
 template <typename T, class Alloc>
-// using ControlApproximation = PiecewiseLinearApproximation<T, Alloc>;
-using ControlApproximation = PiecewiseConstantApproximation<T, Alloc>;
+using ControlApproximation = PiecewiseLinearApproximation<T, Alloc>;
+// using ControlApproximation = PiecewiseConstantApproximation<T, Alloc>;
 
 /**
  * @arg solverResult shape (2 * N)

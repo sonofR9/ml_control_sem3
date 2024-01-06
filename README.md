@@ -1,2 +1,35 @@
-# 2023_1_The_Loopers
-Многопользовательское приложение для создания knowledge base
+# machine learning control sem3
+
+App demonstrating capabilities of different optimization methods.
+
+## Requirements
+
+Project uses c++23 (probably can be build with c++20, not tested). Cmake version is also set pretty high (may be can be downgraded).
+For gui one will need qt6 installed and configured.
+
+## Implemented
+
+- grey wolf algorithm
+- evolution algorithm
+
+## TODO
+
+1. optimize build time
+2. use c++ modules
+3. use configurable circles list (added to options but not for )
+4. add early stopping to integration (but should not check each iteration: probably would take too long)
+5. add python interface
+6. add algorithms:
+    - particle-swarm optimization
+    - hybrid algorithm
+    - meta-algorithm for functional target threshold (when consider target achieved)
+    - symbolic regression
+7. test pontryagin algorithm
+8. rewrite gradient descent
+9. add tests
+10. add benchmarks
+11. improve documentation, generate doxygen
+
+## Miscellaneous
+
+MIT license is used
