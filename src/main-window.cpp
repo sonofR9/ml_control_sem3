@@ -322,7 +322,7 @@ void MainWindow::startBatchOptimization() {
   batchNumber_ = 0;
   batchCount_ = batchCountInput_[0]->text().toInt();
   for (auto* bar : progress_) {
-    bar->setMaximum(static_cast<int>(copy_.iters));
+    bar->setMaximum(static_cast<int>(copy_.iters * batchCount_));
     bar->setValue(0);
   }
   setTextIteration(iterations_, 0, copy_.iters * batchCount_, -1);
