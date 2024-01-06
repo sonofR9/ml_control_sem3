@@ -256,6 +256,9 @@ MainWindow::~MainWindow() {
   QSettings(QDir::homePath() + "/" + kAppFolder + "/misc.ini",
             QSettings::IniFormat)
       .setValue("batch_count", batchCountInput_[0]->text().toInt());
+  QSettings(QDir::homePath() + "/" + kAppFolder + "/misc.ini",
+            QSettings::IniFormat)
+      .setValue("chart_dt", chartsDt_[0]->text().toDouble());
 
   fillOptionsFromGui();
   writeConfig(options_, options_.configFile);
@@ -397,7 +400,7 @@ void MainWindow::gotResult() {
 
   trajectory_ =
       two_wheeled_robot::getTrajectoryFromControl<double, DoubleAllocator>(
-          best_, copy_.tMax);
+          best_, options_.tMax, chartsDt_[0]->text().toDouble());
   for (const auto& chart : charts_) {
     updateChart(chart, trajectory_[0], trajectory_[1],
                 options_.functionalOptions.terminalTolerance,
@@ -758,8 +761,18 @@ QWidget* MainWindow::constructShared(QWidget* tab) {
   hLayout->addWidget(chartView);
   hLayout->addItem(
       new QSpacerItem(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding));
-
   vLayout->addItem(hLayout);
+
+  chartsDt_.emplace_back(nullptr);
+  addField<QDoubleValidator>(
+      shared, vLayout, "Display trajectory integration dt", chartsDt_.back());
+  chartsDt_.back()->setText(QString::number(
+      QSettings(QDir::homePath() + "/" + kAppFolder + "/misc.ini",
+                QSettings::IniFormat)
+          .value("chart_dt")
+          .toDouble()));
+  connect(chartsDt_.back(), &QLineEdit::editingFinished,
+          [this, index]() { emit syncSharedWidgets(index); });
 
   return shared;
 }
@@ -899,24 +912,29 @@ void MainWindow::enableCurrentOptimizationMethod() {
 }
 
 void MainWindow::syncSharedWidgets(int senderIndex) {
-  bool startEnabled{startOptimization_[senderIndex]->isEnabled()};
-  auto batchCount{batchCountInput_[senderIndex]->text()};
-  bool updateDynamically{updateOptionsDynamically_[senderIndex]->isChecked()};
+  const bool startEnabled{startOptimization_[senderIndex]->isEnabled()};
+  const auto batchCount{batchCountInput_[senderIndex]->text()};
+  const bool updateDynamically{
+      updateOptionsDynamically_[senderIndex]->isChecked()};
+  const auto chartDt{chartsDt_[senderIndex]->text()};
 
   for (std::size_t i{0}; i < startOptimization_.size(); ++i) {
     startOptimization_[i]->blockSignals(true);
     startBatchOptimization_[i]->blockSignals(true);
     batchCountInput_[i]->blockSignals(true);
     updateOptionsDynamically_[i]->blockSignals(true);
+    chartsDt_[i]->blockSignals(true);
 
     startOptimization_[i]->setEnabled(startEnabled);
     startBatchOptimization_[i]->setEnabled(startEnabled);
     batchCountInput_[i]->setText(batchCount);
     updateOptionsDynamically_[i]->setChecked(updateDynamically);
+    chartsDt_[i]->setText(chartDt);
 
     startOptimization_[i]->blockSignals(false);
     startBatchOptimization_[i]->blockSignals(false);
     batchCountInput_[i]->blockSignals(false);
     updateOptionsDynamically_[i]->blockSignals(false);
+    chartsDt_[i]->blockSignals(false);
   }
 }

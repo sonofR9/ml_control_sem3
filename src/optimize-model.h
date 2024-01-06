@@ -82,7 +82,7 @@ Tensor<double, Alloc<double>> modelTestEvolution(
   }
 
   const auto trajectory{
-      getTrajectoryFromControl<double, Alloc<double>>(best, tMax)};
+      getTrajectoryFromControl<double, Alloc<double>>(best, tMax, dt)};
   writeTrajectoryToFiles(trajectory);
 
   return best;
@@ -133,7 +133,7 @@ Tensor<double, Alloc<double>> modelTestGray(
   }
 
   const auto trajectory{
-      getTrajectoryFromControl<double, Alloc<double>>(best, tMax)};
+      getTrajectoryFromControl<double, Alloc<double>>(best, tMax, dt)};
   writeTrajectoryToFiles(trajectory);
 
   return best;

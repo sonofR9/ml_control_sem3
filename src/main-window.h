@@ -157,4 +157,5 @@ class MainWindow : public QMainWindow {
   std::vector<QLabel*> iterTime_;
 
   std::vector<QChart*> charts_;
+  std::vector<QLineEdit*> chartsDt_;
 };
