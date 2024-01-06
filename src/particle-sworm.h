@@ -155,7 +155,7 @@ class GrayWolfAlgorithm {
                          const auto value{v + DoubleGenerator::get() /
                                                   DoubleGenerator::absLimit() *
                                                   maxDifference_};
-                         return Gray{std::max(std::min(value, uMax_), uMin_)};
+                         return std::max(std::min(value, uMax_), uMin_);
                        });
       } else {
         std::ranges::generate(chromosome, [this]() {

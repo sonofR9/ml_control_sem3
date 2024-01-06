@@ -243,9 +243,10 @@ class Evolution {
             std::transform(
                 baseline_.begin(), baseline_.end(), chromosome.begin(),
                 [this](Gray v) {
-                  const auto value{v + DoubleGenerator::get() /
-                                           DoubleGenerator::absLimit() *
-                                           maxDifference_};
+                  const auto value{v.getDouble() +
+                                   DoubleGenerator::get() /
+                                       DoubleGenerator::absLimit() *
+                                       maxDifference_};
                   return Gray{std::max(std::min(value, uMax_), uMin_)};
                 });
           } else {

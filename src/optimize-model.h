@@ -118,10 +118,10 @@ Tensor<double, Alloc<double>> modelTestGray(
   };
 
   GrayWolfAlgorithm<Alloc, decltype(adap), Printer> solver(
-      adap, paramsCount, 10,
+      adap, paramsCount,
+      {.max = options.controlOptions.uMax, .min = options.controlOptions.uMin},
       {.populationSize = static_cast<std::size_t>(options.wolfOpt.wolfNum),
        .bestNum = static_cast<std::size_t>(options.wolfOpt.numBest)},
-      {.max = options.controlOptions.uMax, .min = options.controlOptions.uMin},
       printer);
   if (!init.empty()) {
     solver.setBaseline(init, kMaxDiff);
