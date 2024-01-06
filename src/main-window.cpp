@@ -707,7 +707,7 @@ QWidget* MainWindow::constructShared(QWidget* tab) {
       new QPushButton{"Start optimization", shared});
   connect(startOptimization_.back(), &QPushButton::clicked, [this, index]() {
     startOptimization();
-    emit syncSharedWidgets(index);
+    syncSharedInputs(index);
   });
   hLayout->addWidget(startOptimization_.back());
 
@@ -719,7 +719,7 @@ QWidget* MainWindow::constructShared(QWidget* tab) {
   connect(startBatchOptimization_.back(), &QPushButton::clicked,
           [this, index]() {
             startBatchOptimization();
-            emit syncSharedWidgets(index);
+            syncSharedInputs(index);
           });
 
   batchCountInput_.emplace_back(nullptr);
@@ -727,19 +727,17 @@ QWidget* MainWindow::constructShared(QWidget* tab) {
                                        batchCountInput_.back());
   batchCountInput_.back()->setText(QString::number(batchCount_));
   connect(batchCountInput_.back(), &QLineEdit::editingFinished,
-          [this, index]() { emit syncSharedWidgets(index); });
+          [this, index]() { syncSharedInputs(index); });
 
   updateOptionsDynamically_.emplace_back(
       new QCheckBox{"Update options dynamically", shared});
   connect(updateOptionsDynamically_.back(), &QCheckBox::stateChanged,
-          [this, index]() { emit syncSharedWidgets(index); });
+          [this, index]() { syncSharedInputs(index); });
   hLayout->addWidget(updateOptionsDynamically_.back());
 
   vLayout->addItem(hLayout);
 
   progress_.emplace_back(new QProgressBar{shared});
-  connect(progress_.back(), &QProgressBar::valueChanged,
-          [this, index]() { emit syncSharedWidgets(index); });
   vLayout->addWidget(progress_.back());
 
   hLayout = new QHBoxLayout{};
@@ -772,7 +770,7 @@ QWidget* MainWindow::constructShared(QWidget* tab) {
           .value("chart_dt")
           .toDouble()));
   connect(chartsDt_.back(), &QLineEdit::editingFinished,
-          [this, index]() { emit syncSharedWidgets(index); });
+          [this, index]() { syncSharedInputs(index); });
 
   return shared;
 }
@@ -911,7 +909,7 @@ void MainWindow::enableCurrentOptimizationMethod() {
   }
 }
 
-void MainWindow::syncSharedWidgets(int senderIndex) {
+void MainWindow::syncSharedInputs(int senderIndex) {
   const bool startEnabled{startOptimization_[senderIndex]->isEnabled()};
   const auto batchCount{batchCountInput_[senderIndex]->text()};
   const bool updateDynamically{

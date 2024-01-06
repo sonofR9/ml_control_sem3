@@ -49,7 +49,7 @@ class MainWindow : public QMainWindow {
  signals:
   void iterationChanged(int iteration, double functional);
   void batchIterationChanged(int iteration, double functional);
-  void syncSharedWidgetsNow(int senderIndex);
+  // void syncSharedInputsNow(int senderIndex);
   void closed();
 
  private:
@@ -87,7 +87,7 @@ class MainWindow : public QMainWindow {
   void onIterationChanged(int iteration, double functional);
   void onBatchIterationChanged(int iteration, double functional);
 
-  void syncSharedWidgets(int senderIndex);
+  void syncSharedInputs(int senderIndex);
 
  private:
   optimization::GlobalOptions& options_;
