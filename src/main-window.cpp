@@ -34,6 +34,7 @@
 namespace {
 using namespace optimization;
 using Method = GlobalOptions::Method;
+using EmitFunction = std::function<void(std::size_t, double)>;
 
 constexpr int kSpacing{5};
 
@@ -229,15 +230,16 @@ void MainWindow::startOptimization() {
   tStart_ = std::chrono::high_resolution_clock::now();
   optimResult_ = std::async(
       std::launch::async, [this]() -> Tensor<double, DoubleAllocator> {
-        auto printer = [this](int iteration, double functional) {
-          emitIterationChanged(iteration, functional);
+        auto printer = [this](std::size_t iteration, double functional) {
+          emitIterationChanged(static_cast<int>(iteration), functional);
         };
         switch (options_.method) {
         case Method::kEvolution:
-          return modelTestEvolution<Allocator, decltype(printer)>(options_,
-                                                                  printer);
+          return modelTestEvolution<Allocator, EmitFunction>(
+              options_, EmitFunction(printer));
         case Method::kGrayWolf:
-          return modelTestGray<Allocator, decltype(printer)>(options_, printer);
+          return modelTestGray<Allocator, EmitFunction>(options_,
+                                                        EmitFunction(printer));
         };
       });
   startOptimization_->setEnabled(false);
@@ -300,15 +302,16 @@ void MainWindow::startNextBatch() {
 
   optimResult_ = std::async(
       std::launch::async, [this]() -> Tensor<double, DoubleAllocator> {
-        auto printer = [this](int iteration, double functional) {
-          emitBatchIterationChanged(iteration, functional);
+        auto printer = [this](std::size_t iteration, double functional) {
+          emitBatchIterationChanged(static_cast<int>(iteration), functional);
         };
         switch (options_.method) {
         case Method::kEvolution:
-          return modelTestEvolution<Allocator, decltype(printer)>(options_,
-                                                                  printer);
+          return modelTestEvolution<Allocator, EmitFunction>(
+              options_, EmitFunction(printer));
         case Method::kGrayWolf:
-          return modelTestGray<Allocator, decltype(printer)>(options_, printer);
+          return modelTestGray<Allocator, EmitFunction>(options_,
+                                                        EmitFunction(printer));
         };
       });
 

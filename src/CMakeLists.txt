@@ -3,6 +3,7 @@ set(TARGET_NAME ${PROJECT_NAME})
 set(SOURCES 
     global.cpp
     options.cpp
+    optimize-model.cpp
     main.cpp
 )
 

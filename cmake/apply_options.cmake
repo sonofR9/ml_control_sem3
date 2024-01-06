@@ -121,3 +121,7 @@ endif()
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
     add_compile_definitions(WINDOWS)  
 endif()
+
+if(ENABLE_FTIME_TRACE)
+    add_compile_options("-ftime-trace")
+endif()

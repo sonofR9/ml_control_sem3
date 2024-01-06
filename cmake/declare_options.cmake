@@ -12,3 +12,5 @@ option(ENABLE_SANITIZER "Set to \"ON\" to enable sanitizer in debug build" OFF)
 option(ENABLE_MATPLOTLIB "Set to \"ON\" to enable matplotlib" OFF)
 
 option(ENABLE_PCH "Set to \"ON\" to enable pre-compiled headers" OFF)
+
+option(ENABLE_FTIME_TRACE "Set to \"ON\" to enable -ftime-trace compile flag" OFF)
