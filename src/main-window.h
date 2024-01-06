@@ -21,6 +21,7 @@ class QProgressBar;
 class QPushButton;
 class QHBoxLayout;
 class QVBoxLayout;
+class QTableWidget;
 class QWidget;
 
 constexpr const char* kAppFolder{"ml_control_sem3"};
@@ -48,16 +49,26 @@ class MainWindow : public QMainWindow {
  signals:
   void iterationChanged(int iteration, double functional);
   void batchIterationChanged(int iteration, double functional);
+  void syncSharedWidgetsNow(int senderIndex);
   void closed();
 
  private:
   void constructView();
+
   QWidget* constructOptimizationTab(QWidget* tabWidget);
   QVBoxLayout* constructGlobalParams(QWidget*);
   QVBoxLayout* constructFunctionalParams(QWidget*);
   QVBoxLayout* constructControlParams(QWidget*);
   QWidget* constructWolfParams(QWidget*);
   QWidget* constructEvolutionParams(QWidget*);
+
+  QWidget* constructShared(QWidget*);
+
+  // info
+  QWidget* constructInfoTab(QWidget* tabWidget);
+
+  // for full screen chart
+  QWidget* constructEmptyTab(QWidget* tabWidget);
 
   void closeEvent(QCloseEvent* event) override;
 
@@ -68,11 +79,15 @@ class MainWindow : public QMainWindow {
   void startBatchOptimization();
   void startNextBatch();
 
+  void gotResult();
+
   void enableCurrentOptimizationMethod();
 
  private slots:
   void onIterationChanged(int iteration, double functional);
   void onBatchIterationChanged(int iteration, double functional);
+
+  void syncSharedWidgets(int senderIndex);
 
  private:
   optimization::GlobalOptions& options_;
@@ -91,6 +106,7 @@ class MainWindow : public QMainWindow {
   int batchCount_;
   int batchNumber_;
 
+  // optimization tab
   QLineEdit* tMax_;
   QLineEdit* dt_;
   QComboBox* method_;
@@ -127,14 +143,18 @@ class MainWindow : public QMainWindow {
     QWidget* widget_;
   } evolution_;
 
-  QPushButton* startOptimization_;
-  QPushButton* startBatchOptimization_;
-  QLineEdit* batchCountInput_;
-  QCheckBox* updateOptionsDynamically_;
+  // info tab
+  QTableWidget* bestDisplay_;
 
-  QProgressBar* progress_;
-  QLabel* iterations_;
-  QLabel* iterTime_;
+  // shared
+  std::vector<QPushButton*> startOptimization_;
+  std::vector<QPushButton*> startBatchOptimization_;
+  std::vector<QLineEdit*> batchCountInput_;
+  std::vector<QCheckBox*> updateOptionsDynamically_;
+
+  std::vector<QProgressBar*> progress_;
+  std::vector<QLabel*> iterations_;
+  std::vector<QLabel*> iterTime_;
 
   std::vector<QChart*> charts_;
 };

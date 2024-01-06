@@ -35,12 +35,12 @@ class DoubleGrayCode {
   DoubleGrayCode() : DoubleGrayCode(static_cast<double>(Z)) {
   }
   /*implicit*/ DoubleGrayCode(double value) {
-    code_ =
-        to_gray(static_cast<uint64_t>(D * (value + static_cast<double>(Z))));
+    code_ = to_gray(static_cast<uint64_t>((value + static_cast<double>(Z)) *
+                                          static_cast<double>(D)));
   }
   DoubleGrayCode& operator=(double value) {
-    code_ =
-        to_gray(static_cast<uint64_t>(D * (value + static_cast<double>(Z))));
+    code_ = to_gray(static_cast<uint64_t>((value + static_cast<double>(Z)) *
+                                          static_cast<double>(D)));
     return *this;
   }
   // /*implicit*/ DoubleGrayCode(uint64_t value) {
@@ -59,7 +59,8 @@ class DoubleGrayCode {
     return code_;
   }
   [[nodiscard]] double getDouble() const {
-    return static_cast<double>(from_gray(code_)) / D - static_cast<double>(Z);
+    return static_cast<double>(from_gray(code_)) / static_cast<double>(D) -
+           static_cast<double>(Z);
   }
 
   void changeBit(int bit) {

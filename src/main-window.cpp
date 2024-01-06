@@ -12,6 +12,7 @@
 #include <QDialog>
 #include <QFileDialog>
 #include <QHBoxLayout>
+#include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
 #include <QLineSeries>
@@ -22,7 +23,9 @@
 #include <QPushButton>
 #include <QScatterSeries>
 #include <QSettings>
+#include <QStringList>
 #include <QTabWidget>
+#include <QTableWidget>
 #include <QVBoxLayout>
 #include <QValidator>
 #include <QWidget>
@@ -38,20 +41,24 @@ using EmitFunction = std::function<void(std::size_t, double)>;
 
 constexpr int kSpacing{5};
 
-void setTextIteration(QLabel* label, int iter, std::size_t maxIter,
-                      double functional) {
-  label->setText(std::format("Iteration: {}/{} Functional: {:.5f}", iter,
-                             maxIter, functional)
-                     .c_str());
+void setTextIteration(std::vector<QLabel*> labels, int iter,
+                      std::size_t maxIter, double functional) {
+  for (auto label : labels) {
+    label->setText(std::format("Iteration: {}/{} Functional: {:.5f}", iter,
+                               maxIter, functional)
+                       .c_str());
+  }
 }
 
-void setTextTimePerIteration(QLabel* label, double totalTime,
+void setTextTimePerIteration(std::vector<QLabel*> labels, double totalTime,
                              std::size_t maxIter) {
   if (maxIter != 0) {
-    label->setText(std::format("Total time: {:6f}, Time per iteration: {:6f}",
-                               totalTime,
-                               totalTime / static_cast<double>(maxIter))
-                       .c_str());
+    for (auto label : labels) {
+      label->setText(std::format("Total time: {:6f}, Time per iteration: {:6f}",
+                                 totalTime,
+                                 totalTime / static_cast<double>(maxIter))
+                         .c_str());
+    }
   }
 }
 
@@ -158,6 +165,46 @@ void updateChart(QChart* chart, const std::vector<double, Alloc>& x,
     chartView->repaint();
   }
 }
+
+Tensor<Tensor<double, RepetitiveAllocator<double>>> reshapeTensor(
+    const Tensor<double, RepetitiveAllocator<double>>& inputTensor, int step) {
+  if (inputTensor.size() % step != 0) {
+    throw std::invalid_argument("Input vector size must be divisible by step.");
+  }
+  int numRows{static_cast<int>(inputTensor.size()) / step};
+
+  auto reshapedTensor = Tensor<Tensor<double, RepetitiveAllocator<double>>>(
+      numRows, Tensor<double, RepetitiveAllocator<double>>(step));
+
+  for (int i = 0; i < numRows; ++i) {
+    for (int j = 0; j < step; ++j) {
+      reshapedTensor[i][j] = inputTensor[i * step + j];
+    }
+  }
+
+  return reshapedTensor;
+}
+
+void refillTable(
+    QTableWidget* table,
+    const Tensor<Tensor<double, RepetitiveAllocator<double>>>& data,
+    const QStringList& horizontalHeaders) {
+  table->clear();
+  table->setRowCount(static_cast<int>(data.size()));
+  table->setColumnCount(static_cast<int>(data[0].size()));
+  for (std::size_t row{0}; row < data.size(); ++row) {
+    for (std::size_t column{0}; column < data[row].size(); ++column) {
+      auto* item{new QTableWidgetItem(
+          QString(std::format("{:.2f}", data[row][column]).c_str()),
+          Qt::DisplayRole)};
+      table->setItem(row, column, item);
+    }
+  }
+
+  table->setHorizontalHeaderLabels(horizontalHeaders);
+  table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+  table->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+}
 }  // namespace
 
 MainWindow::MainWindow(optimization::GlobalOptions& options, QWidget* parent)
@@ -208,7 +255,7 @@ MainWindow::~MainWindow() {
 
   QSettings(QDir::homePath() + "/" + kAppFolder + "/misc.ini",
             QSettings::IniFormat)
-      .setValue("batch_count", batchCountInput_->text().toInt());
+      .setValue("batch_count", batchCountInput_[0]->text().toInt());
 
   fillOptionsFromGui();
   writeConfig(options_, options_.configFile);
@@ -223,8 +270,8 @@ void MainWindow::startOptimization() {
 
   clear_->setCheckState(Qt::CheckState::Unchecked);
 
-  progress_->setMaximum(static_cast<int>(copy_.iters));
-  progress_->setValue(0);
+  progress_[0]->setMaximum(static_cast<int>(copy_.iters));
+  progress_[0]->setValue(0);
   setTextIteration(iterations_, 0, copy_.iters, -1);
 
   tStart_ = std::chrono::high_resolution_clock::now();
@@ -242,12 +289,12 @@ void MainWindow::startOptimization() {
                                                         EmitFunction(printer));
         };
       });
-  startOptimization_->setEnabled(false);
-  startBatchOptimization_->setEnabled(false);
+  startOptimization_[0]->setEnabled(false);
+  startBatchOptimization_[0]->setEnabled(false);
 }
 
 void MainWindow::onIterationChanged(int iteration, double functional) {
-  progress_->setValue(iteration);
+  progress_[0]->setValue(iteration);
   setTextIteration(iterations_, iteration, copy_.iters, functional);
   auto tNow = std::chrono::high_resolution_clock::now();
   auto duration =
@@ -256,21 +303,9 @@ void MainWindow::onIterationChanged(int iteration, double functional) {
       iterTime_, static_cast<double>(duration.count()) / 1000, iteration);
 
   if (iteration == static_cast<int>(copy_.iters)) {
-    best_ = optimResult_.get();
-    writeToSaveFile(options_.controlSaveFile, best_);
-
-    startOptimization_->setEnabled(true);
-    startBatchOptimization_->setEnabled(true);
-
-    trajectory_ =
-        two_wheeled_robot::getTrajectoryFromControl<double, DoubleAllocator>(
-            best_, copy_.tMax);
-    for (const auto& chart : charts_) {
-      updateChart(chart, trajectory_[0], trajectory_[1],
-                  options_.functionalOptions.terminalTolerance,
-                  {{.x = 2.5, .y = 2.5, .r = std::sqrt(2.5)},
-                   {.x = 7.5, .y = 7.5, .r = std::sqrt(2.5)}});
-    }
+    gotResult();
+    startOptimization_[0]->setEnabled(true);
+    startBatchOptimization_[0]->setEnabled(true);
   }
 }
 
@@ -281,20 +316,20 @@ void MainWindow::startBatchOptimization() {
   copy_.tMax = options_.tMax;
 
   batchNumber_ = 0;
-  batchCount_ = batchCountInput_->text().toInt();
-  progress_->setMaximum(static_cast<int>(copy_.iters * batchCount_));
-  progress_->setValue(0);
+  batchCount_ = batchCountInput_[0]->text().toInt();
+  progress_[0]->setMaximum(static_cast<int>(copy_.iters * batchCount_));
+  progress_[0]->setValue(0);
   setTextIteration(iterations_, 0, copy_.iters * batchCount_, -1);
 
   tStart_ = std::chrono::high_resolution_clock::now();
   startNextBatch();
-  startOptimization_->setEnabled(false);
-  startBatchOptimization_->setEnabled(false);
+  startOptimization_[0]->setEnabled(false);
+  startBatchOptimization_[0]->setEnabled(false);
 }
 
 void MainWindow::startNextBatch() {
   ++batchNumber_;
-  if (updateOptionsDynamically_->isChecked()) {
+  if (updateOptionsDynamically_[0]->isChecked()) {
     fillOptionsFromGui();
   } else {
     options_.clearSaveBeforeStart = clear_->isChecked();
@@ -324,7 +359,7 @@ void MainWindow::onBatchIterationChanged(int iteration, double functional) {
   int adjustedIteration{iteration +
                         static_cast<int>(batchNumber_ * copy_.iters)};
 
-  progress_->setValue(adjustedIteration);
+  progress_[0]->setValue(adjustedIteration);
   setTextIteration(iterations_, adjustedIteration, copy_.iters * batchCount_,
                    functional);
 
@@ -336,24 +371,30 @@ void MainWindow::onBatchIterationChanged(int iteration, double functional) {
                           adjustedIteration);
 
   if (iteration == static_cast<int>(copy_.iters)) {
-    best_ = optimResult_.get();
-    writeToSaveFile(options_.controlSaveFile, best_);
-    trajectory_ =
-        two_wheeled_robot::getTrajectoryFromControl<double, DoubleAllocator>(
-            best_, copy_.tMax);
-    for (const auto& chart : charts_) {
-      updateChart(chart, trajectory_[0], trajectory_[1],
-                  options_.functionalOptions.terminalTolerance,
-                  {{.x = 2.5, .y = 2.5, .r = std::sqrt(2.5)},
-                   {.x = 7.5, .y = 7.5, .r = std::sqrt(2.5)}});
-    }
+    gotResult();
 
     if (adjustedIteration == static_cast<int>(copy_.iters * batchCount_)) {
-      startOptimization_->setEnabled(true);
-      startBatchOptimization_->setEnabled(true);
+      startOptimization_[0]->setEnabled(true);
+      startBatchOptimization_[0]->setEnabled(true);
     } else {
       startNextBatch();
     }
+  }
+}
+
+void MainWindow::gotResult() {
+  best_ = optimResult_.get();
+  writeToSaveFile(options_.controlSaveFile, best_);
+  refillTable(bestDisplay_, reshapeTensor(best_, 2), {"u1", "u2"});
+
+  trajectory_ =
+      two_wheeled_robot::getTrajectoryFromControl<double, DoubleAllocator>(
+          best_, copy_.tMax);
+  for (const auto& chart : charts_) {
+    updateChart(chart, trajectory_[0], trajectory_[1],
+                options_.functionalOptions.terminalTolerance,
+                {{.x = 2.5, .y = 2.5, .r = std::sqrt(2.5)},
+                 {.x = 7.5, .y = 7.5, .r = std::sqrt(2.5)}});
   }
 }
 
@@ -382,6 +423,15 @@ void MainWindow::constructView() {
 
   auto* optimizationTab{constructOptimizationTab(tabWidget)};
   tabWidget->addTab(optimizationTab, "Optimization");
+  auto* infoTab{constructInfoTab(tabWidget)};
+  tabWidget->addTab(infoTab, "Info");
+  auto* chartTab{constructEmptyTab(tabWidget)};
+  tabWidget->addTab(chartTab, "Full screen chart");
+
+  for (int i{0}; i < tabWidget->count(); ++i) {
+    auto* tab{tabWidget->widget(i)};
+    tab->layout()->addWidget(constructShared(tab));
+  }
 
   auto* menu{menuBar()};
   auto* config{menu->addMenu("&Config")};
@@ -400,34 +450,6 @@ void MainWindow::constructView() {
                        QSettings::IniFormat);
     settings.setValue("config_file_path", QString(path));
   });
-
-  auto* chartView = new QChartView{centralWidget()};
-  charts_.push_back(chartView->chart());
-  chartView->setRenderHint(QPainter::Antialiasing);
-  chartView->setSizePolicy(QSizePolicy::Preferred,
-                           QSizePolicy::MinimumExpanding);
-  vLayout->addWidget(chartView);
-
-  // does not update when tab 1 is selected
-  // auto* chartTab{new QChartView{tabWidget}};
-  // charts_.push_back(chartTab->chart());
-  // chartTab->setRenderHint(QPainter::Antialiasing);
-  // chartTab->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
-  // tabWidget->addTab(chartTab, "Full screen chart");
-  // connect(tabWidget, &QTabWidget::currentChanged,
-  //         [this, tabWidget, chartView](int index) -> void {
-  //           if (index == 0) {
-  //             chartView->show();
-  //             chartView->setSizePolicy(QSizePolicy::Preferred,
-  //                                      QSizePolicy::MinimumExpanding);
-  //             chartView->updateGeometry();
-  //             tabWidget->updateGeometry();
-  //           } else {
-  //             // chartTab->setChart(charts_);
-  //             chartView->hide();
-  //           }
-  //           QApplication::processEvents();
-  //         });
 
   auto* chartMenu{menu->addMenu("&Chart")};
   auto* chartInNewWindow{chartMenu->addAction("Open in new window")};
@@ -477,41 +499,6 @@ QWidget* MainWindow::constructOptimizationTab(QWidget* tabWidget) {
   hLayout->addStretch(1);
   hLayout->setSpacing(kSpacing);
 
-  hLayout = new QHBoxLayout{};
-  hLayout->setSpacing(kSpacing);
-
-  startOptimization_ = new QPushButton{"Start optimization", tab};
-  connect(startOptimization_, &QPushButton::clicked,
-          [this]() { startOptimization(); });
-  hLayout->addWidget(startOptimization_);
-
-  hLayout->addStretch(1);
-
-  startBatchOptimization_ = new QPushButton{"Start batch optimization", tab};
-  hLayout->addWidget(startBatchOptimization_);
-  connect(startBatchOptimization_, &QPushButton::clicked,
-          [this]() { startBatchOptimization(); });
-  addField<QIntValidator, QHBoxLayout>(tab, hLayout, "batch count",
-                                       batchCountInput_);
-  batchCountInput_->setText(QString::number(batchCount_));
-  updateOptionsDynamically_ = new QCheckBox{"Update options dynamically", tab};
-  hLayout->addWidget(updateOptionsDynamically_);
-
-  vLayout->addItem(hLayout);
-
-  progress_ = new QProgressBar{tab};
-  vLayout->addWidget(progress_);
-
-  hLayout = new QHBoxLayout{};
-  vLayout->addItem(hLayout);
-  iterations_ = new QLabel{tab};
-  setTextIteration(iterations_, 0, 0, 0);
-  hLayout->addWidget(iterations_);
-  iterTime_ = new QLabel{tab};
-  iterTime_->setText("Run to display time statistics");
-  iterTime_->setAlignment(Qt::AlignmentFlag::AlignRight);
-  hLayout->addWidget(iterTime_);
-
   vLayout->setSpacing(kSpacing);
 
   return tab;
@@ -519,6 +506,9 @@ QWidget* MainWindow::constructOptimizationTab(QWidget* tabWidget) {
 
 QVBoxLayout* MainWindow::constructGlobalParams(QWidget* tab) {
   auto* vLayout{new QVBoxLayout{}};
+  vLayout->setAlignment(Qt::AlignTop);
+  vLayout->setSpacing(kSpacing);
+
   auto* title{new QLabel{"Global parameters", tab}};
   title->setAlignment(Qt::AlignmentFlag::AlignCenter);
   vLayout->addWidget(title);
@@ -592,14 +582,14 @@ QVBoxLayout* MainWindow::constructGlobalParams(QWidget* tab) {
   clear_ = new QCheckBox{"Start from scratch (clear save)", tab};
   vLayout->addWidget(clear_);
 
-  vLayout->addStretch(1);
-  vLayout->setSpacing(kSpacing);
-
   return vLayout;
 }
 
 QVBoxLayout* MainWindow::constructFunctionalParams(QWidget* tab) {
   auto* vLayout{new QVBoxLayout{}};
+  vLayout->setAlignment(Qt::AlignTop);
+  vLayout->setSpacing(kSpacing);
+
   auto* title{new QLabel{"Functional parameters", tab}};
   title->setAlignment(Qt::AlignmentFlag::AlignCenter);
   title->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
@@ -631,14 +621,14 @@ QVBoxLayout* MainWindow::constructFunctionalParams(QWidget* tab) {
   addField<QDoubleValidator>(tab, vLayout, "terminal tolerance",
                              functional_.terminalTolerance_);
 
-  vLayout->addStretch(1);
-  vLayout->setSpacing(kSpacing);
-
   return vLayout;
 }
 
 QVBoxLayout* MainWindow::constructControlParams(QWidget* tab) {
   auto* vLayout{new QVBoxLayout{}};
+  vLayout->setAlignment(Qt::AlignTop);
+  vLayout->setSpacing(kSpacing);
+
   auto* title{new QLabel{"Control parameters", tab}};
   title->setAlignment(Qt::AlignmentFlag::AlignCenter);
   title->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
@@ -648,16 +638,16 @@ QVBoxLayout* MainWindow::constructControlParams(QWidget* tab) {
   addField<QDoubleValidator>(tab, vLayout, "min", control_.min_);
   addField<QDoubleValidator>(tab, vLayout, "max", control_.max_);
 
-  vLayout->addStretch(1);
-  vLayout->setSpacing(kSpacing);
-
   return vLayout;
 }
 
 QWidget* MainWindow::constructWolfParams(QWidget* tab) {
   wolf_.widget_ = new QWidget{tab};
   auto* vLayout{new QVBoxLayout{}};
+  vLayout->setAlignment(Qt::AlignTop);
+  vLayout->setSpacing(kSpacing);
   wolf_.widget_->setLayout(vLayout);
+
   auto* title{new QLabel{"Wolf parameters", wolf_.widget_}};
   title->setAlignment(Qt::AlignmentFlag::AlignCenter);
   title->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
@@ -666,16 +656,16 @@ QWidget* MainWindow::constructWolfParams(QWidget* tab) {
   addField<QIntValidator>(wolf_.widget_, vLayout, "number", wolf_.num_);
   addField<QIntValidator>(wolf_.widget_, vLayout, "Best number", wolf_.best_);
 
-  vLayout->addStretch(1);
-  vLayout->setSpacing(kSpacing);
-
   return wolf_.widget_;
 }
 
 QWidget* MainWindow::constructEvolutionParams(QWidget* tab) {
   evolution_.widget_ = new QWidget{tab};
   auto* vLayout{new QVBoxLayout{}};
+  vLayout->setAlignment(Qt::AlignTop);
+  vLayout->setSpacing(kSpacing);
   evolution_.widget_->setLayout(vLayout);
+
   auto* title{new QLabel{"Evolution parameters", evolution_.widget_}};
   title->setAlignment(Qt::AlignmentFlag::AlignCenter);
   title->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
@@ -688,10 +678,110 @@ QWidget* MainWindow::constructEvolutionParams(QWidget* tab) {
   addField<QDoubleValidator>(evolution_.widget_, vLayout, "crossover rate",
                              evolution_.crossover_);
 
-  vLayout->addStretch(1);
+  return evolution_.widget_;
+}
+
+QWidget* MainWindow::constructShared(QWidget* tab) {
+  int index{static_cast<int>(startOptimization_.size())};
+
+  auto* shared{new QWidget{tab}};
+  auto* vLayout{new QVBoxLayout{}};
+  shared->setLayout(vLayout);
   vLayout->setSpacing(kSpacing);
 
-  return evolution_.widget_;
+  auto* hLayout{new QHBoxLayout{}};
+  hLayout->setSpacing(kSpacing);
+
+  startOptimization_.emplace_back(
+      new QPushButton{"Start optimization", shared});
+  connect(startOptimization_.back(), &QPushButton::clicked, [this, index]() {
+    startOptimization();
+    emit syncSharedWidgets(index);
+  });
+  hLayout->addWidget(startOptimization_.back());
+
+  hLayout->addStretch(1);
+
+  startBatchOptimization_.emplace_back(
+      new QPushButton{"Start batch optimization", shared});
+  hLayout->addWidget(startBatchOptimization_.back());
+  connect(startBatchOptimization_.back(), &QPushButton::clicked,
+          [this, index]() {
+            startBatchOptimization();
+            emit syncSharedWidgets(index);
+          });
+
+  batchCountInput_.emplace_back(nullptr);
+  addField<QIntValidator, QHBoxLayout>(shared, hLayout, "batch count",
+                                       batchCountInput_.back());
+  batchCountInput_.back()->setText(QString::number(batchCount_));
+  connect(batchCountInput_.back(), &QLineEdit::editingFinished,
+          [this, index]() { emit syncSharedWidgets(index); });
+
+  updateOptionsDynamically_.emplace_back(
+      new QCheckBox{"Update options dynamically", shared});
+  connect(updateOptionsDynamically_.back(), &QCheckBox::stateChanged,
+          [this, index]() { emit syncSharedWidgets(index); });
+  hLayout->addWidget(updateOptionsDynamically_.back());
+
+  vLayout->addItem(hLayout);
+
+  progress_.emplace_back(new QProgressBar{shared});
+  connect(progress_.back(), &QProgressBar::valueChanged,
+          [this, index]() { emit syncSharedWidgets(index); });
+  vLayout->addWidget(progress_.back());
+
+  hLayout = new QHBoxLayout{};
+  vLayout->addItem(hLayout);
+  iterations_.emplace_back(new QLabel{shared});
+  setTextIteration(iterations_, 0, 0, 0);
+  hLayout->addWidget(iterations_.back());
+  iterTime_.emplace_back(new QLabel{shared});
+  iterTime_.back()->setText("Run to display time statistics");
+  iterTime_.back()->setAlignment(Qt::AlignmentFlag::AlignRight);
+  hLayout->addWidget(iterTime_.back());
+
+  hLayout = new QHBoxLayout();
+  auto* chartView{new QChartView{shared}};
+  charts_.push_back(chartView->chart());
+  chartView->setRenderHint(QPainter::Antialiasing);
+  chartView->setSizePolicy(QSizePolicy::Preferred,
+                           QSizePolicy::MinimumExpanding);
+  hLayout->addWidget(chartView);
+  hLayout->addItem(
+      new QSpacerItem(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding));
+
+  vLayout->addItem(hLayout);
+
+  return shared;
+}
+
+QWidget* MainWindow::constructInfoTab(QWidget* tabWidget) {
+  auto* tab{new QWidget{tabWidget}};
+  auto* vLayout{new QVBoxLayout{}};
+  vLayout->setSpacing(kSpacing);
+  tab->setLayout(vLayout);
+
+  auto* hLayout{new QHBoxLayout{}};
+  hLayout->setSpacing(kSpacing);
+  vLayout->addItem(hLayout);
+
+  bestDisplay_ = new QTableWidget{tab};
+  bestDisplay_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+  hLayout->addWidget(bestDisplay_);
+
+  hLayout->addStretch(1);
+
+  return tab;
+}
+
+QWidget* MainWindow::constructEmptyTab(QWidget* tabWidget) {
+  auto* tab{new QWidget{tabWidget}};
+  auto* vLayout{new QVBoxLayout{}};
+  vLayout->setSpacing(kSpacing);
+  tab->setLayout(vLayout);
+
+  return tab;
 }
 
 void MainWindow::closeEvent(QCloseEvent* event) {
@@ -797,5 +887,28 @@ void MainWindow::enableCurrentOptimizationMethod() {
   case Method::kGrayWolf:
     wolf_.widget_->show();
     break;
+  }
+}
+
+void MainWindow::syncSharedWidgets(int senderIndex) {
+  bool startEnabled{startOptimization_[senderIndex]->isEnabled()};
+  auto batchCount{batchCountInput_[senderIndex]->text()};
+  bool updateDynamically{updateOptionsDynamically_[senderIndex]->isChecked()};
+
+  for (std::size_t i{0}; i < startOptimization_.size(); ++i) {
+    startOptimization_[i]->blockSignals(true);
+    startBatchOptimization_[i]->blockSignals(true);
+    batchCountInput_[i]->blockSignals(true);
+    updateOptionsDynamically_[i]->blockSignals(true);
+
+    startOptimization_[i]->setEnabled(startEnabled);
+    startBatchOptimization_[i]->setEnabled(startEnabled);
+    batchCountInput_[i]->setText(batchCount);
+    updateOptionsDynamically_[i]->setChecked(updateDynamically);
+
+    startOptimization_[i]->blockSignals(false);
+    startBatchOptimization_[i]->blockSignals(false);
+    batchCountInput_[i]->blockSignals(false);
+    updateOptionsDynamically_[i]->blockSignals(false);
   }
 }
