@@ -398,9 +398,11 @@ void MainWindow::gotResult() {
   writeToSaveFile(options_.controlSaveFile, best_);
   refillTable(bestDisplay_, reshapeTensor(best_, 2), {"u1", "u2"});
 
+  auto chartDt{chartsDt_[0]->text().toDouble()};
+  chartDt = std::min(chartDt, 1e-5);
   trajectory_ =
       two_wheeled_robot::getTrajectoryFromControl<double, DoubleAllocator>(
-          best_, options_.tMax, chartsDt_[0]->text().toDouble());
+          best_, options_.tMax, chartDt);
   for (const auto& chart : charts_) {
     updateChart(chart, trajectory_[0], trajectory_[1],
                 options_.functionalOptions.terminalTolerance,
