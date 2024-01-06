@@ -157,16 +157,17 @@ MainWindow::MainWindow(optimization::GlobalOptions& options, QWidget* parent)
                 QSettings::IniFormat)
           .value("main_window")
           .toByteArray());
+
+  batchCount_ = QSettings(QDir::homePath() + "/" + kAppFolder + "/misc.ini",
+                          QSettings::IniFormat)
+                    .value("batch_count")
+                    .toInt();
   constructView();
 
   connect(this, &MainWindow::iterationChanged, this,
           &MainWindow::onIterationChanged);
   connect(this, &MainWindow::batchIterationChanged, this,
           &MainWindow::onBatchIterationChanged);
-
-  batchCount_ = QSettings(QDir::homePath() + "/" + kAppFolder + "/misc.ini",
-                          QSettings::IniFormat)
-                    .value("batch_count");
 
   if (options_.configFile.empty()) {
     QString path{};
@@ -196,7 +197,7 @@ MainWindow::~MainWindow() {
 
   QSettings(QDir::homePath() + "/" + kAppFolder + "/misc.ini",
             QSettings::IniFormat)
-      .setValue("batch_count", batchCount_);
+      .setValue("batch_count", batchCountInput_->text().toInt());
 
   fillOptionsFromGui();
   writeConfig(options_, options_.configFile);
@@ -284,7 +285,7 @@ void MainWindow::startNextBatch() {
   if (updateOptionsDynamically_->isChecked()) {
     fillOptionsFromGui();
   } else {
-    options_.clearSaveBeforeStart = clear_.isChecked();
+    options_.clearSaveBeforeStart = clear_->isChecked();
   }
 
   optimResult_ = std::async(
@@ -301,7 +302,7 @@ void MainWindow::startNextBatch() {
         };
       });
 
-  if (batchNumber_ == 0) {
+  if (clear_->isChecked()) {
     clear_->setCheckState(Qt::CheckState::Unchecked);
   }
 }
@@ -479,7 +480,7 @@ QWidget* MainWindow::constructOptimizationTab(QWidget* tabWidget) {
           [this]() { startBatchOptimization(); });
   addField<QIntValidator, QHBoxLayout>(tab, hLayout, "batch count",
                                        batchCountInput_);
-  batchCountInput_->setText(batchCount_);
+  batchCountInput_->setText(QString::number(batchCount_));
   updateOptionsDynamically_ = new QCheckBox{"Update options dynamically", tab};
   hLayout->addWidget(updateOptionsDynamically_);
 
