@@ -32,6 +32,9 @@ target_link_libraries(${TARGET_NAME} PRIVATE
 )
 
 set(PRIVATE_PCH
+    <format>
+    <vector>
+    
     "optimize-model.h"
     "tensor.h"
 )
@@ -63,6 +66,21 @@ if(true AND Qt6_FOUND)
     set(PRIVATE_PCH
         ${PRIVATE_PCH}
         <QLabel>
+        <QCheckBox>
+        <QComboBox>
+        <QFileDialog>
+        <QHBoxLayout>
+        <QLabel>
+        <QLineEdit>
+        <QMenu>
+        <QMenuBar>
+        <QMessageBox>
+        <QProgressBar>
+        <QPushButton>
+        <QSettings>
+        <QTabWidget>
+        <QVBoxLayout>
+        <QValidator>
         <QWidget>
     )
 endif()

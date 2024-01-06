@@ -158,6 +158,7 @@ MainWindow::MainWindow(optimization::GlobalOptions& options, QWidget* parent)
           .value("main_window")
           .toByteArray());
 
+  // batch count must be loaded before constructView
   batchCount_ = QSettings(QDir::homePath() + "/" + kAppFolder + "/misc.ini",
                           QSettings::IniFormat)
                     .value("batch_count")
