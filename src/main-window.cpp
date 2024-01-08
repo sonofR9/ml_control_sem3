@@ -514,7 +514,7 @@ void MainWindow::constructView() {
   });
 }
 
-QWidget* MainWindow::constructOptimizationTab(QWidget* tabWidget) {
+QWidget* MainWindow::constructOptimizationTab(QTabWidget* tabWidget) {
   auto* tab{new QWidget{tabWidget}};
   auto* vLayout{new QVBoxLayout{}};
   vLayout->setSpacing(kSpacing);
@@ -539,8 +539,10 @@ QWidget* MainWindow::constructOptimizationTab(QWidget* tabWidget) {
 
   hLayout->addStretch(1);
 
-  auto* scrollArea{new QScrollArea};
-  scrollArea->setWidget(tab);
+  // TODO(novak) make scrollArea work
+  // auto* scrollArea{new QScrollArea};
+  // scrollArea->setWidgetResizable(true);
+  // scrollArea->setWidget(tab);
 
   return tab;
 }
@@ -676,13 +678,14 @@ QVBoxLayout* MainWindow::constructObstacleParams(QWidget* tab) {
   vLayout->addWidget(title);
 
   functional_.obstacles_ = new QTableWidget(0, 3, tab);
+  // TODO (novak) to fill fuiFromOptions
   // functional_.obstacles_->setSizePolicy(QSizePolicy::Preferred,
   //                                       QSizePolicy::Maximum);
-  functional_.obstacles_->setMaximumHeight(tab->height());
-  functional_.obstacles_->setSizeAdjustPolicy(
-      QAbstractScrollArea::AdjustToContents);
+  // functional_.obstacles_->setMaximumHeight(tab->height());
+  // functional_.obstacles_->setSizeAdjustPolicy(
+  //     QAbstractScrollArea::AdjustToContents);
   functional_.obstacles_->setSizePolicy(QSizePolicy::Preferred,
-                                        QSizePolicy::Fixed);
+                                        QSizePolicy::Maximum);
   vLayout->addWidget(functional_.obstacles_);
 
   return vLayout;
