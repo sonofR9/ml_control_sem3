@@ -58,6 +58,7 @@ class MainWindow : public QMainWindow {
   QWidget* constructOptimizationTab(QWidget* tabWidget);
   QVBoxLayout* constructGlobalParams(QWidget*);
   QVBoxLayout* constructFunctionalParams(QWidget*);
+  QVBoxLayout* constructObstacleParams(QWidget*);
   QVBoxLayout* constructControlParams(QWidget*);
   QWidget* constructWolfParams(QWidget*);
   QWidget* constructEvolutionParams(QWidget*);
@@ -121,7 +122,7 @@ class MainWindow : public QMainWindow {
     QLineEdit* coefTerminal_;
     QLineEdit* coefObstacle_;
     QLineEdit* terminalTolerance_;
-    // TODO(novak): circles
+    QTableWidget* obstacles_;
   } functional_;
 
   struct Control {
