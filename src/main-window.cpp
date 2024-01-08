@@ -687,6 +687,40 @@ QVBoxLayout* MainWindow::constructObstacleParams(QWidget* tab) {
   functional_.obstacles_->setSizePolicy(QSizePolicy::Preferred,
                                         QSizePolicy::Maximum);
   vLayout->addWidget(functional_.obstacles_);
+  auto* contextMenu{new QMenu(functional_.obstacles_)};
+  auto* insertRowAction{new QAction("Insert Row", contextMenu)};
+  contextMenu->addAction(insertRowAction);
+  connect(insertRowAction, &QAction::triggered, [this]() {
+    int row{functional_.obstacles_->model()->rowCount()};
+    functional_.obstacles_->model()->insertRow(row);
+    for (int column{0}; column < 3; ++column) {
+      functional_.obstacles_->model()->setData(
+          functional_.obstacles_->model()->index(row, column), 1.0,
+          Qt::DisplayRole);
+    }
+  });
+  auto* deleteRowAction{new QAction("Delete Row", contextMenu)};
+  connect(deleteRowAction, &QAction::triggered, [this]() {
+    auto selectedItem{functional_.obstacles_->selectionModel()->currentIndex()};
+    if (selectedItem.isValid()) {
+      auto row{selectedItem.row()};  // Get the first selected row
+      functional_.obstacles_->model()->removeRow(row);
+    }
+  });
+  contextMenu->addAction(deleteRowAction);
+
+  functional_.obstacles_->setContextMenuPolicy(Qt::CustomContextMenu);
+  connect(functional_.obstacles_, &QTableView::customContextMenuRequested,
+          [this, contextMenu, deleteRowAction](const QPoint& pos) {
+            deleteRowAction->setEnabled(false);
+            if (functional_.obstacles_->selectionModel()
+                    ->currentIndex()
+                    .isValid()) {
+              deleteRowAction->setEnabled(true);
+            }
+            contextMenu->popup(
+                functional_.obstacles_->viewport()->mapToGlobal(pos));
+          });
 
   return vLayout;
 }
