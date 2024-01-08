@@ -287,11 +287,12 @@ void MainWindow::startOptimization() {
         };
         switch (options_.method) {
         case Method::kEvolution:
-          return modelTestEvolution<Allocator, EmitFunction>(
-              options_, EmitFunction(printer));
+          return modelTestEvolution<optimization::RepetitiveAllocator,
+                                    EmitFunction>(options_,
+                                                  EmitFunction(printer));
         case Method::kGrayWolf:
-          return modelTestGray<Allocator, EmitFunction>(options_,
-                                                        EmitFunction(printer));
+          return modelTestGray<optimization::RepetitiveAllocator, EmitFunction>(
+              options_, EmitFunction(printer));
         };
       });
   startOptimization_[0]->setEnabled(false);
@@ -351,11 +352,12 @@ void MainWindow::startNextBatch() {
         };
         switch (options_.method) {
         case Method::kEvolution:
-          return modelTestEvolution<Allocator, EmitFunction>(
-              options_, EmitFunction(printer));
+          return modelTestEvolution<optimization::RepetitiveAllocator,
+                                    EmitFunction>(options_,
+                                                  EmitFunction(printer));
         case Method::kGrayWolf:
-          return modelTestGray<Allocator, EmitFunction>(options_,
-                                                        EmitFunction(printer));
+          return modelTestGray<optimization::RepetitiveAllocator, EmitFunction>(
+              options_, EmitFunction(printer));
         };
       });
 
