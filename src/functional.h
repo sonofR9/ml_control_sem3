@@ -1,11 +1,13 @@
 #include "function-approximation.h"
 #include "global.h"
+#include "options.h"
 #include "parse-function.h"
 #include "runge-kutte.h"
 #include "two-wheel-robot.h"
 #include "utils.h"
 
 #include <cassert>
+#include <memory>
 
 namespace two_wheeled_robot {
 using namespace optimization;
@@ -111,9 +113,12 @@ class Functional {
     double terminal;
     double obstacle;
   };
-  constexpr explicit Functional(Coeffients coefficients,
-                                double terminalTolerance) noexcept
-      : coeffients_{coefficients}, terminalTolerance_{terminalTolerance} {
+
+  constexpr explicit Functional(
+      Coeffients coefficients, double terminalTolerance,
+      std::vector<optimization::CircleData> obstacles) noexcept
+      : coeffients_{coefficients}, terminalTolerance_{terminalTolerance},
+        obstacles_{std::move(obstacles)} {
   }
 
   /**
@@ -141,16 +146,27 @@ class Functional {
 
     std::size_t iFinal{i == solvedX[0].size() ? i - 1 : i};
 
-    const auto subIntegrative = [dt](const Tensor<T, Alloc>& point) -> double {
+    const auto subIntegrative = [this,
+                                 dt](const Tensor<T, Alloc>& point) -> double {
+      constexpr double kBigNumber = 1e5;
       auto mySqr = [](auto x) { return x * x; };
-      const double h1{std::sqrt(2.5) -
-                      std::sqrt(mySqr(point[0] - 2.5) + mySqr(point[1] - 2.5))};
-      const double h2{std::sqrt(2.5) -
-                      std::sqrt(mySqr(point[0] - 7.5) + mySqr(point[1] - 7.5))};
-      if (h1 > 0 || h2 > 0) {
-        const double kBigNumber = 1e5;
-        return kBigNumber * dt;
+      auto pointInside = [mySqr](const Tensor<T, Alloc>& point,
+                                 const CircleData& obstacle) -> double {
+        return obstacle.r - std::sqrt(mySqr(point[0] - obstacle.x) +
+                                      mySqr(point[1] - obstacle.y));
+      };
+      for (const auto& obstacle : obstacles_) {
+        if (pointInside(point, obstacle) > 0) {
+          return kBigNumber * dt;
+        }
       }
+      // const double h1{std::sqrt(2.5) -
+      //                 std::sqrt(mySqr(point[0] - 2.5) + mySqr(point[1]
+      //                 - 2.5))};
+      // const double h2{std::sqrt(2.5) -
+      //                 std::sqrt(mySqr(point[0] - 7.5) + mySqr(point[1]
+      //                 - 7.5))};
+      // if (h1 > 0 || h2 > 0) {
       return 0.0;
     };
 
@@ -170,5 +186,6 @@ class Functional {
  private:
   Coeffients coeffients_;
   double terminalTolerance_;
+  std::vector<optimization::CircleData> obstacles_;
 };
 }  // namespace two_wheeled_robot

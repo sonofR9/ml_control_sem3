@@ -22,6 +22,7 @@ class QPushButton;
 class QHBoxLayout;
 class QVBoxLayout;
 class QTableWidget;
+class QTabWidget;
 class QWidget;
 
 constexpr const char* kAppFolder{"ml_control_sem3"};
@@ -55,9 +56,10 @@ class MainWindow : public QMainWindow {
  private:
   void constructView();
 
-  QWidget* constructOptimizationTab(QWidget* tabWidget);
+  QWidget* constructOptimizationTab(QTabWidget* tabWidget);
   QVBoxLayout* constructGlobalParams(QWidget*);
   QVBoxLayout* constructFunctionalParams(QWidget*);
+  QVBoxLayout* constructObstacleParams(QWidget*);
   QVBoxLayout* constructControlParams(QWidget*);
   QWidget* constructWolfParams(QWidget*);
   QWidget* constructEvolutionParams(QWidget*);
@@ -121,7 +123,7 @@ class MainWindow : public QMainWindow {
     QLineEdit* coefTerminal_;
     QLineEdit* coefObstacle_;
     QLineEdit* terminalTolerance_;
-    // TODO(novak): circles
+    QTableWidget* obstacles_;
   } functional_;
 
   struct Control {

@@ -58,7 +58,8 @@ Tensor<double, Alloc<double>> modelTestEvolution(
   Functional functional{{.time = options.functionalOptions.coefTime,
                          .terminal = options.functionalOptions.coefTerminal,
                          .obstacle = options.functionalOptions.coefObstacle},
-                        options.functionalOptions.terminalTolerance};
+                        options.functionalOptions.terminalTolerance,
+                        options.functionalOptions.circles};
   const auto adap = [paramsCount, tMax, dt, &functional](
                         const Tensor<double, Alloc<double>>& solverResult) {
     assert((solverResult.size() == paramsCount));
@@ -110,7 +111,8 @@ Tensor<double, Alloc<double>> modelTestGray(
   Functional functional{{.time = options.functionalOptions.coefTime,
                          .terminal = options.functionalOptions.coefTerminal,
                          .obstacle = options.functionalOptions.coefObstacle},
-                        options.functionalOptions.terminalTolerance};
+                        options.functionalOptions.terminalTolerance,
+                        options.functionalOptions.circles};
   const auto adap = [paramsCount, tMax, dt, &functional](
                         const Tensor<double, Alloc<double>>& solverResult) {
     assert((solverResult.size() == paramsCount));

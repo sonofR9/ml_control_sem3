@@ -22,6 +22,7 @@
 #include <QProgressBar>
 #include <QPushButton>
 #include <QScatterSeries>
+#include <QScrollArea>
 #include <QSettings>
 #include <QStringList>
 #include <QTabWidget>
@@ -205,6 +206,28 @@ void refillTable(
   table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
   table->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 }
+
+void refillObstaclesTable(QTableWidget* table,
+                          const std::vector<optimization::CircleData>& data) {
+  table->clear();
+  table->setRowCount(static_cast<int>(data.size()));
+  table->setColumnCount(3);
+  for (int row{0}; row < static_cast<int>(data.size()); ++row) {
+    auto* item{new QTableWidgetItem(
+        QString(std::format("{:.2f}", data[row].x).c_str()), Qt::DisplayRole)};
+    table->setItem(row, 0, item);
+    item = new QTableWidgetItem(
+        QString(std::format("{:.2f}", data[row].y).c_str()), Qt::DisplayRole);
+    table->setItem(row, 1, item);
+    item = new QTableWidgetItem(
+        QString(std::format("{:.2f}", data[row].r).c_str()), Qt::DisplayRole);
+    table->setItem(row, 2, item);
+  }
+
+  table->setHorizontalHeaderLabels({"x", "y", "r"});
+  table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+  table->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+}
 }  // namespace
 
 MainWindow::MainWindow(optimization::GlobalOptions& options, QWidget* parent)
@@ -287,11 +310,12 @@ void MainWindow::startOptimization() {
         };
         switch (options_.method) {
         case Method::kEvolution:
-          return modelTestEvolution<Allocator, EmitFunction>(
-              options_, EmitFunction(printer));
+          return modelTestEvolution<optimization::RepetitiveAllocator,
+                                    EmitFunction>(options_,
+                                                  EmitFunction(printer));
         case Method::kGrayWolf:
-          return modelTestGray<Allocator, EmitFunction>(options_,
-                                                        EmitFunction(printer));
+          return modelTestGray<optimization::RepetitiveAllocator, EmitFunction>(
+              options_, EmitFunction(printer));
         };
       });
   startOptimization_[0]->setEnabled(false);
@@ -351,11 +375,12 @@ void MainWindow::startNextBatch() {
         };
         switch (options_.method) {
         case Method::kEvolution:
-          return modelTestEvolution<Allocator, EmitFunction>(
-              options_, EmitFunction(printer));
+          return modelTestEvolution<optimization::RepetitiveAllocator,
+                                    EmitFunction>(options_,
+                                                  EmitFunction(printer));
         case Method::kGrayWolf:
-          return modelTestGray<Allocator, EmitFunction>(options_,
-                                                        EmitFunction(printer));
+          return modelTestGray<optimization::RepetitiveAllocator, EmitFunction>(
+              options_, EmitFunction(printer));
         };
       });
 
@@ -406,8 +431,7 @@ void MainWindow::gotResult() {
   for (const auto& chart : charts_) {
     updateChart(chart, trajectory_[0], trajectory_[1],
                 options_.functionalOptions.terminalTolerance,
-                {{.x = 2.5, .y = 2.5, .r = std::sqrt(2.5)},
-                 {.x = 7.5, .y = 7.5, .r = std::sqrt(2.5)}});
+                options_.functionalOptions.circles);
   }
 }
 
@@ -490,17 +514,21 @@ void MainWindow::constructView() {
   });
 }
 
-QWidget* MainWindow::constructOptimizationTab(QWidget* tabWidget) {
+QWidget* MainWindow::constructOptimizationTab(QTabWidget* tabWidget) {
   auto* tab{new QWidget{tabWidget}};
   auto* vLayout{new QVBoxLayout{}};
+  vLayout->setSpacing(kSpacing);
   tab->setLayout(vLayout);
 
   auto* hLayout{new QHBoxLayout{}};
+  hLayout->setSpacing(kSpacing);
   vLayout->addItem(hLayout);
   auto* globalParams{constructGlobalParams(tab)};
   hLayout->addItem(globalParams);
   auto* functionalParams{constructFunctionalParams(tab)};
   hLayout->addItem(functionalParams);
+  auto* obstaclesParams{constructObstacleParams(tab)};
+  hLayout->addItem(obstaclesParams);
   auto* controlParams{constructControlParams(tab)};
   hLayout->addItem(controlParams);
   auto* wolfParams{constructWolfParams(tab)};
@@ -510,9 +538,11 @@ QWidget* MainWindow::constructOptimizationTab(QWidget* tabWidget) {
   enableCurrentOptimizationMethod();
 
   hLayout->addStretch(1);
-  hLayout->setSpacing(kSpacing);
 
-  vLayout->setSpacing(kSpacing);
+  // TODO(novak) make scrollArea work
+  // auto* scrollArea{new QScrollArea};
+  // scrollArea->setWidgetResizable(true);
+  // scrollArea->setWidget(tab);
 
   return tab;
 }
@@ -633,6 +663,64 @@ QVBoxLayout* MainWindow::constructFunctionalParams(QWidget* tab) {
 
   addField<QDoubleValidator>(tab, vLayout, "terminal tolerance",
                              functional_.terminalTolerance_);
+
+  return vLayout;
+}
+
+QVBoxLayout* MainWindow::constructObstacleParams(QWidget* tab) {
+  auto* vLayout{new QVBoxLayout{}};
+  vLayout->setAlignment(Qt::AlignTop);
+  vLayout->setSpacing(kSpacing);
+
+  auto* title{new QLabel{"Obstacles", tab}};
+  title->setAlignment(Qt::AlignmentFlag::AlignCenter);
+  title->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+  vLayout->addWidget(title);
+
+  functional_.obstacles_ = new QTableWidget(0, 3, tab);
+  // TODO (novak) to fill fuiFromOptions
+  // functional_.obstacles_->setSizePolicy(QSizePolicy::Preferred,
+  //                                       QSizePolicy::Maximum);
+  // functional_.obstacles_->setMaximumHeight(tab->height());
+  // functional_.obstacles_->setSizeAdjustPolicy(
+  //     QAbstractScrollArea::AdjustToContents);
+  functional_.obstacles_->setSizePolicy(QSizePolicy::Preferred,
+                                        QSizePolicy::Maximum);
+  vLayout->addWidget(functional_.obstacles_);
+  auto* contextMenu{new QMenu(functional_.obstacles_)};
+  auto* insertRowAction{new QAction("Insert Row", contextMenu)};
+  contextMenu->addAction(insertRowAction);
+  connect(insertRowAction, &QAction::triggered, [this]() {
+    int row{functional_.obstacles_->model()->rowCount()};
+    functional_.obstacles_->model()->insertRow(row);
+    for (int column{0}; column < 3; ++column) {
+      functional_.obstacles_->model()->setData(
+          functional_.obstacles_->model()->index(row, column), 1.0,
+          Qt::DisplayRole);
+    }
+  });
+  auto* deleteRowAction{new QAction("Delete Row", contextMenu)};
+  connect(deleteRowAction, &QAction::triggered, [this]() {
+    auto selectedItem{functional_.obstacles_->selectionModel()->currentIndex()};
+    if (selectedItem.isValid()) {
+      auto row{selectedItem.row()};  // Get the first selected row
+      functional_.obstacles_->model()->removeRow(row);
+    }
+  });
+  contextMenu->addAction(deleteRowAction);
+
+  functional_.obstacles_->setContextMenuPolicy(Qt::CustomContextMenu);
+  connect(functional_.obstacles_, &QTableView::customContextMenuRequested,
+          [this, contextMenu, deleteRowAction](const QPoint& pos) {
+            deleteRowAction->setEnabled(false);
+            if (functional_.obstacles_->selectionModel()
+                    ->currentIndex()
+                    .isValid()) {
+              deleteRowAction->setEnabled(true);
+            }
+            contextMenu->popup(
+                functional_.obstacles_->viewport()->mapToGlobal(pos));
+          });
 
   return vLayout;
 }
@@ -825,7 +913,8 @@ void MainWindow::fillGuiFromOptions() {
       QString::number(options_.functionalOptions.coefObstacle));
   functional_.terminalTolerance_->setText(
       QString::number(options_.functionalOptions.terminalTolerance));
-  // TODO(novak) add circles
+  refillObstaclesTable(functional_.obstacles_,
+                       options_.functionalOptions.circles);
 
   // Set optimization method
   method_->setCurrentIndex(static_cast<int>(options_.method));
@@ -868,7 +957,20 @@ void MainWindow::fillOptionsFromGui() {
       functional_.coefObstacle_->text().toDouble();
   options_.functionalOptions.terminalTolerance =
       functional_.terminalTolerance_->text().toDouble();
-  // TODO(novak) circles
+
+  options_.functionalOptions.circles.clear();
+  for (int row{0}; row < functional_.obstacles_->model()->rowCount(); ++row) {
+    auto xIndex{functional_.obstacles_->model()->index(row, 0)};
+    auto yIndex{functional_.obstacles_->model()->index(row, 1)};
+    auto rIndex{functional_.obstacles_->model()->index(row, 2)};
+
+    auto x{functional_.obstacles_->model()->data(xIndex).toDouble()};
+    auto y{functional_.obstacles_->model()->data(yIndex).toDouble()};
+    auto r{functional_.obstacles_->model()->data(rIndex).toDouble()};
+
+    CircleData circleData = {x, y, r};
+    options_.functionalOptions.circles.push_back(circleData);
+  }
 
   // Read optimization method
   options_.method = static_cast<Method>(method_->currentIndex());
