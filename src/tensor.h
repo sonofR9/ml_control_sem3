@@ -398,6 +398,7 @@ constexpr Tensor<T, Alloc>& operator-=(
 }
 
 
+// TODO(novak) add *= overloads too
 template <typename T>
 concept Subscriptable = requires(T t) { t[0]; };
 
@@ -449,7 +450,6 @@ constexpr Tensor<T, Alloc<T>> operator*(const Tensor<T, Alloc<T>>& self,
 template <typename T, template <typename> class Alloc, NotSubscriptable U>
 constexpr U operator*(const Tensor<U, Alloc<U>>& self, 
                       const Tensor<T, Alloc<T>>& other) {
-  
   // case 1xm * mx1
   assert((other[0].size() == 1) && "dimensions must conform to matrix multiplication rule");
   assert((other.size() == self.size()) && "dimensions must conform to matrix multiplication rule");
@@ -545,6 +545,8 @@ constexpr Tensor<Tensor<U, Alloc<U>>, Alloc<Tensor<U, Alloc<U>>>> transposeAndMu
   }
   return result;
 }
+
+// TODO(novak) add transpose function
 }  // namespace optimization
 
 template <typename T, class Alloc>
