@@ -1,3 +1,19 @@
+/* Copyright (C) 2023-2024 Novak Alexander
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "options.h"
 
 #include "utils.h"
@@ -13,50 +29,50 @@
 #include <sstream>
 #include <string>
 
-namespace {
-template <typename T>
-constexpr T getValue(const boost::program_options::variables_map& vm,
-                     const std::string& name) {
-  if (vm.contains(name)) {
-    return vm[name].as<T>();
-  }
-  return {};
-}
-
-std::string vectorToCommaSeparatedString(const std::vector<double>& values) {
-  std::stringstream stream;
-  std::copy(values.begin(), values.end(),
-            std::ostream_iterator<double>(stream, ","));
-  return stream.str();
-}
-
-void vectorToSeparateLines(const std::string& fileName, std::string tag) {
-  if (tag.back() != '=') {
-    tag += '=';
-  }
-  std::ifstream inputFile(fileName);
-  std::stringstream modifiedLines;  // Store modified lines temporarily
-
-  std::string line;
-  while (std::getline(inputFile, line)) {
-    if (line.starts_with(tag)) {
-      // Split the values and write separate lines to the stringstream
-      std::istringstream iss(line.substr(tag.size()));  // Skip startingWord
-      std::string value;
-      while (std::getline(iss, value, ',')) {
-        modifiedLines << tag << value << std::endl;
-      }
-    } else {
-      modifiedLines << line << std::endl;  // Copy other lines directly
+amespace {
+  template <typename T>
+  constexpr T getValue(const boost::program_options::variables_map& vm,
+                       const std::string& name) {
+    if (vm.contains(name)) {
+      return vm[name].as<T>();
     }
+    return {};
   }
 
-  inputFile.close();
+  std::string vectorToCommaSeparatedString(const std::vector<double>& values) {
+    std::stringstream stream;
+    std::copy(values.begin(), values.end(),
+              std::ostream_iterator<double>(stream, ","));
+    return stream.str();
+  }
 
-  std::ofstream outputFile(fileName);
-  outputFile << modifiedLines.str();
-  outputFile.close();
-}
+  void vectorToSeparateLines(const std::string& fileName, std::string tag) {
+    if (tag.back() != '=') {
+      tag += '=';
+    }
+    std::ifstream inputFile(fileName);
+    std::stringstream modifiedLines;  // Store modified lines temporarily
+
+    std::string line;
+    while (std::getline(inputFile, line)) {
+      if (line.starts_with(tag)) {
+        // Split the values and write separate lines to the stringstream
+        std::istringstream iss(line.substr(tag.size()));  // Skip startingWord
+        std::string value;
+        while (std::getline(iss, value, ',')) {
+          modifiedLines << tag << value << std::endl;
+        }
+      } else {
+        modifiedLines << line << std::endl;  // Copy other lines directly
+      }
+    }
+
+    inputFile.close();
+
+    std::ofstream outputFile(fileName);
+    outputFile << modifiedLines.str();
+    outputFile.close();
+  }
 }  // namespace
 
 namespace optimization {
