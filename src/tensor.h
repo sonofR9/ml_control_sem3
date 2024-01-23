@@ -397,6 +397,75 @@ constexpr Tensor<T, Alloc>& operator-=(
   return self;
 }
 
+
+template <typename T>
+concept Subscriptable = requires(T t) { t[0]; };
+
+template <Subscriptable T, class Alloc>
+constexpr Tensor<T, Alloc<T>> operator*(const Tensor<T, Alloc>& self, 
+                                        const Tensor<T, Alloc>& other) {
+  assert((self[0].size() == other.size()) && "dimensions must conform to matrix multiplication rule");
+  // mxn * nxp
+  int m{self.size()};
+  int n{self[0].size()};
+  int p{other[0].size()};
+
+  Tensor<T, Alloc> result{m, T(p, 0)};
+
+  for (int i = 0; i < m; ++i) {
+    for (int j = 0; j < p; ++j) {
+      for (int k = 0; k < n; ++k) {
+        result[i][j] += self[i][k] * other[k][j];
+      }
+    }
+  }
+
+  return result;
+}
+
+// overloads of operator* for vectors multiplication
+template <typename T>
+concept NotSubscriptable = !Subscriptable<T>;
+
+template <typename T, template <typename> class Alloc, NotSubscriptable U>
+constexpr Tensor<T, Alloc<T>> operator*(const Tensor<T, Alloc<T>>& self, 
+                                        const Tensor<U, Alloc<U>>& other) {
+  // case mx1 * 1xp
+  assert((self[0].size() == 1) && "dimensions must conform to matrix multiplication rule");
+  int m{self.size()};
+  int p{other.size()};
+
+  Tensor<T, Alloc<T>> result{m, T(p, 0)};
+
+  for (int i = 0; i < m; ++i) {
+    for (int j = 0; j < p; ++j) {
+      result[i][j] = self[i][0] * other[j];
+    }
+  }
+
+  return result;
+}
+
+template <typename T, template <typename> class Alloc, NotSubscriptable U>
+constexpr U operator*(const Tensor<U, Alloc<U>>& self, 
+                      const Tensor<T, Alloc<T>>& other) {
+  
+  // case 1xm * mx1
+  assert((other[0].size() == 1) && "dimensions must conform to matrix multiplication rule");
+  assert((other.size() == self.size()) && "dimensions must conform to matrix multiplication rule");
+  int m{self.size()};
+
+  U result{0};
+
+  for (int i = 0; i < m; ++i) {
+    for (int j = 0; j < m; ++j) {
+      result += self[i] * other[j][0];
+    }
+  }
+
+  return result;
+}
+
 template <typename T, class Alloc, typename M>
 constexpr Tensor<T, Alloc> operator*(const Tensor<T, Alloc>& self,
                                      M multiplier) {
@@ -454,6 +523,27 @@ template <typename T, class Alloc, class Alloc2>
 constexpr bool operator!=(const Tensor<T, Alloc>& lhs,
                           const Tensor<T, Alloc2>& rhs) {
   return !(lhs == rhs);
+}
+
+template <NotSubscriptable U, class Alloc>
+constexpr U dotProduct(const Tensor<U, Alloc>& lhs, const Tensor<U, Alloc>& rhs) {
+  assert((lhs.size() == rhs.size()) && "dimensions must be the same");
+  U result{0};
+  for (std::size_t i{0}; i < lhs.size(); ++i) {
+    result += lhs[i] * rhs[i];
+  }
+  return result;
+}
+
+template <NotSubscriptable U, template <typename> class Alloc>
+constexpr Tensor<Tensor<U, Alloc<U>>, Alloc<Tensor<U, Alloc<U>>>> transposeAndMultiple(const Tensor<U, Alloc<U>>& lhs, const Tensor<U, Alloc<U>>& rhs) {
+  Tensor<Tensor<U, Alloc<U>>, Alloc<Tensor<U, Alloc<U>>>> result{lhs.size(), Tensor<U, Alloc<U>>(rhs.size())};
+  for (std::size_t i{0}; i < lhs.size(); ++i) {
+    for (std::size_t j{0}; j < rhs.size(); ++j) {
+      result[i][j] = lhs[i] * rhs[j];
+    }
+  }
+  return result;
 }
 }  // namespace optimization
 
