@@ -210,10 +210,10 @@ constexpr Tensor<T, Alloc> FK(const Tensor<T, Alloc>& q) {
   return {tBuf[0][3],
           tBuf[1][3],
           tBuf[2][3],
-          std::atan2(tBuf[3][1], tBuf[3][2]),
-          std::atan2(tBuf[1][3], -tBuf[2][3]),
-          std::atan2(std::sqrt(tBuf[1][3] * tBuf[1][3] + tBuf[2][3] * tBuf[2][3]), 
-                     tBuf[3][3]) };
+          std::atan2(tBuf[2][0], tBuf[2][1]),
+          std::atan2(tBuf[0][2], -tBuf[1][2]),
+          std::atan2(std::sqrt(tBuf[0][2] * tBuf[0][2] + tBuf[1][2] * tBuf[1][2]), 
+                     tBuf[2][2]) };
 }
 
 } //  namespace kuka
