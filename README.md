@@ -34,4 +34,4 @@ For gui one will need qt6 installed and configured.
 
 ## Miscellaneous
 
-MIT license is used
+GPL license is used
