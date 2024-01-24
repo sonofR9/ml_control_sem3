@@ -29,7 +29,7 @@
 #include <sstream>
 #include <string>
 
-amespace {
+namespace {
   template <typename T>
   constexpr T getValue(const boost::program_options::variables_map& vm,
                        const std::string& name) {

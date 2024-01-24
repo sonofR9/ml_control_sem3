@@ -3,7 +3,7 @@ set(TARGET_NAME ${PROJECT_NAME})
 set(SOURCES 
     global.cpp
     options.cpp
-    optimize-model.cpp
+    two-wheel-robot/optimize-wheel-robot.cpp
     main.cpp
 )
 
@@ -23,6 +23,11 @@ endif()
 
 add_executable(${TARGET_NAME} ${SOURCES}) 
 
+target_include_directories(${TARGET_NAME} PRIVATE
+    "two-wheel-robot"
+    "lbr-iiwa"
+    "."
+)
 
 find_boost_libs(property_tree program_options serialization)
 
@@ -36,7 +41,7 @@ set(PRIVATE_PCH
     <format>
     <vector>
     
-    "optimize-model.h"
+    "two-wheel-robot/optimize-wheel-robot.h"
     "tensor.h"
 )
 

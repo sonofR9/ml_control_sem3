@@ -17,7 +17,7 @@
 #include "main-window.h"
 
 #include "global.h"
-#include "optimize-model.h"
+#include "optimize-wheel-robot.h"
 #include "options.h"
 #include "utils.h"
 
@@ -729,7 +729,6 @@ QVBoxLayout* MainWindow::constructObstacleParams(QWidget* tab) {
   connect(functional_.obstacles_, &QTableView::customContextMenuRequested,
           [this, contextMenu, deleteRowAction](const QPoint& pos) {
             deleteRowAction->setEnabled(false);
-            нал
             if (functional_.obstacles_->selectionModel()
                     ->currentIndex()
                     .isValid()) {

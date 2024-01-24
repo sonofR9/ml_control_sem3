@@ -1,5 +1,5 @@
 #include "function-approximation.h"
-#include "functional.h"
+#include "functional-wheel-robot.h"
 
 #include <gtest/gtest.h>
 

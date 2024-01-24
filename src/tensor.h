@@ -403,7 +403,7 @@ template <typename T>
 concept Subscriptable = requires(T t) { t[0]; };
 
 template <Subscriptable T, class Alloc>
-constexpr Tensor<T, Alloc<T>> operator*(const Tensor<T, Alloc>& self, 
+constexpr Tensor<T, Alloc> operator*(const Tensor<T, Alloc>& self, 
                                         const Tensor<T, Alloc>& other) {
   assert((self[0].size() == other.size()) && "dimensions must conform to matrix multiplication rule");
   // mxn * nxp

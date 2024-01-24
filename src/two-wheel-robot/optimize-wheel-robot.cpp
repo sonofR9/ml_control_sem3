@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "optimize-model.h"
+#include "optimize-wheel-robot.h"
 
 namespace optimization {
 template Tensor<double, RepetitiveAllocator<double>> modelTestEvolution<

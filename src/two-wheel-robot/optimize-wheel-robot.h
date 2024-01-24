@@ -18,7 +18,7 @@
 
 #include "allocator.h"
 #include "evolution-optimization.h"
-#include "functional.h"
+#include "functional-wheel-robot.h"
 #include "global.h"
 #include "options.h"
 #include "particle-sworm.h"

@@ -16,7 +16,7 @@
 
 #include "allocator.h"
 #include "global.h"
-#include "optimize-model.h"
+#include "optimize-wheel-robot.h"
 #include "options.h"
 #include "tensor.h"
 #include "utils.h"
