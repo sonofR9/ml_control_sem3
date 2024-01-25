@@ -17,19 +17,14 @@
 #pragma once
 
 #include "tensor.h"
+#include "types.h"
 
 namespace kuka {
 using namespace optimization;
 
 template <typename T, class Alloc>
-struct LineSegment {
-  const Tensor<T, Alloc>& begin;
-  const Tensor<T, Alloc>& end;
-};
-
-template <typename T, class Alloc>
-constexpr T pointSegmentDistance(const Tensor<T, Alloc>& point,
-                                 const LineSegment<T, Alloc>& segment) {
+constexpr T pointToSegmentDistance(const Tensor<T, Alloc>& point,
+                                   const LineSegment<T, Alloc>& segment) {
   assert((segment.begin.size() == 3) && (segment.end.size() == 3) &&
          "it is not 3d segment");
   assert((segment.begin != segment.end) &&
@@ -53,5 +48,21 @@ constexpr T pointSegmentDistance(const Tensor<T, Alloc>& point,
 
   pointToSegment -= dot / dotProduct(direction, direction) * direction;
   return std::sqrt(dotProduct(pointToSegment, pointToSegment));
+}
+
+// segment-segment not implemented due to pure performance
+// for example implementation see
+// https://github.com/davideberly/GeometricTools/blob/master/GTL/Mathematics/Distance/ND/DistSegmentSegment.h
+
+// point-cylinder implementation gives only approximate results (more accurate
+// results may be obtained but performance will degrade. A bit more accurate
+// (but still not ideal) results in corner cases may be obtained by subscripting
+// radius of cylinder in the direction of projection of point-cylinderEnd onto
+// surface perpendicular to cylinder core line segment. In other cases results
+// are precise. Also this approximation gives minimum possible distance)
+template <typename T, class Alloc>
+constexpr T pointToSegmentDistance(const Tensor<T, Alloc>& point,
+                                   const Cylinder<T, Alloc>& cylinder) {
+  return pointToSegmentDistance(point, cylinder.segment);
 }
 }  // namespace kuka
