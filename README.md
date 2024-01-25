@@ -14,6 +14,8 @@ For gui one will need qt6 installed and configured.
 
 ## TODO
 
+0. Use static thread_local members or globals instead of thread_local static local variables in functions
+
 1. optimize build time
 2. use c++ modules
 3. use configurable circles list (added to options but not for )
