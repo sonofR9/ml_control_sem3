@@ -99,7 +99,7 @@ struct Tensor {
   friend class boost::serialization::access;
   template <class Archive>
   void serialize(Archive& ar, const unsigned int version) {
-    ar & data_;
+    ar& data_;
   }
 
   std::vector<T, Alloc> data_;
@@ -397,15 +397,15 @@ constexpr Tensor<T, Alloc>& operator-=(
   return self;
 }
 
-
 // TODO(novak) add *= overloads too
 template <typename T>
 concept Subscriptable = requires(T t) { t[0]; };
 
 template <Subscriptable T, class Alloc>
-constexpr Tensor<T, Alloc> operator*(const Tensor<T, Alloc>& self, 
-                                        const Tensor<T, Alloc>& other) {
-  assert((self[0].size() == other.size()) && "dimensions must conform to matrix multiplication rule");
+constexpr Tensor<T, Alloc> operator*(const Tensor<T, Alloc>& self,
+                                     const Tensor<T, Alloc>& other) {
+  assert((self[0].size() == other.size()) &&
+         "dimensions must conform to matrix multiplication rule");
   // mxn * nxp
   int m{self.size()};
   int n{self[0].size()};
@@ -429,10 +429,11 @@ template <typename T>
 concept NotSubscriptable = !Subscriptable<T>;
 
 template <typename T, template <typename> class Alloc, NotSubscriptable U>
-constexpr Tensor<T, Alloc<T>> operator*(const Tensor<T, Alloc<T>>& self, 
+constexpr Tensor<T, Alloc<T>> operator*(const Tensor<T, Alloc<T>>& self,
                                         const Tensor<U, Alloc<U>>& other) {
   // case mx1 * 1xp
-  assert((self[0].size() == 1) && "dimensions must conform to matrix multiplication rule");
+  assert((self[0].size() == 1) &&
+         "dimensions must conform to matrix multiplication rule");
   int m{self.size()};
   int p{other.size()};
 
@@ -448,11 +449,13 @@ constexpr Tensor<T, Alloc<T>> operator*(const Tensor<T, Alloc<T>>& self,
 }
 
 template <typename T, template <typename> class Alloc, NotSubscriptable U>
-constexpr U operator*(const Tensor<U, Alloc<U>>& self, 
+constexpr U operator*(const Tensor<U, Alloc<U>>& self,
                       const Tensor<T, Alloc<T>>& other) {
   // case 1xm * mx1
-  assert((other[0].size() == 1) && "dimensions must conform to matrix multiplication rule");
-  assert((other.size() == self.size()) && "dimensions must conform to matrix multiplication rule");
+  assert((other[0].size() == 1) &&
+         "dimensions must conform to matrix multiplication rule");
+  assert((other.size() == self.size()) &&
+         "dimensions must conform to matrix multiplication rule");
   int m{self.size()};
 
   U result{0};
@@ -526,7 +529,8 @@ constexpr bool operator!=(const Tensor<T, Alloc>& lhs,
 }
 
 template <NotSubscriptable U, class Alloc>
-constexpr U dotProduct(const Tensor<U, Alloc>& lhs, const Tensor<U, Alloc>& rhs) {
+constexpr U dotProduct(const Tensor<U, Alloc>& lhs,
+                       const Tensor<U, Alloc>& rhs) {
   assert((lhs.size() == rhs.size()) && "dimensions must be the same");
   U result{0};
   for (std::size_t i{0}; i < lhs.size(); ++i) {
@@ -536,8 +540,11 @@ constexpr U dotProduct(const Tensor<U, Alloc>& lhs, const Tensor<U, Alloc>& rhs)
 }
 
 template <NotSubscriptable U, template <typename> class Alloc>
-constexpr Tensor<Tensor<U, Alloc<U>>, Alloc<Tensor<U, Alloc<U>>>> transposeAndMultiple(const Tensor<U, Alloc<U>>& lhs, const Tensor<U, Alloc<U>>& rhs) {
-  Tensor<Tensor<U, Alloc<U>>, Alloc<Tensor<U, Alloc<U>>>> result{lhs.size(), Tensor<U, Alloc<U>>(rhs.size())};
+constexpr Tensor<Tensor<U, Alloc<U>>, Alloc<Tensor<U, Alloc<U>>>>
+transposeAndMultiple(const Tensor<U, Alloc<U>>& lhs,
+                     const Tensor<U, Alloc<U>>& rhs) {
+  Tensor<Tensor<U, Alloc<U>>, Alloc<Tensor<U, Alloc<U>>>> result{
+      lhs.size(), Tensor<U, Alloc<U>>(rhs.size())};
   for (std::size_t i{0}; i < lhs.size(); ++i) {
     for (std::size_t j{0}; j < rhs.size(); ++j) {
       result[i][j] = lhs[i] * rhs[j];
