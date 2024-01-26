@@ -61,8 +61,8 @@ constexpr T pointToSegmentDistance(const Tensor<T, Alloc>& point,
 // surface perpendicular to cylinder core line segment. In other cases results
 // are precise. Also this approximation gives minimum possible distance)
 template <typename T, class Alloc>
-constexpr T pointToSegmentDistance(const Tensor<T, Alloc>& point,
-                                   const Cylinder<T, Alloc>& cylinder) {
+constexpr T pointToCylinderDistance(const Tensor<T, Alloc>& point,
+                                    const Cylinder<T, Alloc>& cylinder) {
   return pointToSegmentDistance(point, cylinder.segment);
 }
 }  // namespace kuka

@@ -16,13 +16,12 @@
 
 #pragma once
 
-#include "tensor.h"
+#include "types.h"
 
 namespace kuka {
 using namespace optimization;
 
-template <typename T, template <typename> class Alloc>
-using Tensor2d = Tensor<Tensor<T, Alloc<T>>, Alloc<Tensor<T, Alloc<T>>>>;
+constexpr int kNumDof{7};
 
 // NOLINTBEGIN(readability-identifier-naming)
 
@@ -274,9 +273,9 @@ class KukaLbrIiwa {
     return operator()(q);
   }
 
-  template <int I>
-  constexpr static Coordinates3d getLinkPosition(const Tensor<T, Alloc<T>>& q) {
-    return forwardKinematics(q)[I];
+  constexpr static Coordinates3d getLinkPosition(const Tensor<T, Alloc<T>>& q,
+                                                 std::size_t i) {
+    return forwardKinematics(q)[i];
   }
 
  private:

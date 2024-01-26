@@ -16,8 +16,13 @@
 
 #pragma once
 
+#include "tensor.h"  // IWYU pragma: export
+
 namespace kuka {
 using namespace optimization;
+
+template <typename T, template <typename> class Alloc>
+using Tensor2d = Tensor<Tensor<T, Alloc<T>>, Alloc<Tensor<T, Alloc<T>>>>;
 
 template <typename T, class Alloc>
 struct LineSegment {

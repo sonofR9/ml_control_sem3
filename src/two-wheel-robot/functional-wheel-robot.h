@@ -65,25 +65,6 @@ Tensor<T, Alloc> stdVectorToStaticTensor(const std::vector<T, Alloc>& vec) {
   return result;
 }
 
-// template <typename T, class Alloc, StateSpaceFunction<T, Alloc> F>
-// double integrate(double startT, const Tensor<T, Alloc>& startX, F fun,
-//                  double interestT, double delta = 0.001) {
-//   assert((startX.size() == fun(startX, startT).size()));
-//   double curT{startT};
-//   Tensor<T, Alloc> curX{startX};
-
-//   while (curT < interestT) {
-//     auto k1 = fun(curX, curT);
-//     auto k2 = fun(curX + delta / 2 * k1, curT + delta / 2);
-//     auto k3 = fun(curX + delta / 2 * k2, curT + delta / 2);
-//     auto k4 = fun(curX + delta * k3, curT + delta);
-
-//     curX += delta / 6 * (k1 + 2 * k2 + 2 * k3 + k4);
-//     curT += delta;
-//   }
-//   return curX;
-// }
-
 template <typename T, class Alloc,
           class VectorAlloc = std::allocator<std::vector<T, Alloc>>>
 std::vector<std::vector<T, Alloc>, VectorAlloc> getTrajectoryFromControl(
