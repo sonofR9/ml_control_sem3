@@ -23,7 +23,7 @@ namespace kuka {
 using namespace optimization;
 
 template <typename T, template <typename> class Alloc>
-Tensor2d<T, Alloc> optimizationResultToSequence(
+Tensor2d<T, Alloc> optimizationResultToPosesSequence(
     const Tensor<T, Alloc<T>>& result) {
   assert((result.size() % kNumDof == 0) &&
          "optimization result must be divisible by number degrees of freedom");
@@ -49,9 +49,12 @@ class Functional {
 
   constexpr explicit Functional(Coeffients coefficients,
                                 double terminalTolerance,
-                                Environment<T, Alloc> environment) noexcept
+                                Tensor<T, Alloc<T>> allowedJointSpeeds,
+                                Environment<T, Alloc> environment,
+                                Tensor<T, Alloc<T>> taskGoal) noexcept
       : coeffients_{coefficients}, terminalTolerance_{terminalTolerance},
-        environment_{std::move(environment)} {
+        allowedJointSpeeds_{allowedJointSpeeds},
+        environment_{std::move(environment)}, taskGoal_{std::move(taskGoal)} {
   }
 
   /**
@@ -60,53 +63,152 @@ class Functional {
    */
   double operator()(const Tensor<T, Alloc<T>>& solverResult, double tMax = 10,
                     double dt = 0.01) {
-    const auto solvedX =
-        getTrajectoryFromControl<T, Alloc, VectorAlloc>(solverResult, tMax, dt);
+    constexpr double kBigNumber = 1e5;
 
-    Tensor<T, Alloc> xf{0, 0, 0};
+    using Manipulator = KukaLbrIiwa<T, Alloc>;
+    const auto solvedQ{
+        optimizationResultToPosesSequence<T, Alloc>(solverResult)};
+
+    // to task space
+    using AllJointsCoordinates =
+        Tensor<typename Manipulator::CoordinatesTaskSpace,
+               Alloc<typename Manipulator::CoordinatesTaskSpace>>;
+    auto solvedTaskSpace =
+        Tensor<AllJointsCoordinates, Alloc<AllJointsCoordinates>>(
+            solvedQ.size(), AllJointsCoordinates{});
     std::size_t i{0};
+    for (const auto& q : solvedQ) {
+      solvedTaskSpace[i] = Manipulator::forwardKinematics(q);
+      ++i;
+    };
+
+    // calculate speed in generalized coordinates q
+    auto speedQ =
+        Tensor2d<T, Alloc>(solvedQ.size(), Tensor<T, Alloc<T>>(kNumDof));
+    for (std::size_t i = 0; i < solvedQ.size() - 1; ++i) {
+      for (std::size_t j = 0; j < kNumDof; ++j) {
+        speedQ[i][j] = (solvedQ[i + 1][j] - solvedQ[i][j]) / dt;
+      }
+    }
+    // last speed assumed to be the same as previous
+    for (std::size_t j = 0; j < kNumDof; ++j) {
+      speedQ.back[solvedQ.size() - 1][j] = speedQ.front()[j];
+    }
+
+    // calculate speed task space
+    auto speedTaskSpace =
+        Tensor<AllJointsCoordinates, Alloc<AllJointsCoordinates>>(
+            solvedTaskSpace.size(), AllJointsCoordinates{});
+    for (std::size_t i{0}; i < solvedTaskSpace.size() - 1; ++i) {
+      for (std::size_t j{0}; j < kNumDof; ++j) {
+        for (std::size_t k{0}; k < solvedTaskSpace[i][j].size(); ++k) {
+          speedTaskSpace[i][j][k] =
+              (solvedTaskSpace[i + 1][j][k] - solvedTaskSpace[i][j][k]) / dt;
+        }
+      }
+    }
+    // last speed assumed to be the same as previous
+    for (std::size_t j = 0; j < kNumDof; ++j) {
+      for (std::size_t k{0}; k < solvedTaskSpace[i][j].size(); ++k) {
+        speedTaskSpace[solvedTaskSpace.size() - 1][j][k] =
+            solvedTaskSpace.back()[j][k];
+      }
+    }
+
+    // does reach the end?
+    i = 0;
     double tEnd{0};
+    double endDiff{0};
     for (; tEnd < tMax - kEps; tEnd += dt) {
-      if (std::abs(solvedX[0][i] - xf[0]) + std::abs(solvedX[1][i] - xf[1]) +
-              std::abs(solvedX[2][i] - xf[2]) <
-          terminalTolerance_) {
+      endDiff = 0;
+      for (std::size_t j = 0; j < kNumDof; ++j) {
+        endDiff += std::abs(solvedTaskSpace[i][kNumDof - 1][j] - taskGoal_[j]);
+      }
+      if (endDiff < terminalTolerance_) {
         break;
       }
       ++i;
     }
 
-    std::size_t iFinal{i == solvedX[0].size() ? i - 1 : i};
+    std::size_t iFinal{i == solvedQ.size() ? i - 1 : i};
 
-    const auto isColliding = [this, dt](const Tensor<T, Alloc>& point) -> bool {
-      auto mySqr = [](auto x) { return x * x; };
-      auto pointInside = [mySqr](const Tensor<T, Alloc>& point,
-                                 const CircleData& obstacle) -> double {
-        return obstacle.r - std::sqrt(mySqr(point[0] - obstacle.x) +
-                                      mySqr(point[1] - obstacle.y));
-      };
-      for (const auto& obstacle : environment_) {
-        if (pointInside(point, obstacle) > 0) {
-          return true;
-        }
+    // allowed speed?
+    double speedPenalty{0};
+    for (std::size_t i = 0; i < speedQ.size() - 1; ++i) {
+      for (std::size_t j = 0; j < kNumDof; ++j) {
+        speedPenalty += speedQ[i][j] > allowedJointSpeeds_[j] ? kBigNumber : 0;
       }
-
-      return false;
-    };
-
-    double integral{0};
-    for (std::size_t i{0}; i < iFinal; ++i) {
-      constexpr double kBigNumber = 1e5;
-      integral += isColliding({solvedX[0][i], solvedX[1][i], solvedX[2][i]})
-                      ? kBigNumber * dt
-                      : 0;
     }
 
+    // calculate allowed distances
+
+    // colliding?
+    const auto isColliding =
+        [this](const Tensor<T, Alloc<T>>& poseTaskSpace,
+               const typename Environment<T, Alloc>::EnvironmentAtTimestamp&
+                   environment,
+               double allowedDistance) -> bool {
+      assert((poseTaskSpace.size() >= 3) &&
+             "one of xyz coordinates is missing");
+      for (const auto& obstacles : environment) {
+        for (const auto& cylinder : obstacles.parts) {
+          if (pointToCylinderDistance(poseTaskSpace, cylinder) <
+              allowedDistance) {
+            return true;
+          }
+        }
+      }
+      return false;
+
+      //   return std::ranges::any_of(
+      //       environment_,
+      //       [this, allowedDistance,
+      //        &poseTaskSpace](const auto& obstacles) -> bool {
+      //         return std::ranges::any_of(
+      //             obstacles.parts,
+      //             [this, allowedDistance,
+      //              &poseTaskSpace](const auto& cylinder) -> bool {
+      //               return pointToCylinderDistance(poseTaskSpace, cylinder) <
+      //                      allowedDistance;
+      //             });
+      //       });
+    };
+
+    double obstaclePenalty{0};
+    const double kEnvironmentTMax{environment_.dt *
+                                  (environment_.obstacles.size() - 1)};
+    const auto convertToEnvironmentIndex =
+        [this, kEnvironmentTMax](double time) -> std::size_t {
+      return time >= kEnvironmentTMax
+                 ? environment_.obstacles.size() - 1
+                 : static_cast<std::size_t>(time / environment_.dt);
+    };
+    double tBuf{0};
+    for (std::size_t i{0}; i < iFinal; ++i) {
+      const std::size_t obstaclesIndex{i / iFinal * tEnd / environment_.dt};
+      for (const auto& xyz : solvedTaskSpace[i]) {
+        obstaclePenalty +=
+            isColliding(xyz,
+                        environment_.obstacles[convertToEnvironmentIndex(tBuf)],
+                        allowedDistance)
+                ? kBigNumber * dt
+                : 0;
+      }
+      tBuf += dt;
+    }
+
+    auto result{tEnd + coeffients_.terminal * endDiff +
+                coeffients_.obstacle * obstaclePenalty};
     return 0;  // TODO(novak)
   }
 
  private:
   Coeffients coeffients_;
   double terminalTolerance_;
+
+  Tensor<T, Alloc<T>> allowedJointSpeeds_;
   Environment<T, Alloc> environment_;
+
+  Tensor<T, Alloc<T>> taskGoal_;
 };
 }  // namespace kuka

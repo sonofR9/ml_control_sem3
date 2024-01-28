@@ -42,10 +42,21 @@ struct Obstacle {
   Tensor<Part, Alloc<Part>> parts;
 };
 
+/**
+ * @brief contains environment at each timestamp at t = {0, dt, 2*dt, ...}.
+ * All of the future obstacles should be assumed to be the same as obstacles at
+ * last timestamp
+ *
+ * @tparam T
+ * @tparam Alloc
+ */
 template <typename T, template <typename> class Alloc>
 struct Environment {
   using ObstacleType = Obstacle<T, Alloc>;
-  Tensor<ObstacleType, Alloc<ObstacleType>> obstacles;
+  using EnvironmentAtTimestamp = Tensor<ObstacleType, Alloc<ObstacleType>>;
+  Tensor<EnvironmentAtTimestamp, Alloc<EnvironmentAtTimestamp>> obstacles;
+
+  double dt;
 };
 
 template <typename T, template <typename> class Alloc>

@@ -197,9 +197,14 @@ template <typename T, template <typename> class Alloc>
 class KukaLbrIiwa {
  public:
   /// @brief xyz, ypr
-  using Coordinates3d = Tensor<T, Alloc<T>>;
-  constexpr static Tensor<Coordinates3d, Alloc<Coordinates3d>> operator()(
-      const Tensor<T, Alloc<T>>& q) {
+  using CoordinatesTaskSpace = Tensor<T, Alloc<T>>;
+
+  /**
+   * @brief
+   * @return coordinates xyz for links 1-6, and xyz, ypr for link 7
+   */
+  constexpr static Tensor<CoordinatesTaskSpace, Alloc<CoordinatesTaskSpace>>
+  operator()(const Tensor<T, Alloc<T>>& q) {
     const auto& d0{kLinkLengths[0]};
     const auto& d1{kLinkLengths[1]};
     const auto& d2{kLinkLengths[2]};
@@ -252,7 +257,11 @@ class KukaLbrIiwa {
     TxO(T07, d6);
 
     auto Coordinates3dFromTransform =
-        [](const Tensor2d<T, Alloc>& transform) -> Coordinates3d {
+        [](const Tensor2d<T, Alloc>& transform) -> CoordinatesTaskSpace {
+      return {transform[0][3], transform[1][3], transform[2][3]};
+    };
+    auto Coordinates6dFromTransform =
+        [](const Tensor2d<T, Alloc>& transform) -> CoordinatesTaskSpace {
       return {transform[0][3],
               transform[1][3],
               transform[2][3],
@@ -265,16 +274,16 @@ class KukaLbrIiwa {
     return {Coordinates3dFromTransform(T01), Coordinates3dFromTransform(T02),
             Coordinates3dFromTransform(T03), Coordinates3dFromTransform(T04),
             Coordinates3dFromTransform(T05), Coordinates3dFromTransform(T06),
-            Coordinates3dFromTransform(T07)};
+            Coordinates6dFromTransform(T07)};
   }
 
-  constexpr static Tensor<Coordinates3d, Alloc<Coordinates3d>>
+  constexpr static Tensor<CoordinatesTaskSpace, Alloc<CoordinatesTaskSpace>>
   forwardKinematics(const Tensor<T, Alloc<T>>& q) {
     return operator()(q);
   }
 
-  constexpr static Coordinates3d getLinkPosition(const Tensor<T, Alloc<T>>& q,
-                                                 std::size_t i) {
+  constexpr static CoordinatesTaskSpace getLinkPosition(
+      const Tensor<T, Alloc<T>>& q, std::size_t i) {
     return forwardKinematics(q)[i];
   }
 
