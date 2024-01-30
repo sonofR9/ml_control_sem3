@@ -93,15 +93,25 @@ double norm(const Iterable auto&& self) {
 // ----------------------- Preallocated callable -----------------------------
 template <typename F, typename U1, typename T, class Alloc>
 concept CallableOneArgPreallocatedResult =
-    requires(F fun, U1 inp, Tensor<T, Alloc>& preallocatedResult) {
+    requires(F fun, U1 inp,
+             Tensor<std::remove_cvref_t<T>, Alloc>& preallocatedResult) {
       { fun(inp, preallocatedResult) } -> std::same_as<void>;
-    };
+    } &&
+    !std::is_invocable_v<F, U1, Tensor<std::remove_cvref_t<T>, Alloc>&&>;
 
 template <typename F, typename U1, typename U2, typename T, class Alloc>
 concept CallableTwoArgsPreallocatedResult =
-    requires(F fun, U1 inp1, U2 inp2, Tensor<T, Alloc>& preallocatedResult) {
+    requires(F fun, U1 inp1, U2 inp2,
+             Tensor<std::remove_cvref_t<T>, Alloc>& preallocatedResult) {
       { fun(inp1, inp2, preallocatedResult) } -> std::same_as<void>;
-    };
+    } &&
+    !std::is_invocable_v<F, U1, U2, Tensor<std::remove_cvref_t<T>, Alloc>&&>;
+
+template <typename F, typename T, typename R, typename... U>
+concept CallableNArgsPreallocatedResult =
+    requires(F fun, std::remove_cv_t<T>& preallocatedResult, U... u) {
+      { fun(u..., preallocatedResult) } -> std::same_as<R>;
+    } && !std::is_invocable_v<F, U..., std::remove_cvref_t<T>&&>;
 
 // --------------------------random numbers----------------------------------
 struct SharedGenerator {
