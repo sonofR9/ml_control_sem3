@@ -76,6 +76,10 @@ constexpr std::size_t kMaxSize{100'000};
 /**
  * @brief takes ~3Mb of space (kMaxSize * sizeof(vector<T*>) to be precise).
  * Fast if you have repetitive allocations of the same size.
+ * @warning must not be used in static member of other template classes due to
+ * static initialization order fiasco! Using in global static variables, static
+ * variables in functions (including template functions) and static members of
+ * classes (not template classes!) is ok
  */
 template <typename T>
 class RepetitiveAllocator {
