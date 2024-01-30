@@ -96,3 +96,13 @@ if (ENABLE_PCH AND NOT ENABLE_CLANG_TIDY)
         ${PRIVATE_PCH}
     )
 endif()
+
+target_compile_options(${TARGET_NAME} PRIVATE 
+    -ffast-math 
+    -flto=thin
+)
+
+target_link_options(${TARGET_NAME} PRIVATE 
+    -ffast-math 
+    -flto=thin
+)
