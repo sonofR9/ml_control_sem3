@@ -133,7 +133,8 @@ class RepetitiveAllocator {
   constexpr static void deallocateAll() {
     for (auto& p : allocated_) {
       // if free_ does not contain p.first => it is in use, do not deallocate
-      if (std::find(free_.begin(), free_.end(), p.first) == free_.end()) {
+      if (std::find(free_[p.second].begin(), free_[p.second].end(), p.first) ==
+          free_[p.second].end()) {
         continue;
       }
       allocator_.deallocate(p.first, p.second);
