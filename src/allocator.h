@@ -130,22 +130,33 @@ class RepetitiveAllocator {
     free_[n].push_back(p);
   }
 
-  constexpr void deallocateAll() {
-    free_.clear();
+  constexpr static void deallocateAll() {
     for (auto& p : allocated_) {
+      // if free_ does not contain p.first => it is in use, do not deallocate
+      if (std::find(free_.begin(), free_.end(), p.first) == free_.end()) {
+        continue;
+      }
       allocator_.deallocate(p.first, p.second);
     }
+    free_.clear();
     allocated_.clear();
-    // if (smthInUse) {
-    //   throw BadDealloc("Some objects were still in use when deallocated");
-    // }
   }
 
  private:
+  class AutomaticDeallocator {
+   public:
+    constexpr AutomaticDeallocator() noexcept = default;
+    constexpr ~AutomaticDeallocator() {
+      deallocateAll();
+    }
+  };
+
   static thread_local std::allocator<T> allocator_;
 
   static thread_local std::vector<std::vector<T*>> free_;
   static thread_local std::vector<std::pair<T*, std::size_t>> allocated_;
+
+  static thread_local AutomaticDeallocator autoDeallocator_;
 
 #ifdef COLLECT_ALLOCATOR_STATS
   static thread_local AllocatorStatCollector<T> statCollector_;
@@ -161,6 +172,10 @@ thread_local std::vector<std::vector<T*>> RepetitiveAllocator<T>::free_ =
 template <typename T>
 thread_local std::vector<std::pair<T*, std::size_t>>
     RepetitiveAllocator<T>::allocated_{};
+
+template <typename T>
+thread_local RepetitiveAllocator<T>::AutomaticDeallocator
+    RepetitiveAllocator<T>::autoDeallocator_{};
 
 #ifdef COLLECT_ALLOCATOR_STATS
 template <typename T>
