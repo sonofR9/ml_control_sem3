@@ -65,8 +65,6 @@ int commonMain(int argc, const char** argv) {
 
   const auto res{QApplication::exec()};
 
-  RepetitiveAllocator<double> alloc{};
-  alloc.deallocateAll();
   delete[] qtArgv;
 
   return res;
@@ -93,8 +91,6 @@ int main(int argc, char** argvCmd) try {
     modelTestGray<RepetitiveAllocator>(options);
     break;
   }
-  RepetitiveAllocator<double> alloc{};
-  alloc.deallocateAll();
   return 0;
 #endif
 } catch (const std::exception& e) {
