@@ -16,7 +16,6 @@
 
 #pragma once
 
-#include "lbr-iiwa/lbr-iiwa-forward-kinematics.h"
 #include "tensor.h"  // IWYU pragma: export
 
 namespace kuka {
