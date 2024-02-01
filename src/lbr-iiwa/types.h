@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include "lbr-iiwa/lbr-iiwa-forward-kinematics.h"
 #include "tensor.h"  // IWYU pragma: export
 
 namespace kuka {
@@ -23,6 +24,18 @@ using namespace optimization;
 
 template <typename T, template <typename> class Alloc>
 using Tensor2d = Tensor<Tensor<T, Alloc<T>>, Alloc<Tensor<T, Alloc<T>>>>;
+
+template <typename T, template <typename> class Alloc>
+using Tensor3d = Tensor<Tensor2d<T, Alloc>, Alloc<Tensor2d<T, Alloc>>>;
+
+template <typename T, template <typename> class Alloc>
+using Tensor4d = Tensor<Tensor3d<T, Alloc>, Alloc<Tensor3d<T, Alloc>>>;
+
+template <typename T, template <typename> class Alloc>
+using Tensor5d = Tensor<Tensor4d<T, Alloc>, Alloc<Tensor4d<T, Alloc>>>;
+
+template <typename T, template <typename> class Alloc>
+using Tensor6d = Tensor<Tensor5d<T, Alloc>, Alloc<Tensor5d<T, Alloc>>>;
 
 template <typename T, class Alloc>
 struct LineSegment {
@@ -54,13 +67,17 @@ template <typename T, template <typename> class Alloc>
 struct Environment {
   using ObstacleType = Obstacle<T, Alloc>;
   using EnvironmentAtTimestamp = Tensor<ObstacleType, Alloc<ObstacleType>>;
-  Tensor<EnvironmentAtTimestamp, Alloc<EnvironmentAtTimestamp>> obstacles;
+
+  // if there are some obstacles that are present only at some of the
+  // timestamps, they should be at the end of the list
+  Tensor<EnvironmentAtTimestamp, Alloc<EnvironmentAtTimestamp>>
+      obstaclesAtTimestamp;
 
   double dt;
 };
 
 template <typename T, template <typename> class Alloc>
-struct Manipulator {
+struct ManipulatorModel {
   using CylinderType = Cylinder<T, Alloc<T>>;
   Tensor<CylinderType, Alloc<CylinderType>> links;
 };
