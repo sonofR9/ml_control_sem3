@@ -37,12 +37,20 @@ using AllJointsCoordinates =
 template <typename T, template <typename> class Alloc>
 using AllowedDistances = Tensor5d<T, Alloc>;
 
+struct SafeSeparationParameters {
+  double maxAcceleration{100};
+  double reactionDelay{0.05};
+  double obstaclePositionUncertainty{0.01};
+  double manipulatorPositionUncertainty{0.001};
+  double penetrationDistance{0};
+};
+
 template <typename T, template <typename> class Alloc>
-AllowedDistances<T, Alloc> fun(
+AllowedDistances<T, Alloc> calculateAllowedDistances(
     const Environment<T, Alloc>& environment,
     const Tensor<AllJointsCoordinates<T, Alloc>,
                  Alloc<AllJointsCoordinates<T, Alloc>>>& solvedTaskSpace,
-    double dt) {
+    double dt, SafeSeparationParameters params = {}) {
   using Manipulator = Manipulator<T, Alloc>;
   using AllJointsCoordinates = AllJointsCoordinates<T, Alloc>;
 
@@ -52,14 +60,6 @@ AllowedDistances<T, Alloc> fun(
         Tensor4d<T, Alloc>(kNumDof,
                            Tensor3d<T, Alloc>(0, Tensor2d<T, Alloc>())));
   }
-  auto allowedDistances = AllowedDistances<T, Alloc>(
-      solvedTaskSpace.size(),
-      Tensor4d<T, Alloc>(
-          kNumDof, Tensor3d<T, Alloc>(
-                       environment.obstaclesAtTimestamp[0].size(),
-                       Tensor2d<T, Alloc>(
-                           environment.obstaclesAtTimestamp[0][0].parts.size(),
-                           Tensor<T, Alloc<T>>({0, 0})))));
 
   // calculate speed task space
   // shape is [number of positions, number of joints, number of linear
@@ -88,7 +88,6 @@ AllowedDistances<T, Alloc> fun(
   // calculate environment speed
   // shape is [number of environment positions, number of obstacles, number of
   // parts in obstacle, 2 (begin and end), number of linear coordinates (xyz)=3]
-  using Environment = Environment<T, Alloc>;
   auto environmentSpeed = Tensor5d<T, Alloc>(
       environment.obstaclesAtTimestamp.size(),
       Tensor4d<T, Alloc>(
@@ -157,5 +156,26 @@ AllowedDistances<T, Alloc> fun(
       }
     }
   }
+
+  // calculating allowed distances as:
+  // distance traveled by moving obstacle until manipulator stopped + distance
+  // traveled by manipulator until it reacted + distance manipulator has
+  // traveled since it reacted until it stopped + manipulator position
+  // uncertainty + obstacle position uncertainty + allowable penetration
+  // distance
+  auto kDistanceConstPart{params.obstaclePositionUncertainty +
+                          params.manipulatorPositionUncertainty +
+                          params.penetrationDistance};
+
+  // init result
+  auto allowedDistances = AllowedDistances<T, Alloc>(
+      solvedTaskSpace.size(),
+      Tensor4d<T, Alloc>(
+          kNumDof, Tensor3d<T, Alloc>(
+                       environment.obstaclesAtTimestamp[0].size(),
+                       Tensor2d<T, Alloc>(
+                           environment.obstaclesAtTimestamp[0][0].parts.size(),
+                           Tensor<T, Alloc<T>>({0, 0})))));
+  // resize allowedDistance according to real sizes
 }
 }  // namespace kuka
