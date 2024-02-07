@@ -15,11 +15,14 @@
  */
 
 #include "allocator.h"
+#include "gateway-transmission.h"
 #include "global.h"
 #include "optimize-kuka-robot.h"
 #include "options.h"
 #include "tensor.h"
 #include "utils.h"
+
+#include <chrono>
 
 #ifdef BUILD_WITH_QT
 #include "main-window.h"
@@ -35,6 +38,8 @@
 
 using namespace optimization;
 using namespace kuka;
+
+constexpr const char* kTrajectoryFilePath{"trajectory.txt"};
 
 #ifdef BUILD_WITH_QT
 int commonMain(int argc, const char** argv) {
@@ -74,6 +79,7 @@ int commonMain(int argc, const char** argv) {
 
 int main(int argc, char** argvCmd) try {
   using namespace optimization;
+  using namespace std::chrono_literals;
 
   const char** argv = const_cast<const char**>(argvCmd);
 
@@ -81,18 +87,38 @@ int main(int argc, char** argvCmd) try {
 #ifdef BUILD_WITH_QT
   return commonMain(argc, argv);
 #else
+  std::size_t lastSequentialNumber{0};
   while (true) {
+    auto [trajectoryRaw, sequentialNumber] = readDataFromFile<Tensor<
+        Tensor<double, RepetitiveAllocator<double> >,
+        RepetitiveAllocator<Tensor<double, RepetitiveAllocator<double> > > > >(
+        kTrajectoryFilePath);
+    Tensor<double, RepetitiveAllocator<double> > trajectory{
+        kNumDof * trajectoryRaw.size()};
+    for (std::size_t i{0}; i < trajectoryRaw.size(); ++i) {
+      for (std::size_t j{0}; j < trajectoryRaw[i].size(); ++j) {
+        trajectory[i * kNumDof + j] = trajectoryRaw[i][j];
+      }
+    }
+    if (sequentialNumber == lastSequentialNumber) {
+      std::this_thread::sleep_for(1ms);
+    }
     auto options{parseOptions(argc, argv)};
 
     SharedGenerator::gen.seed(options.seed);
 
     switch (options.method) {
-    case GlobalOptions::Method::kEvolution:
-      kuka::modelTestEvolution<RepetitiveAllocator>(options);
+    case GlobalOptions::Method::kEvolution: {
+      auto best{
+          kuka::modelTestEvolution<RepetitiveAllocator>(options, trajectory)};
+      writeDataToFile(kTrajectoryFilePath, best, ++lastSequentialNumber);
       break;
-    case GlobalOptions::Method::kGrayWolf:
-      kuka::modelTestGray<RepetitiveAllocator>(options);
+    }
+    case GlobalOptions::Method::kGrayWolf: {
+      auto best{kuka::modelTestGray<RepetitiveAllocator>(options, trajectory)};
+      writeDataToFile(kTrajectoryFilePath, best, ++lastSequentialNumber);
       break;
+    }
     }
   }
   return 0;

@@ -56,7 +56,9 @@ class TimeMeasurer {
 template <template <typename> class Alloc,
           PrintFunction Printer = decltype(&coutPrint)>
 Tensor<double, Alloc<double>> modelTestEvolution(
-    const optimization::GlobalOptions& options, Printer printer = &coutPrint) {
+    const optimization::GlobalOptions& options,
+    const Tensor<double, Alloc<double>>& offlineTrajectory,
+    Printer printer = &coutPrint) {
   const double tMax{options.tMax};
   const double dt{options.integrationDt};
   const int iters{options.iter};
@@ -71,17 +73,25 @@ Tensor<double, Alloc<double>> modelTestEvolution(
 
   TimeMeasurer tm("Evolution");
 
+  Tensor<double, Alloc<double>> environment{};
+  for (const auto& circle : options.functionalOptions.circles) {
+    environment.emplace_back(circle);
+  }
+
   using namespace kuka;
-  // TODO(novak) call
   Functional functional{{.time = options.functionalOptions.coefTime,
                          .terminal = options.functionalOptions.coefTerminal,
+                         .speed = options.functionalOptions.coefObstacle,
                          .obstacle = options.functionalOptions.coefObstacle},
                         options.functionalOptions.terminalTolerance,
-                        options.functionalOptions.circles};
+                        {1.75, 1.75, 1.75, 2.27, 2.44, 3.14, 3.14},
+                        environment,
+                        options.controlOptions.targetState};
   const auto adap = [paramsCount, tMax, dt, &functional](
                         const Tensor<double, Alloc<double>>& solverResult) {
     assert((solverResult.size() == paramsCount));
-    return functional.operator()<double, Alloc<double>>(solverResult, tMax, dt);
+    return functional.template operator()<double, Alloc<double>>(solverResult,
+                                                                 tMax, dt);
   };
 
   Evolution<1000, 1000, Alloc, decltype(adap), Printer> solver(
@@ -91,8 +101,8 @@ Tensor<double, Alloc<double>> modelTestEvolution(
       {.mutation = options.evolutionOpt.mutationRate,
        .crossover = options.evolutionOpt.crossoverRate},
       printer);
-  if (!init.empty()) {
-    solver.setBaseline(init, kMaxDiff);
+  if (!offlineTrajectory.empty()) {
+    solver.setBaseline(offlineTrajectory, kMaxDiff);
   }
   const auto best{solver.solve(iters)};
 
@@ -110,7 +120,9 @@ Tensor<double, Alloc<double>> modelTestEvolution(
 template <template <typename> class Alloc,
           PrintFunction Printer = decltype(&coutPrint)>
 Tensor<double, Alloc<double>> modelTestGray(
-    const optimization::GlobalOptions& options, Printer printer = &coutPrint) {
+    const optimization::GlobalOptions& options,
+    const Tensor<double, Alloc<double>>& offlineTrajectory,
+    Printer printer = &coutPrint) {
   const double tMax{options.tMax};
   const double dt{options.integrationDt};
   const int iters{options.iter};
@@ -125,16 +137,25 @@ Tensor<double, Alloc<double>> modelTestGray(
 
   TimeMeasurer tm("gray wolf");
 
-  using namespace two_wheeled_robot;
+  Tensor<double, Alloc<double>> environment{};
+  for (const auto& circle : options.functionalOptions.circles) {
+    environment.emplace_back(circle);
+  }
+
+  using namespace kuka;
   Functional functional{{.time = options.functionalOptions.coefTime,
                          .terminal = options.functionalOptions.coefTerminal,
+                         .speed = options.functionalOptions.coefObstacle,
                          .obstacle = options.functionalOptions.coefObstacle},
                         options.functionalOptions.terminalTolerance,
-                        options.functionalOptions.circles};
+                        {1.75, 1.75, 1.75, 2.27, 2.44, 3.14, 3.14},
+                        environment,
+                        options.controlOptions.targetState};
   const auto adap = [paramsCount, tMax, dt, &functional](
                         const Tensor<double, Alloc<double>>& solverResult) {
     assert((solverResult.size() == paramsCount));
-    return functional.operator()<double, Alloc<double>>(solverResult, tMax, dt);
+    return functional.template operator()<double, Alloc<double>>(solverResult,
+                                                                 tMax, dt);
   };
 
   GrayWolfAlgorithm<Alloc, decltype(adap), Printer> solver(
@@ -143,8 +164,8 @@ Tensor<double, Alloc<double>> modelTestGray(
       {.populationSize = static_cast<std::size_t>(options.wolfOpt.wolfNum),
        .bestNum = static_cast<std::size_t>(options.wolfOpt.numBest)},
       printer);
-  if (!init.empty()) {
-    solver.setBaseline(init, kMaxDiff);
+  if (!offlineTrajectory.empty()) {
+    solver.setBaseline(offlineTrajectory, kMaxDiff);
   }
   const auto best{solver.solve(iters)};
 
@@ -160,19 +181,25 @@ Tensor<double, Alloc<double>> modelTestGray(
 }
 
 extern template Tensor<double, RepetitiveAllocator<double>>
-modelTestEvolution<RepetitiveAllocator>(const optimization::GlobalOptions&,
-                                        decltype(&coutPrint));
+modelTestEvolution<RepetitiveAllocator>(
+    const optimization::GlobalOptions&,
+    const Tensor<double, RepetitiveAllocator<double>>& offlineTrajectory,
+    decltype(&coutPrint));
 extern template Tensor<double, RepetitiveAllocator<double>>
-modelTestGray<RepetitiveAllocator>(const optimization::GlobalOptions&,
-                                   decltype(&coutPrint));
+modelTestGray<RepetitiveAllocator>(
+    const optimization::GlobalOptions&,
+    const Tensor<double, RepetitiveAllocator<double>>& offlineTrajectory,
+    decltype(&coutPrint));
 
 extern template Tensor<double, RepetitiveAllocator<double>> modelTestEvolution<
     RepetitiveAllocator, std::function<void(std::size_t, double)>>(
     const optimization::GlobalOptions&,
+    const Tensor<double, RepetitiveAllocator<double>>& offlineTrajectory,
     std::function<void(std::size_t, double)>);
 extern template Tensor<double, RepetitiveAllocator<double>>
 modelTestGray<RepetitiveAllocator, std::function<void(std::size_t, double)>>(
     const optimization::GlobalOptions&,
+    const Tensor<double, RepetitiveAllocator<double>>& offlineTrajectory,
     std::function<void(std::size_t, double)>);
 
 }  // namespace kuka

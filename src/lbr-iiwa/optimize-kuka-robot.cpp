@@ -22,16 +22,22 @@ using namespace optimization;
 template Tensor<double, RepetitiveAllocator<double>> modelTestEvolution<
     RepetitiveAllocator, std::function<void(std::size_t, double)>>(
     const optimization::GlobalOptions&,
+    const Tensor<double, RepetitiveAllocator<double>>& offlineTrajectory,
     std::function<void(std::size_t, double)>);
 template Tensor<double, RepetitiveAllocator<double>>
 modelTestGray<RepetitiveAllocator, std::function<void(std::size_t, double)>>(
     const optimization::GlobalOptions&,
+    const Tensor<double, RepetitiveAllocator<double>>& offlineTrajectory,
     std::function<void(std::size_t, double)>);
 
 template Tensor<double, RepetitiveAllocator<double>>
-modelTestEvolution<RepetitiveAllocator>(const optimization::GlobalOptions&,
-                                        decltype(&coutPrint));
+modelTestEvolution<RepetitiveAllocator>(
+    const optimization::GlobalOptions&,
+    const Tensor<double, RepetitiveAllocator<double>>& offlineTrajectory,
+    decltype(&coutPrint));
 template Tensor<double, RepetitiveAllocator<double>>
-modelTestGray<RepetitiveAllocator>(const optimization::GlobalOptions&,
-                                   decltype(&coutPrint));
+modelTestGray<RepetitiveAllocator>(
+    const optimization::GlobalOptions&,
+    const Tensor<double, RepetitiveAllocator<double>>& offlineTrajectory,
+    decltype(&coutPrint));
 }  // namespace kuka
