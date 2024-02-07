@@ -93,8 +93,8 @@ int main(int argc, char** argvCmd) try {
         Tensor<double, RepetitiveAllocator<double> >,
         RepetitiveAllocator<Tensor<double, RepetitiveAllocator<double> > > > >(
         kTrajectoryFilePath);
-    Tensor<double, RepetitiveAllocator<double> > trajectory{
-        kNumDof * trajectoryRaw.size()};
+    auto trajectory = Tensor<double, RepetitiveAllocator<double> >(
+        kNumDof * trajectoryRaw.size());
     for (std::size_t i{0}; i < trajectoryRaw.size(); ++i) {
       for (std::size_t j{0}; j < trajectoryRaw[i].size(); ++j) {
         trajectory[i * kNumDof + j] = trajectoryRaw[i][j];
