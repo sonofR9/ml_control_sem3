@@ -44,6 +44,7 @@ class Functional {
   struct Coeffients {
     double time;
     double terminal;
+    double speed;
     double obstacle;
   };
 
@@ -66,13 +67,14 @@ class Functional {
     constexpr double kBigNumber = 1e5;
 
     using Manipulator = KukaLbrIiwa<T, Alloc>;
+    using AllJointsCoordinates =
+        Tensor<typename Manipulator::CoordinatesTaskSpace,
+               Alloc<typename Manipulator::CoordinatesTaskSpace>>;
+
     const auto solvedQ{
         optimizationResultToPosesSequence<T, Alloc>(solverResult)};
 
     // to task space
-    using AllJointsCoordinates =
-        Tensor<typename Manipulator::CoordinatesTaskSpace,
-               Alloc<typename Manipulator::CoordinatesTaskSpace>>;
     auto solvedTaskSpace =
         Tensor<AllJointsCoordinates, Alloc<AllJointsCoordinates>>(
             solvedQ.size(), AllJointsCoordinates{});
@@ -95,26 +97,6 @@ class Functional {
       speedQ.back[solvedQ.size() - 1][j] = speedQ.front()[j];
     }
 
-    // calculate speed task space
-    auto speedTaskSpace =
-        Tensor<AllJointsCoordinates, Alloc<AllJointsCoordinates>>(
-            solvedTaskSpace.size(), AllJointsCoordinates{});
-    for (std::size_t i{0}; i < solvedTaskSpace.size() - 1; ++i) {
-      for (std::size_t j{0}; j < kNumDof; ++j) {
-        for (std::size_t k{0}; k < solvedTaskSpace[i][j].size(); ++k) {
-          speedTaskSpace[i][j][k] =
-              (solvedTaskSpace[i + 1][j][k] - solvedTaskSpace[i][j][k]) / dt;
-        }
-      }
-    }
-    // last speed assumed to be the same as previous
-    for (std::size_t j = 0; j < kNumDof; ++j) {
-      for (std::size_t k{0}; k < solvedTaskSpace[i][j].size(); ++k) {
-        speedTaskSpace[solvedTaskSpace.size() - 1][j][k] =
-            solvedTaskSpace.back()[j][k];
-      }
-    }
-
     // does reach the end?
     i = 0;
     double tEnd{0};
@@ -132,7 +114,7 @@ class Functional {
 
     std::size_t iFinal{i == solvedQ.size() ? i - 1 : i};
 
-    // allowed speed?
+    // does excees speed limits?
     double speedPenalty{0};
     for (std::size_t i = 0; i < speedQ.size() - 1; ++i) {
       for (std::size_t j = 0; j < kNumDof; ++j) {
@@ -141,22 +123,43 @@ class Functional {
     }
 
     // calculate allowed distances
+    auto allowedDistances{
+        calculateAllowedDistances(environment_, solvedTaskSpace, dt)};
+    // TODO(novak)
 
     // colliding?
+    // TODO(novak) allowedDistance here should be 3d (-environmentTimestamp and
+    // joint)
     const auto isColliding =
         [this](const Tensor<T, Alloc<T>>& poseTaskSpace,
                const typename Environment<T, Alloc>::EnvironmentAtTimestamp&
                    environment,
-               double allowedDistance) -> bool {
+               auto allowedDistance) -> bool {
       assert((poseTaskSpace.size() >= 3) &&
              "one of xyz coordinates is missing");
-      for (const auto& obstacles : environment) {
-        for (const auto& cylinder : obstacles.parts) {
-          if (pointToCylinderDistance(poseTaskSpace, cylinder) <
-              allowedDistance) {
-            return true;
+
+      const auto allowedToObstacle =
+          [&allowedDistance](std::size_t i, std::size_t j) -> double {
+        T min = std::numeric_limits<T>::max();
+        for (std::size_t k = 0; k < allowedDistance.size(); ++k) {  // numDof
+          for (std::size_t l{0}; l < allowedDistance[k][i][j].size(); ++l) {
+            min = std::min(allowedDistance[k][i][j][l], min);
           }
         }
+        return min;
+      };
+
+      std::size_t i{0};
+      for (const auto& obstacles : environment) {
+        std::size_t j{0};
+        for (const auto& cylinder : obstacles.parts) {
+          if (pointToCylinderDistance(poseTaskSpace, cylinder) <
+              allowedToObstacle(i, j)) {
+            return true;
+          }
+          ++j;
+        }
+        ++i;
       }
       return false;
 
@@ -175,12 +178,12 @@ class Functional {
     };
 
     double obstaclePenalty{0};
-    const double kEnvironmentTMax{environment_.dt *
-                                  (environment_.obstacles.size() - 1)};
+    const double kEnvironmentTMax{
+        environment_.dt * (environment_.obstaclesAtTimestamp.size() - 1)};
     const auto convertToEnvironmentIndex =
         [this, kEnvironmentTMax](double time) -> std::size_t {
       return time >= kEnvironmentTMax
-                 ? environment_.obstacles.size() - 1
+                 ? environment_.obstaclesAtTimestamp.size() - 1
                  : static_cast<std::size_t>(time / environment_.dt);
     };
     double tBuf{0};
@@ -188,9 +191,11 @@ class Functional {
       const std::size_t obstaclesIndex{i / iFinal * tEnd / environment_.dt};
       for (const auto& xyz : solvedTaskSpace[i]) {
         obstaclePenalty +=
-            isColliding(xyz,
-                        environment_.obstacles[convertToEnvironmentIndex(tBuf)],
-                        allowedDistance)
+            isColliding(
+                xyz,
+                environment_
+                    .obstaclesAtTimestamp[convertToEnvironmentIndex(tBuf)],
+                allowedDistances[obstaclesIndex])
                 ? kBigNumber * dt
                 : 0;
       }
@@ -198,7 +203,8 @@ class Functional {
     }
 
     auto result{tEnd + coeffients_.terminal * endDiff +
-                coeffients_.obstacle * obstaclePenalty};
+                coeffients_.obstacle * obstaclePenalty +
+                coeffients_.speed * speedPenalty};
     return 0;  // TODO(novak)
   }
 

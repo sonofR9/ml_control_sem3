@@ -37,57 +37,12 @@ using AllJointsCoordinates =
 template <typename T, template <typename> class Alloc>
 using AllowedDistances = Tensor5d<T, Alloc>;
 
-struct SafeSeparationParameters {
-  double maxAcceleration{100};
-  double reactionDelay{0.05};
-  double obstaclePositionUncertainty{0.01};
-  double manipulatorPositionUncertainty{0.001};
-  double penetrationDistance{0};
-};
-
+// calculate environment speed
+// shape is [number of environment positions, number of obstacles, number of
+// parts in obstacle, 2 (begin and end), number of linear coordinates (xyz)=3]
 template <typename T, template <typename> class Alloc>
-AllowedDistances<T, Alloc> calculateAllowedDistances(
-    const Environment<T, Alloc>& environment,
-    const Tensor<AllJointsCoordinates<T, Alloc>,
-                 Alloc<AllJointsCoordinates<T, Alloc>>>& solvedTaskSpace,
-    double dt, SafeSeparationParameters params = {}) {
-  using Manipulator = Manipulator<T, Alloc>;
-  using AllJointsCoordinates = AllJointsCoordinates<T, Alloc>;
-
-  if (environment.obstaclesAtTimestamp[0].size() == 0) {
-    return AllowedDistances<T, Alloc>(
-        solvedTaskSpace.size(),
-        Tensor4d<T, Alloc>(kNumDof,
-                           Tensor3d<T, Alloc>(0, Tensor2d<T, Alloc>())));
-  }
-
-  // calculate speed task space
-  // shape is [number of positions, number of joints, number of linear
-  // coordinates (xyz)=3]
-  auto speedTaskSpace =
-      Tensor<AllJointsCoordinates, Alloc<AllJointsCoordinates>>(
-          solvedTaskSpace.size(),
-          AllJointsCoordinates(kNumDof,
-                               Manipulator::CoordinatesTaskSpace(3, 0)));
-  for (std::size_t i{0}; i < solvedTaskSpace.size() - 1; ++i) {
-    for (std::size_t j{0}; j < kNumDof; ++j) {
-      for (std::size_t k{0}; k < 3; ++k) {
-        speedTaskSpace[i][j][k] =
-            (solvedTaskSpace[i + 1][j][k] - solvedTaskSpace[i][j][k]) / dt;
-      }
-    }
-  }
-  // last speed assumed to be the same as previous
-  for (std::size_t j = 0; j < kNumDof; ++j) {
-    for (std::size_t k{0}; k < 3; ++k) {
-      speedTaskSpace[solvedTaskSpace.size() - 1][j][k] =
-          speedTaskSpace.back()[j][k];
-    }
-  }
-
-  // calculate environment speed
-  // shape is [number of environment positions, number of obstacles, number of
-  // parts in obstacle, 2 (begin and end), number of linear coordinates (xyz)=3]
+Tensor5d<T, Alloc> calculateEnvironmentSpeed(
+    const Environment<T, Alloc>& environment) {
   auto environmentSpeed = Tensor5d<T, Alloc>(
       environment.obstaclesAtTimestamp.size(),
       Tensor4d<T, Alloc>(
@@ -128,6 +83,7 @@ AllowedDistances<T, Alloc> calculateAllowedDistances(
         }
       }
     }
+    return environmentSpeed;
   }
   // last speed assumed to be the same as previous
   const auto lastTimestampIndex{environment.obstaclesAtTimestamp.size() - 1};
@@ -156,6 +112,65 @@ AllowedDistances<T, Alloc> calculateAllowedDistances(
       }
     }
   }
+}
+
+struct SafeSeparationParameters {
+  double maxAcceleration{100};
+  double reactionDelay{0.05};
+  double obstaclePositionUncertainty{0.01};
+  double manipulatorPositionUncertainty{0.001};
+  double penetrationDistance{0};
+};
+
+/// At every timestamp from every joint to every obstacle part begin and end.
+/// Therefore the shape is [number of the timestamps, number of the joints,
+/// number of the obstacles, number of parts of the obstacle, 2 (begin and
+/// end)]
+template <typename T, template <typename> class Alloc>
+AllowedDistances<T, Alloc> calculateAllowedDistances(
+    const Environment<T, Alloc>& environment,
+    const Tensor<AllJointsCoordinates<T, Alloc>,
+                 Alloc<AllJointsCoordinates<T, Alloc>>>& solvedTaskSpace,
+    double dtReaction, SafeSeparationParameters params = {}) {
+  using Manipulator = Manipulator<T, Alloc>;
+  using AllJointsCoordinates = AllJointsCoordinates<T, Alloc>;
+
+  if (environment.obstaclesAtTimestamp[0].size() == 0) {
+    return AllowedDistances<T, Alloc>(
+        solvedTaskSpace.size(),
+        Tensor4d<T, Alloc>(kNumDof,
+                           Tensor3d<T, Alloc>(0, Tensor2d<T, Alloc>())));
+  }
+
+  // calculate speed task space
+  // shape is [number of positions, number of joints, number of linear
+  // coordinates (xyz)=3]
+  auto speedTaskSpace =
+      Tensor<AllJointsCoordinates, Alloc<AllJointsCoordinates>>(
+          solvedTaskSpace.size(),
+          AllJointsCoordinates(kNumDof,
+                               Manipulator::CoordinatesTaskSpace(3, 0)));
+  for (std::size_t i{0}; i < solvedTaskSpace.size() - 1; ++i) {
+    for (std::size_t j{0}; j < kNumDof; ++j) {
+      for (std::size_t k{0}; k < 3; ++k) {
+        speedTaskSpace[i][j][k] =
+            (solvedTaskSpace[i + 1][j][k] - solvedTaskSpace[i][j][k]) /
+            dtReaction;
+      }
+    }
+  }
+  // last speed assumed to be the same as previous
+  for (std::size_t j = 0; j < kNumDof; ++j) {
+    for (std::size_t k{0}; k < 3; ++k) {
+      speedTaskSpace[solvedTaskSpace.size() - 1][j][k] =
+          speedTaskSpace.back()[j][k];
+    }
+  }
+
+  // calculate environment speed
+  // shape is [number of environment positions, number of obstacles, number of
+  // parts in obstacle, 2 (begin and end), number of linear coordinates (xyz)=3]
+  auto environmentSpeed{calculateEnvironmentSpeed()};
 
   // calculating allowed distances as:
   // distance traveled by moving obstacle until manipulator stopped + distance
@@ -163,11 +178,16 @@ AllowedDistances<T, Alloc> calculateAllowedDistances(
   // traveled since it reacted until it stopped + manipulator position
   // uncertainty + obstacle position uncertainty + allowable penetration
   // distance
+  // ideally should project speed onto direction between the manipulator and the
+  // obstacle
   auto kDistanceConstPart{params.obstaclePositionUncertainty +
                           params.manipulatorPositionUncertainty +
                           params.penetrationDistance};
 
-  // init result
+  /// At every timestamp from every joint to every obstacle part begin and end.
+  /// Therefore the shape is [number of the timestamps, number of the joints,
+  /// number of the obstacles, number of parts of the obstacle, 2 (begin and
+  /// end)]
   auto allowedDistances = AllowedDistances<T, Alloc>(
       solvedTaskSpace.size(),
       Tensor4d<T, Alloc>(
@@ -175,7 +195,50 @@ AllowedDistances<T, Alloc> calculateAllowedDistances(
                        environment.obstaclesAtTimestamp[0].size(),
                        Tensor2d<T, Alloc>(
                            environment.obstaclesAtTimestamp[0][0].parts.size(),
-                           Tensor<T, Alloc<T>>({0, 0})))));
-  // resize allowedDistance according to real sizes
+                           Tensor<T, Alloc<T>>(
+                               {kDistanceConstPart, kDistanceConstPart})))));
+  const auto indexToEnvironmentIndex =
+      [dtReaction, &environment](std::size_t i) -> std::size_t {
+    const auto timeDiff{dtReaction / environment.dt};
+    return std::min(static_cast<std::size_t>(i * timeDiff),
+                    environment.obstaclesAtTimestamp.size());
+  };
+  const auto maxInTensor = [](const Tensor<T, Alloc<T>>& tensor) -> T {
+    T max{tensor[0]};
+    for (std::size_t i{0}; i < tensor.size(); ++i) {
+      max = std::max(max, tensor[i]);
+    }
+    return max;
+  };
+  for (std::size_t i{0}; i < allowedDistances.size(); ++i) {
+    const auto envIndex{indexToEnvironmentIndex(i)};
+    for (std::size_t j{0}; j < allowedDistances[i].size(); ++j) {  // numDof
+      allowedDistances[i].resize(
+          environment.obstaclesAtTimestamp[envIndex].size());
+      for (std::size_t k{0}; k < allowedDistances[i][j].size();
+           ++k) {  // obstacles
+        allowedDistances[i][j][k].resize(
+            environment.obstaclesAtTimestamp[envIndex][k].parts.size());
+        for (std::size_t l{0}; l < allowedDistances[i][j][k].size();
+             ++l) {  // number of parts in obstacle
+          allowedDistances[i][j][k][l].resize(2);
+
+          const auto manipSpeed{maxInTensor(speedTaskSpace[i][j])};
+          const auto stopTime{manipSpeed / params.maxAcceleration};
+          const auto commonPart{kDistanceConstPart + manipSpeed * dtReaction +
+                                manipSpeed * stopTime / 2};
+
+          allowedDistances[i][j][k][l][0] =
+              commonPart + maxInTensor(environmentSpeed[envIndex][k][l][0]) *
+                               (dtReaction + stopTime);
+          allowedDistances[i][j][k][l][1] =
+              commonPart + maxInTensor(environmentSpeed[envIndex][k][l][1]) *
+                               (dtReaction + stopTime);
+        }
+      }
+    }
+  }
+
+  return allowedDistances;
 }
 }  // namespace kuka
